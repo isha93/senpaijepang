@@ -5,7 +5,7 @@ import { createServer } from '../src/server.js';
 test('GET /health returns 200', async () => {
   const server = createServer();
 
-  await new Promise((resolve) => server.listen(0, resolve));
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
   const { port } = server.address();
 
   const res = await fetch(`http://127.0.0.1:${port}/health`);

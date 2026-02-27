@@ -16,10 +16,26 @@ This repository currently contains MVP foundation only:
 - ClickUp/Trello provisioning scripts for delivery tracking.
 
 Not yet implemented in this codebase:
-- Full auth/KYC flow.
+- Full production auth and KYC flow.
 - Production-grade database schema and migrations.
 - TG matching engine and anti-fraud case workflow.
 - Native mobile apps.
+
+Implemented now:
+- Auth skeleton in API (`register`, `login`, `refresh`, `logout`, `me`).
+- In-memory user/session store for local development only.
+
+## Auth Skeleton Endpoints (Current)
+- `POST /auth/register`
+  body: `{ "fullName": "...", "email": "...", "password": "min8chars" }`
+- `POST /auth/login`
+  body: `{ "identifier": "email", "password": "..." }`
+- `POST /auth/refresh`
+  body: `{ "refreshToken": "..." }`
+- `POST /auth/logout`
+  body: `{ "refreshToken": "..." }`
+- `GET /auth/me`
+  header: `Authorization: Bearer <accessToken>`
 
 ## Visual Overview
 ### 1) System Context
@@ -166,6 +182,12 @@ Use `.env.example` as source of truth.
 
 - `API_PORT`
   API port (default `4000`).
+- `AUTH_TOKEN_SECRET`
+  HMAC secret for access token signing.
+- `AUTH_ACCESS_TOKEN_TTL_SEC`
+  access token TTL in seconds (default `900`).
+- `AUTH_REFRESH_TOKEN_TTL_SEC`
+  refresh token TTL in seconds (default `604800`).
 - `POSTGRES_DB`
   database name.
 - `POSTGRES_USER`
