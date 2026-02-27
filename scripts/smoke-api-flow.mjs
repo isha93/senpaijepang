@@ -2,13 +2,15 @@
 
 const base = String(process.env.SMOKE_BASE_URL || 'http://localhost:4000').replace(/\/+$/, '');
 const adminKey = String(process.env.SMOKE_ADMIN_KEY || process.env.ADMIN_API_KEY || 'smoke-admin-key');
+const webhookSecret = String(process.env.SMOKE_WEBHOOK_SECRET || '').trim();
 const email = `smoke-${Date.now()}@example.com`;
 
-async function request(path, { method = 'GET', token, body } = {}) {
+async function request(path, { method = 'GET', token, body, headers: extraHeaders } = {}) {
   const headers = {};
   if (token) headers.Authorization = `Bearer ${token}`;
   if (path.startsWith('/admin/')) headers['x-admin-api-key'] = adminKey;
   if (body !== undefined) headers['Content-Type'] = 'application/json';
+  if (extraHeaders) Object.assign(headers, extraHeaders);
 
   const res = await fetch(`${base}${path}`, {
     method,
@@ -67,6 +69,18 @@ async function main() {
   assert(session.res.status === 201, `kyc session status ${session.res.status}`);
   const sessionId = session.json.session.id;
 
+  step('POST /identity/kyc/sessions/{sessionId}/provider-metadata');
+  const providerMetadata = await request(`/identity/kyc/sessions/${sessionId}/provider-metadata`, {
+    method: 'POST',
+    token: accessToken,
+    body: {
+      providerRef: `smoke-provider-${sessionId}`,
+      metadata: { source: 'smoke' }
+    }
+  });
+  assert(providerMetadata.res.status === 200, `provider-metadata status ${providerMetadata.res.status}`);
+  assert(providerMetadata.json?.session?.providerRef, 'providerRef missing after provider-metadata');
+
   const checksum = 'a3f9f6f30311d8e8860f5f5f5366f6544dc34e8e833b8f13294f129f0d4af167';
 
   step('POST /identity/kyc/upload-url');
@@ -109,6 +123,24 @@ async function main() {
   });
   assert(submit.res.status === 200, `submit status ${submit.res.status}`);
   assert(submit.json?.session?.status === 'SUBMITTED', 'expected SUBMITTED');
+
+  if (webhookSecret) {
+    step('POST /identity/kyc/provider-webhook');
+    const webhook = await request('/identity/kyc/provider-webhook', {
+      method: 'POST',
+      body: {
+        sessionId,
+        providerRef: `smoke-provider-${sessionId}`,
+        metadata: { signal: 'provider_stub' }
+      },
+      headers: {
+        'x-kyc-webhook-secret': webhookSecret,
+        'x-idempotency-key': `smoke-webhook-${sessionId}`
+      }
+    });
+    assert(webhook.res.status === 202, `provider-webhook status ${webhook.res.status}`);
+    assert(webhook.json?.accepted === true, 'provider-webhook accepted should be true');
+  }
 
   step('GET /admin/kyc/review-queue');
   const queue = await request('/admin/kyc/review-queue?status=SUBMITTED&limit=10');

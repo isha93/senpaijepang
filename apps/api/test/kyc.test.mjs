@@ -1,6 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createServer } from '../src/server.js';
+import { createAuthService } from '../src/auth/service.js';
+import { InMemoryAuthStore } from '../src/auth/store.js';
+import { createKycService } from '../src/identity/kyc-service.js';
 
 const TEST_ADMIN_API_KEY = 'test-admin-key';
 const EXAMPLE_CHECKSUM = 'a3f9f6f30311d8e8860f5f5f5366f6544dc34e8e833b8f13294f129f0d4af167';
@@ -254,6 +257,170 @@ test('kyc submit requires uploaded document and is idempotent', async () => {
     assert.equal(history.body.events[0].toStatus, 'CREATED');
     assert.equal(history.body.events[1].toStatus, 'SUBMITTED');
   });
+});
+
+test('kyc provider metadata endpoint updates owned session', async () => {
+  await withServer(async (baseUrl) => {
+    const ownerRegister = await postJson(baseUrl, '/auth/register', {
+      fullName: 'Provider Owner',
+      email: 'provider-owner@example.com',
+      password: 'pass1234'
+    });
+    assert.equal(ownerRegister.res.status, 201);
+    const ownerAccessToken = ownerRegister.body.accessToken;
+
+    const otherRegister = await postJson(baseUrl, '/auth/register', {
+      fullName: 'Provider Other',
+      email: 'provider-other@example.com',
+      password: 'pass1234'
+    });
+    assert.equal(otherRegister.res.status, 201);
+    const otherAccessToken = otherRegister.body.accessToken;
+
+    const createSession = await postJson(
+      baseUrl,
+      '/identity/kyc/sessions',
+      { provider: 'sumsub' },
+      { accessToken: ownerAccessToken }
+    );
+    assert.equal(createSession.res.status, 201);
+    const sessionId = createSession.body.session.id;
+
+    const metadata = await postJson(
+      baseUrl,
+      `/identity/kyc/sessions/${sessionId}/provider-metadata`,
+      {
+        providerRef: 'sumsub-session-123',
+        metadata: {
+          reviewMode: 'manual',
+          providerStatus: 'pending'
+        }
+      },
+      { accessToken: ownerAccessToken }
+    );
+    assert.equal(metadata.res.status, 200);
+    assert.equal(metadata.body.session.providerRef, 'sumsub-session-123');
+    assert.equal(metadata.body.session.providerMetadata.reviewMode, 'manual');
+    assert.equal(metadata.body.session.providerMetadata.providerStatus, 'pending');
+
+    const status = await getJson(baseUrl, '/identity/kyc/status', { accessToken: ownerAccessToken });
+    assert.equal(status.res.status, 200);
+    assert.equal(status.body.session.providerRef, 'sumsub-session-123');
+
+    const forbidden = await postJson(
+      baseUrl,
+      `/identity/kyc/sessions/${sessionId}/provider-metadata`,
+      { providerRef: 'attempt-by-other' },
+      { accessToken: otherAccessToken }
+    );
+    assert.equal(forbidden.res.status, 404);
+    assert.equal(forbidden.body.error.code, 'kyc_session_not_found');
+  });
+});
+
+test('kyc provider webhook stub validates secret and idempotency key', async () => {
+  const store = new InMemoryAuthStore();
+  const authService = createAuthService({
+    store,
+    env: {
+      AUTH_TOKEN_SECRET: 'test-secret'
+    }
+  });
+  const kycService = createKycService({
+    store,
+    env: {
+      KYC_PROVIDER_WEBHOOK_SECRET: 'test-webhook-secret'
+    }
+  });
+
+  await withServer(
+    async (baseUrl) => {
+      const register = await postJson(baseUrl, '/auth/register', {
+        fullName: 'Webhook User',
+        email: 'webhook-user@example.com',
+        password: 'pass1234'
+      });
+      assert.equal(register.res.status, 201);
+      const accessToken = register.body.accessToken;
+
+      const createSession = await postJson(
+        baseUrl,
+        '/identity/kyc/sessions',
+        { provider: 'sumsub' },
+        { accessToken }
+      );
+      assert.equal(createSession.res.status, 201);
+      const sessionId = createSession.body.session.id;
+
+      const missingSecret = await postJson(baseUrl, '/identity/kyc/provider-webhook', {
+        sessionId,
+        providerRef: 'sumsub-ref-a'
+      });
+      assert.equal(missingSecret.res.status, 401);
+      assert.equal(missingSecret.body.error.code, 'missing_webhook_secret');
+
+      const missingIdempotency = await postJson(
+        baseUrl,
+        '/identity/kyc/provider-webhook',
+        {
+          sessionId,
+          providerRef: 'sumsub-ref-a'
+        },
+        {
+          headers: { 'x-kyc-webhook-secret': 'test-webhook-secret' }
+        }
+      );
+      assert.equal(missingIdempotency.res.status, 400);
+      assert.equal(missingIdempotency.body.error.code, 'missing_idempotency_key');
+
+      const first = await postJson(
+        baseUrl,
+        '/identity/kyc/provider-webhook',
+        {
+          sessionId,
+          providerRef: 'sumsub-ref-a',
+          metadata: { providerStatus: 'review_pending' }
+        },
+        {
+          headers: {
+            'x-kyc-webhook-secret': 'test-webhook-secret',
+            'x-idempotency-key': 'event-1'
+          }
+        }
+      );
+      assert.equal(first.res.status, 202);
+      assert.equal(first.body.accepted, true);
+      assert.equal(first.body.duplicate, false);
+      assert.equal(first.body.updated, true);
+      assert.equal(first.body.session.providerRef, 'sumsub-ref-a');
+
+      const duplicate = await postJson(
+        baseUrl,
+        '/identity/kyc/provider-webhook',
+        {
+          sessionId,
+          providerRef: 'sumsub-ref-b',
+          metadata: { providerStatus: 'review_done' }
+        },
+        {
+          headers: {
+            'x-kyc-webhook-secret': 'test-webhook-secret',
+            'x-idempotency-key': 'event-1'
+          }
+        }
+      );
+      assert.equal(duplicate.res.status, 202);
+      assert.equal(duplicate.body.accepted, true);
+      assert.equal(duplicate.body.duplicate, true);
+      assert.equal(duplicate.body.updated, false);
+
+      const status = await getJson(baseUrl, '/identity/kyc/status', { accessToken });
+      assert.equal(status.res.status, 200);
+      assert.equal(status.body.session.providerRef, 'sumsub-ref-a');
+      assert.equal(status.body.session.providerMetadata.providerStatus, 'review_pending');
+    },
+    { authService, kycService }
+  );
 });
 
 test('kyc upload url enforces content type and size constraints', async () => {

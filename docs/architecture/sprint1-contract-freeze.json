@@ -17,10 +17,12 @@
     "/auth/me",
     "/identity/kyc/sessions",
     "/identity/kyc/sessions/{sessionId}/submit",
+    "/identity/kyc/sessions/{sessionId}/provider-metadata",
     "/identity/kyc/status",
     "/identity/kyc/upload-url",
     "/identity/kyc/documents",
     "/identity/kyc/history",
+    "/identity/kyc/provider-webhook",
     "/admin/kyc/review",
     "/admin/kyc/review-queue"
   ]

@@ -13,8 +13,9 @@ Delivered baseline in repository:
   - auth flow (`register`, `login`, `refresh`, `logout`, `me`)
   - KYC session flow (`create`, `submit`, `status`)
   - KYC document metadata ingestion
+  - provider metadata hook + webhook intake stub (secret + idempotency)
   - admin review endpoint with audit trail events
-  - migration files for auth and KYC (`001`, `002`, `003`)
+  - migration files for auth/RBAC/KYC (`001`-`005`)
 
 Current references:
 - Runtime contract: `openapi-runtime-v0.yaml`

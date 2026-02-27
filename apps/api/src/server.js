@@ -9,7 +9,8 @@ import { InMemoryApiMetrics } from './observability/metrics.js';
 const JSON_HEADERS = { 'Content-Type': 'application/json' };
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-admin-api-key',
+  'Access-Control-Allow-Headers':
+    'Content-Type, Authorization, x-admin-api-key, x-kyc-webhook-secret, x-idempotency-key',
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
   'Access-Control-Expose-Headers': 'x-request-id'
 };
@@ -44,8 +45,21 @@ function getAdminApiKeyHeader(req) {
   return String(req.headers['x-admin-api-key'] || '').trim();
 }
 
+function getWebhookSecretHeader(req) {
+  return String(req.headers['x-kyc-webhook-secret'] || '').trim();
+}
+
+function getIdempotencyKeyHeader(req) {
+  return String(req.headers['x-idempotency-key'] || '').trim();
+}
+
 function matchKycSubmitRoute(pathname) {
   const match = String(pathname || '').match(/^\/identity\/kyc\/sessions\/([^/]+)\/submit$/);
+  return match ? match[1] : null;
+}
+
+function matchKycProviderMetadataRoute(pathname) {
+  const match = String(pathname || '').match(/^\/identity\/kyc\/sessions\/([^/]+)\/provider-metadata$/);
   return match ? match[1] : null;
 }
 
@@ -143,6 +157,18 @@ async function handleRequest(req, res, authService, kycService, adminApiKey, met
 
   if (req.method === 'GET' && url.pathname === '/metrics') {
     sendJson(res, 200, metrics.snapshot());
+    return;
+  }
+
+  if (req.method === 'POST' && url.pathname === '/identity/kyc/provider-webhook') {
+    const body = await readJsonBody(req);
+    const result = await kycService.ingestProviderWebhook({
+      webhookSecret: getWebhookSecretHeader(req),
+      idempotencyKey: getIdempotencyKeyHeader(req),
+      payload: body,
+      sourceIp: req.socket?.remoteAddress || null
+    });
+    sendJson(res, 202, result);
     return;
   }
 
@@ -259,6 +285,25 @@ async function handleRequest(req, res, authService, kycService, adminApiKey, met
     const result = await kycService.submitSession({
       userId: user.id,
       sessionId: submitSessionId
+    });
+    sendJson(res, 200, result);
+    return;
+  }
+
+  const providerMetadataSessionId =
+    req.method === 'POST' ? matchKycProviderMetadataRoute(url.pathname) : null;
+  if (req.method === 'POST' && providerMetadataSessionId) {
+    const user = await authenticateRequest(req, res, authService);
+    if (!user) {
+      return;
+    }
+
+    const body = await readJsonBody(req);
+    const result = await kycService.setProviderMetadata({
+      userId: user.id,
+      sessionId: providerMetadataSessionId,
+      providerRef: body.providerRef,
+      metadata: body.metadata
     });
     sendJson(res, 200, result);
     return;

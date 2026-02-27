@@ -42,6 +42,17 @@ function normalizeProvider(provider) {
   return normalizedProvider;
 }
 
+function normalizeProviderRef(providerRef) {
+  if (providerRef === undefined || providerRef === null || String(providerRef).trim() === '') {
+    return null;
+  }
+  const normalized = String(providerRef).trim();
+  if (normalized.length > 128) {
+    throw new KycApiError(400, 'invalid_provider_ref', 'providerRef must be <= 128 characters');
+  }
+  return normalized;
+}
+
 function normalizeDocumentType(documentType) {
   const normalized = String(documentType || '')
     .trim()
@@ -165,6 +176,21 @@ function normalizeMetadata(metadata) {
   return metadata;
 }
 
+function normalizeWebhookIdempotencyKey(idempotencyKey) {
+  const normalized = String(idempotencyKey || '').trim();
+  if (!normalized) {
+    throw new KycApiError(
+      400,
+      'missing_idempotency_key',
+      'x-idempotency-key header is required for provider webhook'
+    );
+  }
+  if (normalized.length > 200) {
+    throw new KycApiError(400, 'invalid_idempotency_key', 'x-idempotency-key must be <= 200 characters');
+  }
+  return normalized;
+}
+
 function normalizeDecision(decision) {
   const normalized = String(decision || '')
     .trim()
@@ -224,12 +250,39 @@ function normalizeReviewedBy(reviewedBy) {
 }
 
 export class KycService {
-  constructor({ store, objectStorage, maxUploadBytes, allowedContentTypes, logger }) {
+  constructor({
+    store,
+    objectStorage,
+    maxUploadBytes,
+    allowedContentTypes,
+    logger,
+    providerWebhookSecret,
+    providerWebhookIdempotencyTtlMs
+  }) {
     this.store = store;
     this.objectStorage = objectStorage;
     this.maxUploadBytes = maxUploadBytes;
     this.allowedContentTypes = allowedContentTypes;
     this.logger = logger || NOOP_LOGGER;
+    this.providerWebhookSecret = String(providerWebhookSecret || '').trim();
+    this.providerWebhookIdempotencyTtlMs = Number(providerWebhookIdempotencyTtlMs || 24 * 60 * 60 * 1000);
+    this.providerWebhookSeenKeys = new Map();
+  }
+
+  registerWebhookIdempotencyKey(idempotencyKey) {
+    const now = Date.now();
+    for (const [key, seenAt] of this.providerWebhookSeenKeys.entries()) {
+      if (now - seenAt > this.providerWebhookIdempotencyTtlMs) {
+        this.providerWebhookSeenKeys.delete(key);
+      }
+    }
+
+    if (this.providerWebhookSeenKeys.has(idempotencyKey)) {
+      return true;
+    }
+
+    this.providerWebhookSeenKeys.set(idempotencyKey, now);
+    return false;
   }
 
   async startSession({ userId, provider }) {
@@ -267,6 +320,98 @@ export class KycService {
     return {
       status: mapTrustStatus(session.status),
       session: this.publicSession(session)
+    };
+  }
+
+  async setProviderMetadata({ userId, sessionId, providerRef, metadata }) {
+    const normalizedSessionId = String(sessionId || '').trim();
+    if (!normalizedSessionId) {
+      throw new KycApiError(400, 'invalid_session_id', 'sessionId is required');
+    }
+
+    const targetSession = await this.resolveUserSession({ userId, sessionId: normalizedSessionId });
+    if (!targetSession) {
+      throw new KycApiError(404, 'kyc_session_not_found', 'kyc session not found');
+    }
+
+    const normalizedProviderRef = normalizeProviderRef(providerRef);
+    const normalizedMetadata = normalizeMetadata(metadata);
+    if (!normalizedProviderRef && Object.keys(normalizedMetadata).length === 0) {
+      throw new KycApiError(
+        400,
+        'invalid_provider_metadata',
+        'providerRef or metadata is required to update provider metadata'
+      );
+    }
+
+    const updatedSession = await this.store.updateKycSessionProviderData({
+      sessionId: targetSession.id,
+      providerRef: normalizedProviderRef || targetSession.providerRef || null,
+      providerMetadataJson: normalizedMetadata
+    });
+
+    return {
+      status: mapTrustStatus(updatedSession.status),
+      session: this.publicSession(updatedSession)
+    };
+  }
+
+  async ingestProviderWebhook({ webhookSecret, idempotencyKey, payload, sourceIp }) {
+    if (!this.providerWebhookSecret) {
+      throw new KycApiError(503, 'provider_webhook_disabled', 'provider webhook is disabled');
+    }
+
+    const normalizedWebhookSecret = String(webhookSecret || '').trim();
+    if (!normalizedWebhookSecret) {
+      throw new KycApiError(
+        401,
+        'missing_webhook_secret',
+        'x-kyc-webhook-secret header is required'
+      );
+    }
+    if (normalizedWebhookSecret !== this.providerWebhookSecret) {
+      throw new KycApiError(403, 'invalid_webhook_secret', 'x-kyc-webhook-secret is invalid');
+    }
+
+    const normalizedIdempotencyKey = normalizeWebhookIdempotencyKey(idempotencyKey);
+    const duplicate = this.registerWebhookIdempotencyKey(normalizedIdempotencyKey);
+    const normalizedPayload = normalizeMetadata(payload);
+
+    let updatedSession = null;
+    let updated = false;
+
+    if (!duplicate) {
+      const normalizedSessionId = String(normalizedPayload.sessionId || '').trim();
+      const normalizedProviderRef = normalizeProviderRef(normalizedPayload.providerRef);
+      const metadata = normalizeMetadata(normalizedPayload.metadata || normalizedPayload);
+
+      if (normalizedSessionId) {
+        const session = await this.store.findKycSessionById(normalizedSessionId);
+        if (session) {
+          updatedSession = await this.store.updateKycSessionProviderData({
+            sessionId: normalizedSessionId,
+            providerRef: normalizedProviderRef || session.providerRef || null,
+            providerMetadataJson: metadata
+          });
+          updated = true;
+        }
+      }
+    }
+
+    this.logger.info('kyc.provider_webhook.received', {
+      duplicate,
+      idempotencyKey: normalizedIdempotencyKey,
+      sourceIp: sourceIp || null,
+      payloadKeys: Object.keys(normalizedPayload).slice(0, 20),
+      updated
+    });
+
+    return {
+      accepted: true,
+      duplicate,
+      idempotencyKey: normalizedIdempotencyKey,
+      updated,
+      session: updatedSession ? this.publicSession(updatedSession) : null
     };
   }
 
@@ -618,6 +763,8 @@ export class KycService {
       id: session.id,
       status: session.status,
       provider: session.provider,
+      providerRef: session.providerRef || null,
+      providerMetadata: session.providerMetadataJson || {},
       submittedAt: session.submittedAt,
       reviewedBy: session.reviewedBy,
       reviewedAt: session.reviewedAt,
@@ -663,6 +810,7 @@ export function createKycService({ store, objectStorage, env = process.env, logg
     typeof store.findLatestKycSessionByUserId !== 'function' ||
     typeof store.findKycSessionById !== 'function' ||
     typeof store.updateKycSessionStatus !== 'function' ||
+    typeof store.updateKycSessionProviderData !== 'function' ||
     typeof store.listKycSessionsByStatuses !== 'function' ||
     typeof store.createIdentityDocument !== 'function' ||
     typeof store.findIdentityDocumentBySessionAndChecksum !== 'function' ||
@@ -686,13 +834,20 @@ export function createKycService({ store, objectStorage, env = process.env, logg
     Number.isFinite(maxUploadBytesRaw) && maxUploadBytesRaw > 0
       ? Math.floor(maxUploadBytesRaw)
       : 10 * 1024 * 1024;
+  const providerWebhookIdempotencyTtlSecRaw = Number(env.KYC_PROVIDER_WEBHOOK_IDEMPOTENCY_TTL_SEC || 86400);
+  const providerWebhookIdempotencyTtlMs =
+    Number.isFinite(providerWebhookIdempotencyTtlSecRaw) && providerWebhookIdempotencyTtlSecRaw > 0
+      ? Math.floor(providerWebhookIdempotencyTtlSecRaw * 1000)
+      : 86400 * 1000;
 
   return new KycService({
     store,
     objectStorage: resolvedObjectStorage,
     maxUploadBytes,
     allowedContentTypes: normalizeAllowedContentTypes(env.OBJECT_STORAGE_ALLOWED_CONTENT_TYPES),
-    logger
+    logger,
+    providerWebhookSecret: env.KYC_PROVIDER_WEBHOOK_SECRET,
+    providerWebhookIdempotencyTtlMs
   });
 }
 

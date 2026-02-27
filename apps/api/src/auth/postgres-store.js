@@ -30,6 +30,8 @@ function mapKycSessionRow(row) {
     userId: row.user_id,
     status: row.status,
     provider: row.provider,
+    providerRef: row.provider_ref,
+    providerMetadataJson: row.provider_metadata_json || {},
     submittedAt: row.submitted_at ? new Date(row.submitted_at).toISOString() : null,
     reviewedBy: row.reviewed_by,
     reviewedAt: row.reviewed_at ? new Date(row.reviewed_at).toISOString() : null,
@@ -192,6 +194,8 @@ export class PostgresAuthStore {
           user_id,
           status,
           provider,
+          provider_ref,
+          provider_metadata_json,
           submitted_at,
           reviewed_by,
           reviewed_at,
@@ -212,6 +216,8 @@ export class PostgresAuthStore {
           user_id,
           status,
           provider,
+          provider_ref,
+          provider_metadata_json,
           submitted_at,
           reviewed_by,
           reviewed_at,
@@ -236,6 +242,8 @@ export class PostgresAuthStore {
           user_id,
           status,
           provider,
+          provider_ref,
+          provider_metadata_json,
           submitted_at,
           reviewed_by,
           reviewed_at,
@@ -267,6 +275,8 @@ export class PostgresAuthStore {
           user_id,
           status,
           provider,
+          provider_ref,
+          provider_metadata_json,
           submitted_at,
           reviewed_by,
           reviewed_at,
@@ -305,6 +315,34 @@ export class PostgresAuthStore {
     );
 
     return mapIdentityDocumentRow(result.rows[0]);
+  }
+
+  async updateKycSessionProviderData({ sessionId, providerRef, providerMetadataJson }) {
+    const result = await this.pool.query(
+      `
+        UPDATE kyc_sessions
+        SET
+          provider_ref = COALESCE($2::text, provider_ref),
+          provider_metadata_json = COALESCE(provider_metadata_json, '{}'::jsonb) || COALESCE($3::jsonb, '{}'::jsonb),
+          updated_at = NOW()
+        WHERE id = $1
+        RETURNING
+          id,
+          user_id,
+          status,
+          provider,
+          provider_ref,
+          provider_metadata_json,
+          submitted_at,
+          reviewed_by,
+          reviewed_at,
+          created_at,
+          updated_at
+      `,
+      [sessionId, providerRef || null, JSON.stringify(providerMetadataJson || {})]
+    );
+
+    return mapKycSessionRow(result.rows[0]);
   }
 
   async findIdentityDocumentBySessionAndChecksum({ kycSessionId, checksumSha256 }) {
@@ -388,6 +426,8 @@ export class PostgresAuthStore {
         user_id,
         status,
         provider,
+        provider_ref,
+        provider_metadata_json,
         submitted_at,
         reviewed_by,
         reviewed_at,

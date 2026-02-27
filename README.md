@@ -51,6 +51,9 @@ Implemented now:
 - `POST /identity/kyc/sessions/{sessionId}/submit`
   header: `Authorization: Bearer <accessToken>`
   submit uploaded KYC documents for review.
+- `POST /identity/kyc/sessions/{sessionId}/provider-metadata`
+  header: `Authorization: Bearer <accessToken>`
+  body: `{ "providerRef"?: "...", "metadata"?: {...} }`
 - `GET /identity/kyc/status`
   header: `Authorization: Bearer <accessToken>`
   response status enum: `NOT_STARTED | IN_PROGRESS | MANUAL_REVIEW | VERIFIED | REJECTED`
@@ -63,12 +66,16 @@ Implemented now:
 - `GET /identity/kyc/history?sessionId=<uuid>`
   header: `Authorization: Bearer <accessToken>`
   returns KYC status transition audit trail for user-owned session.
+- `POST /identity/kyc/provider-webhook`
+  headers: `x-kyc-webhook-secret`, `x-idempotency-key`
+  provider webhook stub endpoint (secret + idempotency validation + metadata hook).
 
 KYC upload sequence:
 1. call `POST /identity/kyc/upload-url`
 2. upload file with returned `uploadUrl` + required headers
 3. call `POST /identity/kyc/documents` with `objectKey`
-4. call `POST /identity/kyc/sessions/{sessionId}/submit`
+4. optional hook `POST /identity/kyc/sessions/{sessionId}/provider-metadata`
+5. call `POST /identity/kyc/sessions/{sessionId}/submit`
 
 ## Admin KYC Endpoint (Current)
 - `POST /admin/kyc/review`
@@ -290,6 +297,10 @@ Use `.env.example` as source of truth.
   PostgreSQL pool size for API when `AUTH_STORE=postgres`.
 - `ADMIN_API_KEY`
   shared key for admin review endpoints (`POST /admin/kyc/review`).
+- `KYC_PROVIDER_WEBHOOK_SECRET`
+  shared secret for `POST /identity/kyc/provider-webhook` (empty = disabled).
+- `KYC_PROVIDER_WEBHOOK_IDEMPOTENCY_TTL_SEC`
+  idempotency key retention window for webhook dedupe (default `86400`).
 - `LOG_LEVEL`
   structured log level (`debug|info|warn|error`), default `info`.
 - `POSTGRES_DB`
@@ -395,4 +406,5 @@ Fallback tracking is Trello:
 - Sprint 1 API baseline active:
   - auth + KYC + admin review queue
   - explicit KYC submit endpoint (`/identity/kyc/sessions/{sessionId}/submit`)
+  - provider metadata hook + provider webhook stub
   - KYC audit trail status transitions

@@ -135,6 +135,8 @@ export class InMemoryAuthStore {
       userId,
       status: 'CREATED',
       provider,
+      providerRef: null,
+      providerMetadataJson: {},
       submittedAt: null,
       reviewedBy: null,
       reviewedAt: null,
@@ -179,6 +181,27 @@ export class InMemoryAuthStore {
     if (reviewedAt) {
       session.reviewedAt = reviewedAt;
     }
+    session.updatedAt = new Date().toISOString();
+    return session;
+  }
+
+  updateKycSessionProviderData({ sessionId, providerRef, providerMetadataJson }) {
+    const session = this.kycSessionsById.get(sessionId);
+    if (!session) {
+      return null;
+    }
+
+    if (providerRef !== undefined) {
+      session.providerRef = providerRef;
+    }
+
+    if (providerMetadataJson && typeof providerMetadataJson === 'object' && !Array.isArray(providerMetadataJson)) {
+      session.providerMetadataJson = {
+        ...(session.providerMetadataJson || {}),
+        ...providerMetadataJson
+      };
+    }
+
     session.updatedAt = new Date().toISOString();
     return session;
   }

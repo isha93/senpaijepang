@@ -23,10 +23,12 @@ Auth:
 Identity/KYC:
 - `POST /identity/kyc/sessions`
 - `POST /identity/kyc/sessions/{sessionId}/submit`
+- `POST /identity/kyc/sessions/{sessionId}/provider-metadata`
 - `GET /identity/kyc/status`
 - `POST /identity/kyc/upload-url`
 - `POST /identity/kyc/documents`
 - `GET /identity/kyc/history`
+- `POST /identity/kyc/provider-webhook` (shared secret header `x-kyc-webhook-secret`, idempotency key `x-idempotency-key`)
 
 Admin:
 - `POST /admin/kyc/review` (shared key header `x-admin-api-key`)
@@ -45,6 +47,9 @@ Admin:
 - `003_kyc_status_events.sql`:
   - `kyc_status_events`
   - unique constraint `(kyc_session_id, checksum_sha256)` in `identity_documents`
+- `005_kyc_provider_metadata.sql`:
+  - `kyc_sessions.provider_ref`
+  - `kyc_sessions.provider_metadata_json`
 
 ## 5. KYC Status Model
 Raw session statuses:
@@ -81,7 +86,9 @@ Trust status (API response):
 - API generates pre-signed upload URL via `POST /identity/kyc/upload-url`.
 - Client uploads file directly to object storage (`PUT`).
 - Client confirms metadata via `POST /identity/kyc/documents` with `objectKey`.
+- Optional provider hook metadata via `POST /identity/kyc/sessions/{sessionId}/provider-metadata`.
 - Client submits session via `POST /identity/kyc/sessions/{sessionId}/submit`.
+- Provider webhook stub via `POST /identity/kyc/provider-webhook` (secret + idempotency validation).
 - API enforces:
   - content type whitelist
   - max file size guard
@@ -91,7 +98,7 @@ Trust status (API response):
 ## 7. Known Gaps vs `openapi-v1.yaml`
 - Runtime belum pakai prefix `/v1`.
 - Admin model masih shared key, belum role-based auth.
-- Provider webhook intake belum diimplementasi.
+- Provider webhook processing masih stub (belum ada signature scheme/vendor-specific verification workflow).
 
 ## 8. Change Control
 - Setiap perubahan endpoint runtime wajib update `openapi-runtime-v0.yaml` dan file ini di commit yang sama.
