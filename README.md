@@ -23,7 +23,7 @@ Not yet implemented in this codebase:
 
 Implemented now:
 - Auth skeleton in API (`register`, `login`, `refresh`, `logout`, `me`).
-- In-memory user/session store for local development only.
+- Auth store adapters: `in-memory` and `postgres`.
 
 ## Auth Skeleton Endpoints (Current)
 - `POST /auth/register`
@@ -145,6 +145,20 @@ npm install
 docker compose up -d
 ```
 
+Optional (recommended for backend work):
+5. Run auth database migration.
+
+```bash
+npm run migrate:api
+```
+
+6. Switch API auth store to postgres.
+
+```bash
+# in .env
+AUTH_STORE=postgres
+```
+
 ## Development Commands (Root)
 - `npm run ci`
   run lint + typecheck + test for all workspaces.
@@ -162,6 +176,8 @@ docker compose up -d
   start dashboard static app.
 - `npm run dev:admin`
   start admin static app.
+- `npm run migrate:api`
+  run PostgreSQL migrations for API (`apps/api/migrations`).
 
 ## Quick Smoke Check
 1. Start API:
@@ -182,12 +198,16 @@ Use `.env.example` as source of truth.
 
 - `API_PORT`
   API port (default `4000`).
+- `AUTH_STORE`
+  auth storage backend: `memory` or `postgres` (default `memory`).
 - `AUTH_TOKEN_SECRET`
   HMAC secret for access token signing.
 - `AUTH_ACCESS_TOKEN_TTL_SEC`
   access token TTL in seconds (default `900`).
 - `AUTH_REFRESH_TOKEN_TTL_SEC`
   refresh token TTL in seconds (default `604800`).
+- `DB_POOL_MAX`
+  PostgreSQL pool size for API when `AUTH_STORE=postgres`.
 - `POSTGRES_DB`
   database name.
 - `POSTGRES_USER`

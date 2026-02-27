@@ -27,7 +27,7 @@ export class AuthService {
     this.refreshTokenTtlSec = refreshTokenTtlSec;
   }
 
-  register({ fullName, email, password }) {
+  async register({ fullName, email, password }) {
     const normalizedName = String(fullName || '').trim();
     const normalizedEmail = String(email || '').trim().toLowerCase();
 
@@ -41,7 +41,7 @@ export class AuthService {
       throw new ApiError(400, 'invalid_password', 'password must be at least 8 characters');
     }
 
-    const user = this.store.createUser({
+    const user = await this.store.createUser({
       fullName: normalizedName,
       email: normalizedEmail,
       passwordHash: hashPassword(password)
@@ -54,9 +54,9 @@ export class AuthService {
     return this.issueSession(user);
   }
 
-  login({ identifier, password }) {
+  async login({ identifier, password }) {
     const normalizedIdentifier = String(identifier || '').trim().toLowerCase();
-    const user = this.store.findUserByEmail(normalizedIdentifier);
+    const user = await this.store.findUserByEmail(normalizedIdentifier);
 
     if (!user || !verifyPassword(String(password || ''), user.passwordHash)) {
       throw new ApiError(401, 'invalid_credentials', 'invalid credentials');
@@ -65,41 +65,41 @@ export class AuthService {
     return this.issueSession(user);
   }
 
-  refresh({ refreshToken }) {
+  async refresh({ refreshToken }) {
     const token = String(refreshToken || '').trim();
     if (!token) {
       throw new ApiError(400, 'invalid_refresh_token', 'refresh token is required');
     }
 
     const tokenHash = hashToken(token);
-    const session = this.store.findSessionByTokenHash(tokenHash);
+    const session = await this.store.findSessionByTokenHash(tokenHash);
     if (!session || session.revokedAt || Date.now() >= session.expiresAt) {
       throw new ApiError(401, 'invalid_refresh_token', 'refresh token is invalid or expired');
     }
 
-    const user = this.store.findUserById(session.userId);
+    const user = await this.store.findUserById(session.userId);
     if (!user) {
       throw new ApiError(401, 'invalid_refresh_token', 'refresh token is invalid');
     }
 
-    this.store.revokeSession(session.id);
+    await this.store.revokeSession(session.id);
     return this.issueSession(user);
   }
 
-  logout({ refreshToken }) {
+  async logout({ refreshToken }) {
     const token = String(refreshToken || '').trim();
     if (!token) {
       return;
     }
 
     const tokenHash = hashToken(token);
-    const session = this.store.findSessionByTokenHash(tokenHash);
+    const session = await this.store.findSessionByTokenHash(tokenHash);
     if (session) {
-      this.store.revokeSession(session.id);
+      await this.store.revokeSession(session.id);
     }
   }
 
-  authenticateAccessToken(accessToken) {
+  async authenticateAccessToken(accessToken) {
     const payload = verifyAccessToken({ token: accessToken, secret: this.accessTokenSecret });
     if (!payload || payload.typ !== 'access' || !payload.sub || !payload.exp) {
       throw new ApiError(401, 'invalid_access_token', 'access token is invalid');
@@ -108,7 +108,7 @@ export class AuthService {
       throw new ApiError(401, 'expired_access_token', 'access token has expired');
     }
 
-    const user = this.store.findUserById(payload.sub);
+    const user = await this.store.findUserById(payload.sub);
     if (!user) {
       throw new ApiError(401, 'invalid_access_token', 'access token is invalid');
     }
@@ -116,7 +116,7 @@ export class AuthService {
     return this.publicUser(user);
   }
 
-  issueSession(user) {
+  async issueSession(user) {
     const nowSec = Math.floor(Date.now() / 1000);
     const accessPayload = {
       typ: 'access',
@@ -129,7 +129,7 @@ export class AuthService {
 
     const refreshToken = createRefreshToken();
     const expiresAt = Date.now() + this.refreshTokenTtlSec * 1000;
-    this.store.createSession({
+    await this.store.createSession({
       userId: user.id,
       tokenHash: hashToken(refreshToken),
       expiresAt

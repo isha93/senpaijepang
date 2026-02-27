@@ -60,28 +60,28 @@ async function handleRequest(req, res, authService) {
 
   if (req.method === 'POST' && url.pathname === '/auth/register') {
     const body = await readJsonBody(req);
-    const result = authService.register(body);
+    const result = await authService.register(body);
     sendJson(res, 201, result);
     return;
   }
 
   if (req.method === 'POST' && url.pathname === '/auth/login') {
     const body = await readJsonBody(req);
-    const result = authService.login(body);
+    const result = await authService.login(body);
     sendJson(res, 200, result);
     return;
   }
 
   if (req.method === 'POST' && url.pathname === '/auth/refresh') {
     const body = await readJsonBody(req);
-    const result = authService.refresh(body);
+    const result = await authService.refresh(body);
     sendJson(res, 200, result);
     return;
   }
 
   if (req.method === 'POST' && url.pathname === '/auth/logout') {
     const body = await readJsonBody(req);
-    authService.logout(body);
+    await authService.logout(body);
     sendNoContent(res);
     return;
   }
@@ -98,7 +98,7 @@ async function handleRequest(req, res, authService) {
       return;
     }
 
-    const user = authService.authenticateAccessToken(token);
+    const user = await authService.authenticateAccessToken(token);
     sendJson(res, 200, { user });
     return;
   }
