@@ -3,6 +3,8 @@ import { createAuthService } from './auth/service.js';
 import { InMemoryAuthStore } from './auth/store.js';
 import { PostgresAuthStore } from './auth/postgres-store.js';
 import { createDbPool } from './db/pool.js';
+import { createKycService } from './identity/kyc-service.js';
+import { createObjectStorageFromEnv } from './identity/object-storage.js';
 
 async function createAuthStoreFromEnv(env = process.env) {
   const mode = String(env.AUTH_STORE || 'memory').trim().toLowerCase();
@@ -33,11 +35,19 @@ async function createAuthStoreFromEnv(env = process.env) {
 async function main() {
   const port = Number(process.env.API_PORT || 4000);
   const authStore = await createAuthStoreFromEnv(process.env);
+  const objectStorage = await createObjectStorageFromEnv(process.env);
   const authService = createAuthService({ store: authStore.store, env: process.env });
-  const server = createServer({ authService });
+  const kycService = createKycService({
+    store: authStore.store,
+    objectStorage: objectStorage.storage,
+    env: process.env
+  });
+  const server = createServer({ authService, kycService });
 
   server.listen(port, () => {
-    console.log(`API listening on http://localhost:${port} (authStore=${authStore.mode})`);
+    console.log(
+      `API listening on http://localhost:${port} (authStore=${authStore.mode}, objectStorage=${objectStorage.mode})`
+    );
   });
 
   async function gracefulShutdown(signal) {
@@ -48,6 +58,7 @@ async function main() {
     });
 
     await authStore.close();
+    await objectStorage.close();
     process.exit(0);
   }
 

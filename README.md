@@ -46,12 +46,20 @@ Implemented now:
 - `GET /identity/kyc/status`
   header: `Authorization: Bearer <accessToken>`
   response status enum: `NOT_STARTED | IN_PROGRESS | MANUAL_REVIEW | VERIFIED | REJECTED`
+- `POST /identity/kyc/upload-url`
+  header: `Authorization: Bearer <accessToken>`
+  body: `{ "sessionId"?: "uuid", "documentType": "KTP|PASSPORT|...", "fileName": "ktp.jpg", "contentType": "image/jpeg|image/png|application/pdf", "contentLength": 512000, "checksumSha256": "64hex" }`
 - `POST /identity/kyc/documents`
   header: `Authorization: Bearer <accessToken>`
-  body: `{ "sessionId"?: "uuid", "documentType": "KTP|PASSPORT|...", "fileUrl": "https://...|s3://...", "checksumSha256": "64hex", "metadata"?: {...} }`
+  body: `{ "sessionId"?: "uuid", "documentType": "KTP|PASSPORT|...", "objectKey": "kyc/<user>/<session>/...", "checksumSha256": "64hex", "metadata"?: {...} }`
 - `GET /identity/kyc/history?sessionId=<uuid>`
   header: `Authorization: Bearer <accessToken>`
   returns KYC status transition audit trail for user-owned session.
+
+KYC upload sequence:
+1. call `POST /identity/kyc/upload-url`
+2. upload file with returned `uploadUrl` + required headers
+3. call `POST /identity/kyc/documents` with `objectKey`
 
 ## Admin KYC Endpoint (Current)
 - `POST /admin/kyc/review`
@@ -253,6 +261,26 @@ Use `.env.example` as source of truth.
   MinIO root user.
 - `MINIO_ROOT_PASSWORD`
   MinIO root password.
+- `OBJECT_STORAGE_PROVIDER`
+  storage adapter mode: `memory` (default) or `s3`.
+- `OBJECT_STORAGE_BUCKET`
+  object bucket name for KYC files.
+- `OBJECT_STORAGE_REGION`
+  region for S3 signing.
+- `OBJECT_STORAGE_ENDPOINT`
+  S3-compatible endpoint, e.g. `http://localhost:9000` for MinIO.
+- `OBJECT_STORAGE_ACCESS_KEY_ID`
+  access key for object storage.
+- `OBJECT_STORAGE_SECRET_ACCESS_KEY`
+  secret key for object storage.
+- `OBJECT_STORAGE_FORCE_PATH_STYLE`
+  set `true` for MinIO/local S3-compatible endpoint.
+- `OBJECT_STORAGE_PRESIGN_EXPIRES_SEC`
+  pre-signed URL lifetime in seconds.
+- `OBJECT_STORAGE_MAX_FILE_BYTES`
+  max upload size accepted by API validation.
+- `OBJECT_STORAGE_ALLOWED_CONTENT_TYPES`
+  comma-separated whitelist for upload content types.
 
 ## CI
 GitHub Actions workflow:

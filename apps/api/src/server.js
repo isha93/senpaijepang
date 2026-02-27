@@ -178,6 +178,26 @@ async function handleRequest(req, res, authService, kycService, adminApiKey) {
     return;
   }
 
+  if (req.method === 'POST' && url.pathname === '/identity/kyc/upload-url') {
+    const user = await authenticateRequest(req, res, authService);
+    if (!user) {
+      return;
+    }
+
+    const body = await readJsonBody(req);
+    const result = await kycService.createUploadUrl({
+      userId: user.id,
+      sessionId: body.sessionId,
+      documentType: body.documentType,
+      fileName: body.fileName,
+      contentType: body.contentType,
+      contentLength: body.contentLength,
+      checksumSha256: body.checksumSha256
+    });
+    sendJson(res, 201, result);
+    return;
+  }
+
   if (req.method === 'POST' && url.pathname === '/identity/kyc/documents') {
     const user = await authenticateRequest(req, res, authService);
     if (!user) {
@@ -189,7 +209,7 @@ async function handleRequest(req, res, authService, kycService, adminApiKey) {
       userId: user.id,
       sessionId: body.sessionId,
       documentType: body.documentType,
-      fileUrl: body.fileUrl,
+      objectKey: body.objectKey,
       checksumSha256: body.checksumSha256,
       metadata: body.metadata
     });

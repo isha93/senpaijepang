@@ -66,7 +66,7 @@ test('kyc status requires access token', async () => {
   });
 });
 
-test('kyc flow: not started -> create session -> upload document -> history', async () => {
+test('kyc flow: not started -> create session -> pre-sign upload -> submit document -> history', async () => {
   await withServer(async (baseUrl) => {
     const register = await postJson(
       baseUrl,
@@ -95,13 +95,36 @@ test('kyc flow: not started -> create session -> upload document -> history', as
     assert.equal(createSession.body.session.provider, 'sumsub');
     assert.ok(createSession.body.session.id);
 
+    const uploadUrl = await postJson(
+      baseUrl,
+      '/identity/kyc/upload-url',
+      {
+        sessionId: createSession.body.session.id,
+        documentType: 'ktp',
+        fileName: 'ktp-front.jpg',
+        contentType: 'image/jpeg',
+        contentLength: 512000,
+        checksumSha256: EXAMPLE_CHECKSUM
+      },
+      { accessToken }
+    );
+
+    assert.equal(uploadUrl.res.status, 201);
+    assert.equal(uploadUrl.body.status, 'IN_PROGRESS');
+    assert.equal(uploadUrl.body.session.status, 'CREATED');
+    assert.ok(uploadUrl.body.upload.objectKey);
+    assert.match(uploadUrl.body.upload.objectKey, new RegExp(`^kyc/.+/${createSession.body.session.id}/`));
+    assert.equal(uploadUrl.body.upload.method, 'PUT');
+    assert.ok(uploadUrl.body.upload.uploadUrl);
+    assert.equal(uploadUrl.body.upload.headers['Content-Type'], 'image/jpeg');
+
     const uploadDocument = await postJson(
       baseUrl,
       '/identity/kyc/documents',
       {
         sessionId: createSession.body.session.id,
         documentType: 'ktp',
-        fileUrl: 'https://example.com/ktp/front.jpg',
+        objectKey: uploadUrl.body.upload.objectKey,
         checksumSha256: EXAMPLE_CHECKSUM,
         metadata: { side: 'front', country: 'ID' }
       },
@@ -111,7 +134,22 @@ test('kyc flow: not started -> create session -> upload document -> history', as
     assert.equal(uploadDocument.res.status, 201);
     assert.equal(uploadDocument.body.session.status, 'SUBMITTED');
     assert.equal(uploadDocument.body.document.documentType, 'KTP');
+    assert.equal(uploadDocument.body.document.objectKey, uploadUrl.body.upload.objectKey);
     assert.equal(uploadDocument.body.document.checksumSha256, EXAMPLE_CHECKSUM);
+
+    const duplicateUpload = await postJson(
+      baseUrl,
+      '/identity/kyc/documents',
+      {
+        sessionId: createSession.body.session.id,
+        documentType: 'ktp',
+        objectKey: uploadUrl.body.upload.objectKey,
+        checksumSha256: EXAMPLE_CHECKSUM
+      },
+      { accessToken }
+    );
+    assert.equal(duplicateUpload.res.status, 409);
+    assert.equal(duplicateUpload.body.error.code, 'duplicate_document');
 
     const statusAfter = await getJson(baseUrl, '/identity/kyc/status', { accessToken });
     assert.equal(statusAfter.res.status, 200);
@@ -126,6 +164,58 @@ test('kyc flow: not started -> create session -> upload document -> history', as
     assert.equal(history.body.events.length, 2);
     assert.equal(history.body.events[0].toStatus, 'CREATED');
     assert.equal(history.body.events[1].toStatus, 'SUBMITTED');
+  });
+});
+
+test('kyc upload url enforces content type and size constraints', async () => {
+  await withServer(async (baseUrl) => {
+    const register = await postJson(baseUrl, '/auth/register', {
+      fullName: 'KYC Validate',
+      email: 'kyc-validate@example.com',
+      password: 'pass1234'
+    });
+    assert.equal(register.res.status, 201);
+    const accessToken = register.body.accessToken;
+
+    const createSession = await postJson(
+      baseUrl,
+      '/identity/kyc/sessions',
+      { provider: 'manual' },
+      { accessToken }
+    );
+    assert.equal(createSession.res.status, 201);
+
+    const invalidType = await postJson(
+      baseUrl,
+      '/identity/kyc/upload-url',
+      {
+        sessionId: createSession.body.session.id,
+        documentType: 'passport',
+        fileName: 'passport.exe',
+        contentType: 'application/x-msdownload',
+        contentLength: 1024,
+        checksumSha256: EXAMPLE_CHECKSUM
+      },
+      { accessToken }
+    );
+    assert.equal(invalidType.res.status, 400);
+    assert.equal(invalidType.body.error.code, 'invalid_content_type');
+
+    const oversized = await postJson(
+      baseUrl,
+      '/identity/kyc/upload-url',
+      {
+        sessionId: createSession.body.session.id,
+        documentType: 'passport',
+        fileName: 'passport.pdf',
+        contentType: 'application/pdf',
+        contentLength: 11 * 1024 * 1024,
+        checksumSha256: EXAMPLE_CHECKSUM
+      },
+      { accessToken }
+    );
+    assert.equal(oversized.res.status, 400);
+    assert.equal(oversized.body.error.code, 'invalid_content_length');
   });
 });
 

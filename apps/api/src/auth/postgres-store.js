@@ -269,6 +269,28 @@ export class PostgresAuthStore {
     return mapIdentityDocumentRow(result.rows[0]);
   }
 
+  async findIdentityDocumentBySessionAndChecksum({ kycSessionId, checksumSha256 }) {
+    const result = await this.pool.query(
+      `
+        SELECT
+          id,
+          kyc_session_id,
+          document_type,
+          file_url,
+          checksum_sha256,
+          metadata_json,
+          verified_at,
+          created_at
+        FROM identity_documents
+        WHERE kyc_session_id = $1 AND checksum_sha256 = $2
+        LIMIT 1
+      `,
+      [kycSessionId, checksumSha256]
+    );
+
+    return mapIdentityDocumentRow(result.rows[0]);
+  }
+
   async createKycStatusEvent({ kycSessionId, fromStatus, toStatus, actorType, actorId, reason }) {
     const result = await this.pool.query(
       `

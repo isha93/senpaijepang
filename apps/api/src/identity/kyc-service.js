@@ -1,3 +1,5 @@
+import { createInMemoryObjectStorage } from './object-storage.js';
+
 class KycApiError extends Error {
   constructor(status, code, message) {
     super(message);
@@ -42,6 +44,76 @@ function normalizeDocumentType(documentType) {
     throw new KycApiError(400, 'invalid_document_type', 'documentType must be <= 64 characters');
   }
   return normalized;
+}
+
+function normalizeFileName(fileName) {
+  const normalized = String(fileName || '').trim();
+  if (!normalized) {
+    throw new KycApiError(400, 'invalid_file_name', 'fileName is required');
+  }
+  if (normalized.length > 180) {
+    throw new KycApiError(400, 'invalid_file_name', 'fileName must be <= 180 characters');
+  }
+  return normalized;
+}
+
+function normalizeObjectKey(objectKey) {
+  const normalized = String(objectKey || '').trim();
+  if (!normalized) {
+    throw new KycApiError(400, 'invalid_object_key', 'objectKey is required');
+  }
+  if (normalized.length > 1024) {
+    throw new KycApiError(400, 'invalid_object_key', 'objectKey must be <= 1024 characters');
+  }
+  if (normalized.startsWith('/') || normalized.includes('..')) {
+    throw new KycApiError(400, 'invalid_object_key', 'objectKey is invalid');
+  }
+  if (!/^[a-zA-Z0-9/_\-.]+$/.test(normalized)) {
+    throw new KycApiError(400, 'invalid_object_key', 'objectKey contains unsupported characters');
+  }
+  return normalized;
+}
+
+function normalizeContentType(contentType, allowedContentTypes) {
+  const normalized = String(contentType || '')
+    .trim()
+    .toLowerCase();
+  if (!normalized) {
+    throw new KycApiError(400, 'invalid_content_type', 'contentType is required');
+  }
+  if (!allowedContentTypes.has(normalized)) {
+    throw new KycApiError(
+      400,
+      'invalid_content_type',
+      `contentType must be one of: ${Array.from(allowedContentTypes).join(', ')}`
+    );
+  }
+  return normalized;
+}
+
+function normalizeContentLength(contentLength, maxUploadBytes) {
+  const normalized = Number(contentLength);
+  if (!Number.isFinite(normalized) || normalized <= 0) {
+    throw new KycApiError(400, 'invalid_content_length', 'contentLength must be a positive number');
+  }
+  if (normalized > maxUploadBytes) {
+    throw new KycApiError(
+      400,
+      'invalid_content_length',
+      `contentLength must be <= ${maxUploadBytes} bytes`
+    );
+  }
+  return Math.floor(normalized);
+}
+
+function normalizeAllowedContentTypes(rawAllowedTypes) {
+  const fallback = ['image/jpeg', 'image/png', 'application/pdf'];
+  const source = String(rawAllowedTypes || fallback.join(','));
+  const values = source
+    .split(',')
+    .map((value) => value.trim().toLowerCase())
+    .filter(Boolean);
+  return new Set(values.length > 0 ? values : fallback);
 }
 
 function normalizeFileUrl(fileUrl) {
@@ -111,8 +183,11 @@ function normalizeReviewedBy(reviewedBy) {
 }
 
 export class KycService {
-  constructor({ store }) {
+  constructor({ store, objectStorage, maxUploadBytes, allowedContentTypes }) {
     this.store = store;
+    this.objectStorage = objectStorage;
+    this.maxUploadBytes = maxUploadBytes;
+    this.allowedContentTypes = allowedContentTypes;
   }
 
   async startSession({ userId, provider }) {
@@ -152,26 +227,98 @@ export class KycService {
     };
   }
 
-  async uploadDocument({ userId, sessionId, documentType, fileUrl, checksumSha256, metadata }) {
+  async createUploadUrl({
+    userId,
+    sessionId,
+    documentType,
+    fileName,
+    contentType,
+    contentLength,
+    checksumSha256
+  }) {
     const targetSession = await this.resolveUserSession({ userId, sessionId });
     if (!targetSession) {
       throw new KycApiError(404, 'kyc_session_not_found', 'kyc session not found');
     }
-    if (targetSession.status === 'VERIFIED' || targetSession.status === 'REJECTED') {
-      throw new KycApiError(
-        409,
-        'kyc_session_locked',
-        'cannot upload documents for verified or rejected session'
-      );
+    this.assertSessionWritable(targetSession);
+
+    const normalizedDocumentType = normalizeDocumentType(documentType);
+    const normalizedFileName = normalizeFileName(fileName);
+    const normalizedContentType = normalizeContentType(contentType, this.allowedContentTypes);
+    const normalizedContentLength = normalizeContentLength(contentLength, this.maxUploadBytes);
+    const normalizedChecksumSha256 = normalizeChecksumSha256(checksumSha256);
+
+    const objectKey = this.objectStorage.buildObjectKey({
+      userId,
+      sessionId: targetSession.id,
+      documentType: normalizedDocumentType,
+      fileName: normalizedFileName
+    });
+
+    const upload = await this.objectStorage.createUploadUrl({
+      objectKey,
+      contentType: normalizedContentType,
+      contentLength: normalizedContentLength,
+      checksumSha256: normalizedChecksumSha256
+    });
+
+    return {
+      status: mapTrustStatus(targetSession.status),
+      session: this.publicSession(targetSession),
+      upload: {
+        objectKey,
+        uploadUrl: upload.uploadUrl,
+        method: upload.method,
+        headers: upload.headers,
+        expiresAt: upload.expiresAt
+      }
+    };
+  }
+
+  async uploadDocument({ userId, sessionId, documentType, objectKey, checksumSha256, metadata }) {
+    const targetSession = await this.resolveUserSession({ userId, sessionId });
+    if (!targetSession) {
+      throw new KycApiError(404, 'kyc_session_not_found', 'kyc session not found');
+    }
+    this.assertSessionWritable(targetSession);
+
+    const normalizedDocumentType = normalizeDocumentType(documentType);
+    const normalizedObjectKey = normalizeObjectKey(objectKey);
+    const normalizedChecksumSha256 = normalizeChecksumSha256(checksumSha256);
+    const normalizedMetadata = normalizeMetadata(metadata);
+
+    this.assertObjectKeyOwnership({
+      userId,
+      sessionId: targetSession.id,
+      objectKey: normalizedObjectKey
+    });
+
+    const duplicateDocument = await this.store.findIdentityDocumentBySessionAndChecksum({
+      kycSessionId: targetSession.id,
+      checksumSha256: normalizedChecksumSha256
+    });
+    if (duplicateDocument) {
+      throw new KycApiError(409, 'duplicate_document', 'document with same checksum already exists');
     }
 
-    const document = await this.store.createIdentityDocument({
-      kycSessionId: targetSession.id,
-      documentType: normalizeDocumentType(documentType),
-      fileUrl: normalizeFileUrl(fileUrl),
-      checksumSha256: normalizeChecksumSha256(checksumSha256),
-      metadataJson: normalizeMetadata(metadata)
-    });
+    let document;
+    try {
+      document = await this.store.createIdentityDocument({
+        kycSessionId: targetSession.id,
+        documentType: normalizedDocumentType,
+        fileUrl: normalizeFileUrl(this.objectStorage.toFileUrl(normalizedObjectKey)),
+        checksumSha256: normalizedChecksumSha256,
+        metadataJson: {
+          ...normalizedMetadata,
+          objectKey: normalizedObjectKey
+        }
+      });
+    } catch (error) {
+      if (String(error?.code || '') === '23505') {
+        throw new KycApiError(409, 'duplicate_document', 'document with same checksum already exists');
+      }
+      throw error;
+    }
 
     let updatedSession = targetSession;
     const previousStatus = targetSession.status;
@@ -197,6 +344,27 @@ export class KycService {
       session: this.publicSession(updatedSession),
       document: this.publicDocument(document)
     };
+  }
+
+  assertSessionWritable(session) {
+    if (session.status === 'VERIFIED' || session.status === 'REJECTED') {
+      throw new KycApiError(
+        409,
+        'kyc_session_locked',
+        'cannot upload documents for verified or rejected session'
+      );
+    }
+  }
+
+  assertObjectKeyOwnership({ userId, sessionId, objectKey }) {
+    const prefix = `kyc/${userId}/${sessionId}/`;
+    if (!objectKey.startsWith(prefix)) {
+      throw new KycApiError(
+        400,
+        'invalid_object_key',
+        `objectKey must start with '${prefix}' for this session`
+      );
+    }
   }
 
   async reviewSession({ sessionId, decision, reviewedBy, reason }) {
@@ -280,13 +448,15 @@ export class KycService {
   }
 
   publicDocument(document) {
+    const metadata = document.metadataJson || {};
     return {
       id: document.id,
       kycSessionId: document.kycSessionId,
       documentType: document.documentType,
+      objectKey: metadata.objectKey || null,
       fileUrl: document.fileUrl,
       checksumSha256: document.checksumSha256,
-      metadata: document.metadataJson,
+      metadata,
       verifiedAt: document.verifiedAt,
       createdAt: document.createdAt
     };
@@ -306,7 +476,7 @@ export class KycService {
   }
 }
 
-export function createKycService({ store }) {
+export function createKycService({ store, objectStorage, env = process.env } = {}) {
   if (
     !store ||
     typeof store.createKycSession !== 'function' ||
@@ -314,12 +484,33 @@ export function createKycService({ store }) {
     typeof store.findKycSessionById !== 'function' ||
     typeof store.updateKycSessionStatus !== 'function' ||
     typeof store.createIdentityDocument !== 'function' ||
+    typeof store.findIdentityDocumentBySessionAndChecksum !== 'function' ||
     typeof store.createKycStatusEvent !== 'function' ||
     typeof store.listKycStatusEventsBySessionId !== 'function'
   ) {
     throw new Error('KYC store is missing required methods');
   }
-  return new KycService({ store });
+  const resolvedObjectStorage = objectStorage || createInMemoryObjectStorage({ env });
+  if (
+    typeof resolvedObjectStorage.buildObjectKey !== 'function' ||
+    typeof resolvedObjectStorage.createUploadUrl !== 'function' ||
+    typeof resolvedObjectStorage.toFileUrl !== 'function'
+  ) {
+    throw new Error('KYC object storage is missing required methods');
+  }
+
+  const maxUploadBytesRaw = Number(env.OBJECT_STORAGE_MAX_FILE_BYTES || 10 * 1024 * 1024);
+  const maxUploadBytes =
+    Number.isFinite(maxUploadBytesRaw) && maxUploadBytesRaw > 0
+      ? Math.floor(maxUploadBytesRaw)
+      : 10 * 1024 * 1024;
+
+  return new KycService({
+    store,
+    objectStorage: resolvedObjectStorage,
+    maxUploadBytes,
+    allowedContentTypes: normalizeAllowedContentTypes(env.OBJECT_STORAGE_ALLOWED_CONTENT_TYPES)
+  });
 }
 
 export function isKycApiError(error) {

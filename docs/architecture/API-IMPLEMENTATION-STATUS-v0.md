@@ -22,6 +22,7 @@ Auth:
 Identity/KYC:
 - `POST /identity/kyc/sessions`
 - `GET /identity/kyc/status`
+- `POST /identity/kyc/upload-url`
 - `POST /identity/kyc/documents`
 - `GET /identity/kyc/history`
 
@@ -59,9 +60,19 @@ Trust status (API response):
 - Admin review endpoint: shared secret `ADMIN_API_KEY`.
 - Note: `ADMIN_API_KEY` adalah sementara untuk MVP bootstrap; target next step adalah RBAC admin account + scoped permissions.
 
+## 6.1 Current KYC Upload Model
+- API generates pre-signed upload URL via `POST /identity/kyc/upload-url`.
+- Client uploads file directly to object storage (`PUT`).
+- Client confirms metadata via `POST /identity/kyc/documents` with `objectKey`.
+- API enforces:
+  - content type whitelist
+  - max file size guard
+  - SHA256 checksum format + duplicate checksum protection per session
+  - object key ownership prefix (`kyc/{userId}/{sessionId}/`)
+
 ## 7. Known Gaps vs `openapi-v1.yaml`
 - Runtime belum pakai prefix `/v1`.
-- KYC submit endpoint terpisah (`/identity/kyc/sessions/{id}/submit`) belum ada.
+- KYC submit endpoint terpisah (`/identity/kyc/sessions/{id}/submit`) belum ada karena status auto-transisi ke `SUBMITTED` saat dokumen pertama terdaftar.
 - Admin model masih shared key, belum role-based auth.
 - Provider webhook intake belum diimplementasi.
 

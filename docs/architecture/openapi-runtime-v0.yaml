@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: SenpaiJepang API (Runtime v0)
-  version: 0.2.0
+  version: 0.3.0
   description: Runtime API contract implemented in repository as of 2026-02-27.
 servers:
   - url: http://localhost:4000
@@ -159,6 +159,32 @@ paths:
               schema:
                 $ref: '#/components/schemas/KycStatusEnvelope'
         '401':
+          $ref: '#/components/responses/ApiError'
+
+  /identity/kyc/upload-url:
+    post:
+      tags: [Identity]
+      summary: Generate pre-signed upload URL for KYC file
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/KycUploadUrlRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KycUploadUrlResponse'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/ApiError'
+        '404':
+          $ref: '#/components/responses/ApiError'
+        '409':
           $ref: '#/components/responses/ApiError'
 
   /identity/kyc/documents:
@@ -415,9 +441,9 @@ components:
           type: string
           example: manual
 
-    KycDocumentUploadRequest:
+    KycUploadUrlRequest:
       type: object
-      required: [documentType, fileUrl, checksumSha256]
+      required: [documentType, fileName, contentType, contentLength, checksumSha256]
       properties:
         sessionId:
           type: string
@@ -426,9 +452,64 @@ components:
         documentType:
           type: string
           example: KTP
-        fileUrl:
+        fileName:
           type: string
-          description: Must be https:// or s3://
+          example: ktp-front.jpg
+        contentType:
+          type: string
+          example: image/jpeg
+        contentLength:
+          type: integer
+          minimum: 1
+          example: 512000
+        checksumSha256:
+          type: string
+          pattern: '^[a-f0-9]{64}$'
+
+    PresignedUpload:
+      type: object
+      required: [objectKey, uploadUrl, method, headers, expiresAt]
+      properties:
+        objectKey:
+          type: string
+        uploadUrl:
+          type: string
+        method:
+          type: string
+          enum: [PUT]
+        headers:
+          type: object
+          additionalProperties:
+            type: string
+        expiresAt:
+          type: string
+          format: date-time
+
+    KycUploadUrlResponse:
+      type: object
+      required: [status, session, upload]
+      properties:
+        status:
+          $ref: '#/components/schemas/KycTrustStatus'
+        session:
+          $ref: '#/components/schemas/KycSession'
+        upload:
+          $ref: '#/components/schemas/PresignedUpload'
+
+    KycDocumentUploadRequest:
+      type: object
+      required: [documentType, objectKey, checksumSha256]
+      properties:
+        sessionId:
+          type: string
+          format: uuid
+          description: Optional, latest user session used when omitted
+        documentType:
+          type: string
+          example: KTP
+        objectKey:
+          type: string
+          description: Must use owned key prefix kyc/{userId}/{sessionId}/...
         checksumSha256:
           type: string
           pattern: '^[a-f0-9]{64}$'
@@ -448,6 +529,9 @@ components:
           format: uuid
         documentType:
           type: string
+        objectKey:
+          type: string
+          nullable: true
         fileUrl:
           type: string
         checksumSha256:

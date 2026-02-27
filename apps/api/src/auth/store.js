@@ -145,6 +145,17 @@ export class InMemoryAuthStore {
     return document;
   }
 
+  findIdentityDocumentBySessionAndChecksum({ kycSessionId, checksumSha256 }) {
+    const ids = this.identityDocumentIdsBySessionId.get(kycSessionId) || [];
+    for (const id of ids) {
+      const document = this.identityDocumentsById.get(id);
+      if (document && document.checksumSha256 === checksumSha256) {
+        return document;
+      }
+    }
+    return null;
+  }
+
   createKycStatusEvent({ kycSessionId, fromStatus, toStatus, actorType, actorId, reason }) {
     const event = {
       id: randomUUID(),
