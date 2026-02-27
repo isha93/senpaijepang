@@ -18,6 +18,8 @@
     "dev:web-sdm": "npm run dev -w @senpaijepang/web-sdm",
     "dev:dashboard": "npm run dev -w @senpaijepang/dashboard",
     "dev:admin": "npm run dev -w @senpaijepang/admin",
+    "dev:all": "node scripts/dev-all.mjs start",
+    "stop:all": "node scripts/dev-all.mjs stop",
     "deploy:staging": "node scripts/deploy-staging.mjs",
     "migrate:api": "npm run migrate -w @senpaijepang/api",
     "lint": "npm run lint --workspaces --if-present",
@@ -28,7 +30,7 @@
     "check:openapi": "node scripts/openapi-check.mjs",
     "ci:security": "npm run scan:sast && npm run scan:secrets && npm run check:openapi",
     "smoke:local": "bash scripts/smoke-local.sh",
-    "smoke:api": "node scripts/smoke-api-flow.mjs",
+    "smoke:api": "node --env-file-if-exists=.env scripts/smoke-api-flow.mjs",
     "ci": "npm run lint && npm run typecheck && npm run test && npm run ci:security"
   }
 }

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
-const base = String(process.env.SMOKE_BASE_URL || 'http://127.0.0.1:4100').replace(/\/+$/, '');
-const adminKey = String(process.env.SMOKE_ADMIN_KEY || 'smoke-admin-key');
+const base = String(process.env.SMOKE_BASE_URL || 'http://localhost:4000').replace(/\/+$/, '');
+const adminKey = String(process.env.SMOKE_ADMIN_KEY || process.env.ADMIN_API_KEY || 'smoke-admin-key');
 const email = `smoke-${Date.now()}@example.com`;
 
 async function request(path, { method = 'GET', token, body } = {}) {
