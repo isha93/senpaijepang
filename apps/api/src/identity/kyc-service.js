@@ -9,6 +9,7 @@ class KycApiError extends Error {
 }
 
 const KYC_REVIEW_STATUSES = new Set(['MANUAL_REVIEW', 'VERIFIED', 'REJECTED']);
+const KYC_RAW_STATUSES = new Set(['CREATED', 'SUBMITTED', 'MANUAL_REVIEW', 'VERIFIED', 'REJECTED']);
 
 function mapTrustStatus(rawStatus) {
   switch (rawStatus) {
@@ -168,6 +169,38 @@ function normalizeDecision(decision) {
     );
   }
   return normalized;
+}
+
+function normalizeReviewQueueStatus(status) {
+  const normalized = String(status || '')
+    .trim()
+    .toUpperCase();
+  if (!normalized || normalized === 'DEFAULT') {
+    return ['SUBMITTED', 'MANUAL_REVIEW'];
+  }
+  if (normalized === 'ALL') {
+    return [];
+  }
+  if (!KYC_RAW_STATUSES.has(normalized)) {
+    throw new KycApiError(
+      400,
+      'invalid_status_filter',
+      'status filter must be one of ALL, SUBMITTED, MANUAL_REVIEW, VERIFIED, REJECTED, CREATED'
+    );
+  }
+  return [normalized];
+}
+
+function normalizeQueueLimit(limit) {
+  const fallback = 25;
+  if (limit === undefined || limit === null || String(limit).trim() === '') {
+    return fallback;
+  }
+  const normalized = Number(limit);
+  if (!Number.isFinite(normalized) || normalized < 1 || normalized > 100) {
+    throw new KycApiError(400, 'invalid_limit', 'limit must be between 1 and 100');
+  }
+  return Math.floor(normalized);
 }
 
 function normalizeReviewedBy(reviewedBy) {
@@ -422,6 +455,77 @@ export class KycService {
     };
   }
 
+  async listReviewQueue({ status, limit }) {
+    const statuses = normalizeReviewQueueStatus(status);
+    const queueLimit = normalizeQueueLimit(limit);
+    const sessions = await this.store.listKycSessionsByStatuses({
+      statuses,
+      limit: queueLimit
+    });
+
+    const items = await Promise.all(
+      sessions.map(async (session) => {
+        const [user, documents, events] = await Promise.all([
+          this.store.findUserById(session.userId),
+          this.store.listIdentityDocumentsBySessionId(session.id),
+          this.store.listKycStatusEventsBySessionId(session.id)
+        ]);
+
+        const lastEvent = events.length > 0 ? events[events.length - 1] : null;
+        return {
+          session: this.publicSession(session),
+          trustStatus: mapTrustStatus(session.status),
+          user: user
+            ? {
+                id: user.id,
+                fullName: user.fullName,
+                email: user.email
+              }
+            : null,
+          documents: documents.map((document) => this.publicDocument(document)),
+          documentCount: documents.length,
+          events: events.map((event) => this.publicEvent(event)),
+          lastEvent: lastEvent ? this.publicEvent(lastEvent) : null,
+          riskFlags: this.buildRiskFlags({ session, documents })
+        };
+      })
+    );
+
+    return {
+      count: items.length,
+      filters: {
+        status: statuses
+      },
+      items
+    };
+  }
+
+  buildRiskFlags({ session, documents }) {
+    const flags = [];
+    if (documents.length === 0) {
+      flags.push('NO_DOCUMENTS');
+    }
+    if (documents.length > 5) {
+      flags.push('HIGH_DOCUMENT_COUNT');
+    }
+    const duplicateObjectKeys = new Set();
+    for (const document of documents) {
+      const objectKey = document?.metadataJson?.objectKey;
+      if (!objectKey) {
+        flags.push('MISSING_OBJECT_KEY');
+        continue;
+      }
+      if (duplicateObjectKeys.has(objectKey)) {
+        flags.push('DUPLICATE_OBJECT_KEY');
+      }
+      duplicateObjectKeys.add(objectKey);
+    }
+    if (session.status === 'CREATED' && documents.length > 0) {
+      flags.push('INCONSISTENT_SESSION_STATUS');
+    }
+    return Array.from(new Set(flags));
+  }
+
   async resolveUserSession({ userId, sessionId }) {
     const normalizedSessionId = String(sessionId || '').trim();
     if (normalizedSessionId) {
@@ -479,12 +583,15 @@ export class KycService {
 export function createKycService({ store, objectStorage, env = process.env } = {}) {
   if (
     !store ||
+    typeof store.findUserById !== 'function' ||
     typeof store.createKycSession !== 'function' ||
     typeof store.findLatestKycSessionByUserId !== 'function' ||
     typeof store.findKycSessionById !== 'function' ||
     typeof store.updateKycSessionStatus !== 'function' ||
+    typeof store.listKycSessionsByStatuses !== 'function' ||
     typeof store.createIdentityDocument !== 'function' ||
     typeof store.findIdentityDocumentBySessionAndChecksum !== 'function' ||
+    typeof store.listIdentityDocumentsBySessionId !== 'function' ||
     typeof store.createKycStatusEvent !== 'function' ||
     typeof store.listKycStatusEventsBySessionId !== 'function'
   ) {

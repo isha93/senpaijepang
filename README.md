@@ -65,6 +65,9 @@ KYC upload sequence:
 - `POST /admin/kyc/review`
   header: `x-admin-api-key: <ADMIN_API_KEY>`
   body: `{ "sessionId": "uuid", "decision": "MANUAL_REVIEW|VERIFIED|REJECTED", "reviewedBy": "ops@...", "reason"?: "..." }`
+- `GET /admin/kyc/review-queue?status=DEFAULT|ALL|SUBMITTED|MANUAL_REVIEW|VERIFIED|REJECTED|CREATED&limit=1..100`
+  header: `x-admin-api-key: <ADMIN_API_KEY>`
+  returns queue items with user summary, document list, risk flags, and status events.
 
 ## Visual Overview
 ### 1) System Context

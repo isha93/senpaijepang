@@ -341,4 +341,49 @@ export class PostgresAuthStore {
 
     return result.rows.map((row) => mapKycStatusEventRow(row));
   }
+
+  async listKycSessionsByStatuses({ statuses, limit }) {
+    const normalizedStatuses = Array.isArray(statuses) ? statuses.filter(Boolean) : [];
+    const query = `
+      SELECT
+        id,
+        user_id,
+        status,
+        provider,
+        submitted_at,
+        reviewed_by,
+        reviewed_at,
+        created_at,
+        updated_at
+      FROM kyc_sessions
+      WHERE ($1::text[] IS NULL OR status = ANY($1::text[]))
+      ORDER BY COALESCE(submitted_at, created_at) DESC
+      LIMIT $2
+    `;
+
+    const params = [normalizedStatuses.length > 0 ? normalizedStatuses : null, limit];
+    const result = await this.pool.query(query, params);
+    return result.rows.map((row) => mapKycSessionRow(row));
+  }
+
+  async listIdentityDocumentsBySessionId(kycSessionId) {
+    const result = await this.pool.query(
+      `
+        SELECT
+          id,
+          kyc_session_id,
+          document_type,
+          file_url,
+          checksum_sha256,
+          metadata_json,
+          verified_at,
+          created_at
+        FROM identity_documents
+        WHERE kyc_session_id = $1
+        ORDER BY created_at ASC
+      `,
+      [kycSessionId]
+    );
+    return result.rows.map((row) => mapIdentityDocumentRow(row));
+  }
 }

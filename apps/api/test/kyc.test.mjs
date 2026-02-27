@@ -296,6 +296,81 @@ test('admin review endpoint requires api key and updates status', async () => {
   );
 });
 
+test('admin review queue returns submitted sessions with documents', async () => {
+  await withServer(
+    async (baseUrl) => {
+      const register = await postJson(baseUrl, '/auth/register', {
+        fullName: 'Queue User',
+        email: 'queue@example.com',
+        password: 'pass1234'
+      });
+      assert.equal(register.res.status, 201);
+      const accessToken = register.body.accessToken;
+
+      const createSession = await postJson(
+        baseUrl,
+        '/identity/kyc/sessions',
+        { provider: 'sumsub' },
+        { accessToken }
+      );
+      assert.equal(createSession.res.status, 201);
+      const sessionId = createSession.body.session.id;
+
+      const uploadUrl = await postJson(
+        baseUrl,
+        '/identity/kyc/upload-url',
+        {
+          sessionId,
+          documentType: 'passport',
+          fileName: 'passport.pdf',
+          contentType: 'application/pdf',
+          contentLength: 420000,
+          checksumSha256: EXAMPLE_CHECKSUM
+        },
+        { accessToken }
+      );
+      assert.equal(uploadUrl.res.status, 201);
+
+      const uploadDocument = await postJson(
+        baseUrl,
+        '/identity/kyc/documents',
+        {
+          sessionId,
+          documentType: 'passport',
+          objectKey: uploadUrl.body.upload.objectKey,
+          checksumSha256: EXAMPLE_CHECKSUM,
+          metadata: { page: 'bio' }
+        },
+        { accessToken }
+      );
+      assert.equal(uploadDocument.res.status, 201);
+      assert.equal(uploadDocument.body.session.status, 'SUBMITTED');
+
+      const missingKey = await getJson(baseUrl, '/admin/kyc/review-queue');
+      assert.equal(missingKey.res.status, 401);
+      assert.equal(missingKey.body.error.code, 'missing_admin_api_key');
+
+      const queue = await getJson(baseUrl, '/admin/kyc/review-queue?status=SUBMITTED&limit=10', {
+        headers: { 'x-admin-api-key': TEST_ADMIN_API_KEY }
+      });
+      assert.equal(queue.res.status, 200);
+      assert.equal(queue.body.count, 1);
+      assert.equal(queue.body.items[0].session.id, sessionId);
+      assert.equal(queue.body.items[0].session.status, 'SUBMITTED');
+      assert.equal(queue.body.items[0].user.email, 'queue@example.com');
+      assert.equal(queue.body.items[0].documentCount, 1);
+      assert.equal(queue.body.items[0].documents[0].objectKey, uploadUrl.body.upload.objectKey);
+
+      const invalidStatus = await getJson(baseUrl, '/admin/kyc/review-queue?status=NOT_VALID', {
+        headers: { 'x-admin-api-key': TEST_ADMIN_API_KEY }
+      });
+      assert.equal(invalidStatus.res.status, 400);
+      assert.equal(invalidStatus.body.error.code, 'invalid_status_filter');
+    },
+    { adminApiKey: TEST_ADMIN_API_KEY }
+  );
+});
+
 test('admin review endpoint disabled when ADMIN_API_KEY is not configured', async () => {
   await withServer(async (baseUrl) => {
     const reviewed = await postJson(baseUrl, '/admin/kyc/review', {

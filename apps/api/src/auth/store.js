@@ -181,4 +181,25 @@ export class InMemoryAuthStore {
       .map((id) => this.kycStatusEventsById.get(id))
       .filter(Boolean);
   }
+
+  listKycSessionsByStatuses({ statuses, limit }) {
+    const allowed = new Set((statuses || []).filter(Boolean));
+    const sessions = Array.from(this.kycSessionsById.values())
+      .filter((session) => (allowed.size === 0 ? true : allowed.has(session.status)))
+      .sort((left, right) => {
+        const leftTime = Date.parse(left.submittedAt || left.createdAt || 0);
+        const rightTime = Date.parse(right.submittedAt || right.createdAt || 0);
+        return rightTime - leftTime;
+      });
+
+    return sessions.slice(0, limit);
+  }
+
+  listIdentityDocumentsBySessionId(kycSessionId) {
+    const ids = this.identityDocumentIdsBySessionId.get(kycSessionId) || [];
+    return ids
+      .map((id) => this.identityDocumentsById.get(id))
+      .filter(Boolean)
+      .sort((left, right) => Date.parse(left.createdAt) - Date.parse(right.createdAt));
+  }
 }

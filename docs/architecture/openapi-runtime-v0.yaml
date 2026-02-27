@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: SenpaiJepang API (Runtime v0)
-  version: 0.3.0
+  version: 0.4.0
   description: Runtime API contract implemented in repository as of 2026-02-27.
 servers:
   - url: http://localhost:4000
@@ -262,6 +262,42 @@ paths:
         '403':
           $ref: '#/components/responses/ApiError'
         '404':
+          $ref: '#/components/responses/ApiError'
+        '503':
+          $ref: '#/components/responses/ApiError'
+
+  /admin/kyc/review-queue:
+    get:
+      tags: [Admin]
+      summary: Get KYC review queue for ops/admin
+      security:
+        - adminApiKeyAuth: []
+      parameters:
+        - in: query
+          name: status
+          required: false
+          schema:
+            type: string
+            enum: [DEFAULT, ALL, SUBMITTED, MANUAL_REVIEW, VERIFIED, REJECTED, CREATED]
+        - in: query
+          name: limit
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminKycReviewQueueResponse'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/ApiError'
+        '403':
           $ref: '#/components/responses/ApiError'
         '503':
           $ref: '#/components/responses/ApiError'
@@ -614,3 +650,60 @@ components:
           type: string
         reason:
           type: string
+
+    AdminKycReviewQueueItem:
+      type: object
+      required: [session, trustStatus, documentCount, documents, events, riskFlags]
+      properties:
+        session:
+          $ref: '#/components/schemas/KycSession'
+        trustStatus:
+          $ref: '#/components/schemas/KycTrustStatus'
+        user:
+          type: object
+          nullable: true
+          properties:
+            id:
+              type: string
+              format: uuid
+            fullName:
+              type: string
+            email:
+              type: string
+        documents:
+          type: array
+          items:
+            $ref: '#/components/schemas/KycDocument'
+        events:
+          type: array
+          items:
+            $ref: '#/components/schemas/KycStatusEvent'
+        lastEvent:
+          allOf:
+            - $ref: '#/components/schemas/KycStatusEvent'
+          nullable: true
+        documentCount:
+          type: integer
+        riskFlags:
+          type: array
+          items:
+            type: string
+
+    AdminKycReviewQueueResponse:
+      type: object
+      required: [count, filters, items]
+      properties:
+        count:
+          type: integer
+        filters:
+          type: object
+          required: [status]
+          properties:
+            status:
+              type: array
+              items:
+                $ref: '#/components/schemas/KycRawStatus'
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdminKycReviewQueueItem'

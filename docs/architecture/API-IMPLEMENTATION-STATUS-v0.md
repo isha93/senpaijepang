@@ -28,6 +28,7 @@ Identity/KYC:
 
 Admin:
 - `POST /admin/kyc/review` (shared key header `x-admin-api-key`)
+- `GET /admin/kyc/review-queue` (status/limit filter, shared key header `x-admin-api-key`)
 
 ## 4. Implemented Data Model (Migration-backed)
 - `001_auth_tables.sql`:
@@ -59,6 +60,7 @@ Trust status (API response):
 - User endpoints: Bearer access token.
 - Admin review endpoint: shared secret `ADMIN_API_KEY`.
 - Note: `ADMIN_API_KEY` adalah sementara untuk MVP bootstrap; target next step adalah RBAC admin account + scoped permissions.
+- Development CORS headers are enabled for web dashboard integration (`GET/POST/OPTIONS`, headers include `Authorization` and `x-admin-api-key`).
 
 ## 6.1 Current KYC Upload Model
 - API generates pre-signed upload URL via `POST /identity/kyc/upload-url`.

@@ -4,14 +4,27 @@ import { InMemoryAuthStore } from './auth/store.js';
 import { createKycService, isKycApiError } from './identity/kyc-service.js';
 
 const JSON_HEADERS = { 'Content-Type': 'application/json' };
+const CORS_HEADERS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-admin-api-key',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS'
+};
 
 function sendJson(res, status, payload) {
-  res.writeHead(status, JSON_HEADERS);
+  res.writeHead(status, {
+    ...JSON_HEADERS,
+    ...CORS_HEADERS
+  });
   res.end(JSON.stringify(payload));
 }
 
 function sendNoContent(res) {
-  res.writeHead(204);
+  res.writeHead(204, CORS_HEADERS);
+  res.end();
+}
+
+function sendOptionsResponse(res) {
+  res.writeHead(204, CORS_HEADERS);
   res.end();
 }
 
@@ -108,6 +121,11 @@ function authenticateAdminRequest(req, res, adminApiKey) {
 
 async function handleRequest(req, res, authService, kycService, adminApiKey) {
   const url = new URL(req.url || '/', 'http://localhost');
+
+  if (req.method === 'OPTIONS') {
+    sendOptionsResponse(res);
+    return;
+  }
 
   if (req.method === 'GET' && url.pathname === '/health') {
     sendJson(res, 200, { status: 'ok', service: 'api', version: '0.1.0' });
@@ -229,6 +247,22 @@ async function handleRequest(req, res, authService, kycService, adminApiKey) {
       sessionId
     });
     sendJson(res, 200, history);
+    return;
+  }
+
+  if (req.method === 'GET' && url.pathname === '/admin/kyc/review-queue') {
+    const authorized = authenticateAdminRequest(req, res, adminApiKey);
+    if (!authorized) {
+      return;
+    }
+
+    const status = url.searchParams.get('status') || undefined;
+    const limit = url.searchParams.get('limit') || undefined;
+    const result = await kycService.listReviewQueue({
+      status,
+      limit
+    });
+    sendJson(res, 200, result);
     return;
   }
 
