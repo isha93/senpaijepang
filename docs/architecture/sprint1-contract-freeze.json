@@ -16,6 +16,7 @@
     "/auth/logout",
     "/auth/me",
     "/identity/kyc/sessions",
+    "/identity/kyc/sessions/{sessionId}/submit",
     "/identity/kyc/status",
     "/identity/kyc/upload-url",
     "/identity/kyc/documents",

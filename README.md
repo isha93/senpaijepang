@@ -48,6 +48,9 @@ Implemented now:
 - `POST /identity/kyc/sessions`
   header: `Authorization: Bearer <accessToken>`
   body: `{ "provider": "manual|sumsub|..." }` (`provider` optional, default `manual`)
+- `POST /identity/kyc/sessions/{sessionId}/submit`
+  header: `Authorization: Bearer <accessToken>`
+  submit uploaded KYC documents for review.
 - `GET /identity/kyc/status`
   header: `Authorization: Bearer <accessToken>`
   response status enum: `NOT_STARTED | IN_PROGRESS | MANUAL_REVIEW | VERIFIED | REJECTED`
@@ -65,6 +68,7 @@ KYC upload sequence:
 1. call `POST /identity/kyc/upload-url`
 2. upload file with returned `uploadUrl` + required headers
 3. call `POST /identity/kyc/documents` with `objectKey`
+4. call `POST /identity/kyc/sessions/{sessionId}/submit`
 
 ## Admin KYC Endpoint (Current)
 - `POST /admin/kyc/review`
@@ -390,4 +394,5 @@ Fallback tracking is Trello:
   - staging bootstrap command
 - Sprint 1 API baseline active:
   - auth + KYC + admin review queue
+  - explicit KYC submit endpoint (`/identity/kyc/sessions/{sessionId}/submit`)
   - KYC audit trail status transitions

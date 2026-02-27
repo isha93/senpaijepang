@@ -66,7 +66,7 @@ test('kyc status requires access token', async () => {
   });
 });
 
-test('kyc flow: not started -> create session -> pre-sign upload -> submit document -> history', async () => {
+test('kyc flow: not started -> create session -> upload document -> submit session -> history', async () => {
   await withServer(async (baseUrl) => {
     const register = await postJson(
       baseUrl,
@@ -132,7 +132,7 @@ test('kyc flow: not started -> create session -> pre-sign upload -> submit docum
     );
 
     assert.equal(uploadDocument.res.status, 201);
-    assert.equal(uploadDocument.body.session.status, 'SUBMITTED');
+    assert.equal(uploadDocument.body.session.status, 'CREATED');
     assert.equal(uploadDocument.body.document.documentType, 'KTP');
     assert.equal(uploadDocument.body.document.objectKey, uploadUrl.body.upload.objectKey);
     assert.equal(uploadDocument.body.document.checksumSha256, EXAMPLE_CHECKSUM);
@@ -151,6 +151,15 @@ test('kyc flow: not started -> create session -> pre-sign upload -> submit docum
     assert.equal(duplicateUpload.res.status, 409);
     assert.equal(duplicateUpload.body.error.code, 'duplicate_document');
 
+    const submitSession = await postJson(
+      baseUrl,
+      `/identity/kyc/sessions/${createSession.body.session.id}/submit`,
+      {},
+      { accessToken }
+    );
+    assert.equal(submitSession.res.status, 200);
+    assert.equal(submitSession.body.session.status, 'SUBMITTED');
+
     const statusAfter = await getJson(baseUrl, '/identity/kyc/status', { accessToken });
     assert.equal(statusAfter.res.status, 200);
     assert.equal(statusAfter.body.status, 'IN_PROGRESS');
@@ -160,6 +169,86 @@ test('kyc flow: not started -> create session -> pre-sign upload -> submit docum
       accessToken
     });
 
+    assert.equal(history.res.status, 200);
+    assert.equal(history.body.events.length, 2);
+    assert.equal(history.body.events[0].toStatus, 'CREATED');
+    assert.equal(history.body.events[1].toStatus, 'SUBMITTED');
+  });
+});
+
+test('kyc submit requires uploaded document and is idempotent', async () => {
+  await withServer(async (baseUrl) => {
+    const register = await postJson(baseUrl, '/auth/register', {
+      fullName: 'KYC Submit User',
+      email: 'kyc-submit@example.com',
+      password: 'pass1234'
+    });
+    assert.equal(register.res.status, 201);
+    const accessToken = register.body.accessToken;
+
+    const createSession = await postJson(
+      baseUrl,
+      '/identity/kyc/sessions',
+      { provider: 'manual' },
+      { accessToken }
+    );
+    assert.equal(createSession.res.status, 201);
+    const sessionId = createSession.body.session.id;
+
+    const submitWithoutDocument = await postJson(
+      baseUrl,
+      `/identity/kyc/sessions/${sessionId}/submit`,
+      {},
+      { accessToken }
+    );
+    assert.equal(submitWithoutDocument.res.status, 409);
+    assert.equal(submitWithoutDocument.body.error.code, 'kyc_session_incomplete');
+
+    const uploadUrl = await postJson(
+      baseUrl,
+      '/identity/kyc/upload-url',
+      {
+        sessionId,
+        documentType: 'passport',
+        fileName: 'passport.pdf',
+        contentType: 'application/pdf',
+        contentLength: 420000,
+        checksumSha256: EXAMPLE_CHECKSUM
+      },
+      { accessToken }
+    );
+    assert.equal(uploadUrl.res.status, 201);
+
+    const uploadDocument = await postJson(
+      baseUrl,
+      '/identity/kyc/documents',
+      {
+        sessionId,
+        documentType: 'passport',
+        objectKey: uploadUrl.body.upload.objectKey,
+        checksumSha256: EXAMPLE_CHECKSUM
+      },
+      { accessToken }
+    );
+    assert.equal(uploadDocument.res.status, 201);
+    assert.equal(uploadDocument.body.session.status, 'CREATED');
+
+    const submit = await postJson(baseUrl, `/identity/kyc/sessions/${sessionId}/submit`, {}, { accessToken });
+    assert.equal(submit.res.status, 200);
+    assert.equal(submit.body.session.status, 'SUBMITTED');
+
+    const submitAgain = await postJson(
+      baseUrl,
+      `/identity/kyc/sessions/${sessionId}/submit`,
+      {},
+      { accessToken }
+    );
+    assert.equal(submitAgain.res.status, 200);
+    assert.equal(submitAgain.body.session.status, 'SUBMITTED');
+
+    const history = await getJson(baseUrl, `/identity/kyc/history?sessionId=${sessionId}`, {
+      accessToken
+    });
     assert.equal(history.res.status, 200);
     assert.equal(history.body.events.length, 2);
     assert.equal(history.body.events[0].toStatus, 'CREATED');
@@ -344,7 +433,11 @@ test('admin review queue returns submitted sessions with documents', async () =>
         { accessToken }
       );
       assert.equal(uploadDocument.res.status, 201);
-      assert.equal(uploadDocument.body.session.status, 'SUBMITTED');
+      assert.equal(uploadDocument.body.session.status, 'CREATED');
+
+      const submit = await postJson(baseUrl, `/identity/kyc/sessions/${sessionId}/submit`, {}, { accessToken });
+      assert.equal(submit.res.status, 200);
+      assert.equal(submit.body.session.status, 'SUBMITTED');
 
       const missingKey = await getJson(baseUrl, '/admin/kyc/review-queue');
       assert.equal(missingKey.res.status, 401);

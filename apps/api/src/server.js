@@ -44,6 +44,11 @@ function getAdminApiKeyHeader(req) {
   return String(req.headers['x-admin-api-key'] || '').trim();
 }
 
+function matchKycSubmitRoute(pathname) {
+  const match = String(pathname || '').match(/^\/identity\/kyc\/sessions\/([^/]+)\/submit$/);
+  return match ? match[1] : null;
+}
+
 async function readJsonBody(req) {
   return new Promise((resolve, reject) => {
     let raw = '';
@@ -241,6 +246,21 @@ async function handleRequest(req, res, authService, kycService, adminApiKey, met
       metadata: body.metadata
     });
     sendJson(res, 201, result);
+    return;
+  }
+
+  const submitSessionId = req.method === 'POST' ? matchKycSubmitRoute(url.pathname) : null;
+  if (req.method === 'POST' && submitSessionId) {
+    const user = await authenticateRequest(req, res, authService);
+    if (!user) {
+      return;
+    }
+
+    const result = await kycService.submitSession({
+      userId: user.id,
+      sessionId: submitSessionId
+    });
+    sendJson(res, 200, result);
     return;
   }
 

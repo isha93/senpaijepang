@@ -362,30 +362,67 @@ export class KycService {
       throw error;
     }
 
-    let updatedSession = targetSession;
-    const previousStatus = targetSession.status;
-    if (previousStatus === 'CREATED') {
-      updatedSession = await this.store.updateKycSessionStatus({
-        sessionId: targetSession.id,
-        status: 'SUBMITTED',
-        submittedAt: new Date().toISOString()
-      });
+    return {
+      status: mapTrustStatus(targetSession.status),
+      session: this.publicSession(targetSession),
+      document: this.publicDocument(document)
+    };
+  }
 
-      const event = await this.store.createKycStatusEvent({
-        kycSessionId: targetSession.id,
-        fromStatus: previousStatus,
-        toStatus: updatedSession.status,
-        actorType: 'USER',
-        actorId: userId,
-        reason: 'document_uploaded'
-      });
-      this.logKycStatusTransition(event);
+  async submitSession({ userId, sessionId }) {
+    const normalizedSessionId = String(sessionId || '').trim();
+    if (!normalizedSessionId) {
+      throw new KycApiError(400, 'invalid_session_id', 'sessionId is required');
     }
+
+    const targetSession = await this.resolveUserSession({ userId, sessionId: normalizedSessionId });
+    if (!targetSession) {
+      throw new KycApiError(404, 'kyc_session_not_found', 'kyc session not found');
+    }
+
+    if (targetSession.status === 'VERIFIED' || targetSession.status === 'REJECTED') {
+      throw new KycApiError(
+        409,
+        'kyc_session_locked',
+        'cannot submit kyc session in verified or rejected state'
+      );
+    }
+
+    if (targetSession.status === 'SUBMITTED' || targetSession.status === 'MANUAL_REVIEW') {
+      return {
+        status: mapTrustStatus(targetSession.status),
+        session: this.publicSession(targetSession)
+      };
+    }
+
+    const documents = await this.store.listIdentityDocumentsBySessionId(targetSession.id);
+    if (documents.length === 0) {
+      throw new KycApiError(
+        409,
+        'kyc_session_incomplete',
+        'cannot submit kyc session without at least one document'
+      );
+    }
+
+    const updatedSession = await this.store.updateKycSessionStatus({
+      sessionId: targetSession.id,
+      status: 'SUBMITTED',
+      submittedAt: targetSession.submittedAt || new Date().toISOString()
+    });
+
+    const event = await this.store.createKycStatusEvent({
+      kycSessionId: targetSession.id,
+      fromStatus: targetSession.status,
+      toStatus: updatedSession.status,
+      actorType: 'USER',
+      actorId: userId,
+      reason: 'session_submitted'
+    });
+    this.logKycStatusTransition(event);
 
     return {
       status: mapTrustStatus(updatedSession.status),
-      session: this.publicSession(updatedSession),
-      document: this.publicDocument(document)
+      session: this.publicSession(updatedSession)
     };
   }
 
@@ -532,7 +569,7 @@ export class KycService {
       duplicateObjectKeys.add(objectKey);
     }
     if (session.status === 'CREATED' && documents.length > 0) {
-      flags.push('INCONSISTENT_SESSION_STATUS');
+      flags.push('PENDING_SUBMISSION');
     }
     return Array.from(new Set(flags));
   }

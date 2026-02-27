@@ -11,7 +11,7 @@ Delivered baseline in repository:
   - staging bootstrap command (`npm run deploy:staging`)
 - Sprint 1 partial:
   - auth flow (`register`, `login`, `refresh`, `logout`, `me`)
-  - KYC session flow (`create`, `status`)
+  - KYC session flow (`create`, `submit`, `status`)
   - KYC document metadata ingestion
   - admin review endpoint with audit trail events
   - migration files for auth and KYC (`001`, `002`, `003`)

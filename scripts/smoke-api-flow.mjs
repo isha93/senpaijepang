@@ -99,7 +99,16 @@ async function main() {
     }
   });
   assert(uploadDocument.res.status === 201, `documents status ${uploadDocument.res.status}`);
-  assert(uploadDocument.json?.session?.status === 'SUBMITTED', 'expected SUBMITTED');
+  assert(uploadDocument.json?.session?.status === 'CREATED', 'expected CREATED after document upload');
+
+  step('POST /identity/kyc/sessions/{sessionId}/submit');
+  const submit = await request(`/identity/kyc/sessions/${sessionId}/submit`, {
+    method: 'POST',
+    token: accessToken,
+    body: {}
+  });
+  assert(submit.res.status === 200, `submit status ${submit.res.status}`);
+  assert(submit.json?.session?.status === 'SUBMITTED', 'expected SUBMITTED');
 
   step('GET /admin/kyc/review-queue');
   const queue = await request('/admin/kyc/review-queue?status=SUBMITTED&limit=10');
