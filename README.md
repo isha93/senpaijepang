@@ -269,8 +269,10 @@ Recommended reading order:
 1. `docs/architecture/ARCHITECTURE-HLD-LLD-v1.md`
 2. `docs/architecture/SCALABLE-QUALITY-BUSINESS-PLAN-v1.md`
 3. `docs/architecture/MVP-SPRINT-PLAN-v1.md`
-4. `docs/architecture/erd-v1.dbml`
-5. `docs/architecture/openapi-v1.yaml`
+4. `docs/architecture/API-IMPLEMENTATION-STATUS-v0.md`
+5. `docs/architecture/openapi-runtime-v0.yaml`
+6. `docs/architecture/erd-v1.dbml`
+7. `docs/architecture/openapi-v1.yaml`
 
 ## Delivery Tracking
 Primary tracking is ClickUp:
@@ -300,4 +302,6 @@ Fallback tracking is Trello:
 - Repo initialized and pushed to `main`.
 - Workspace scaffolding done.
 - Local infra compose file available.
-- API health endpoint test passing.
+- Auth skeleton and KYC skeleton endpoints implemented.
+- KYC audit trail events implemented for status transitions.
+- API tests passing on CI baseline.

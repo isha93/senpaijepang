@@ -1,5 +1,19 @@
 # SenpaiJepang - System Architecture Plan v1.0
 
+## 0. Current Implementation Snapshot (2026-02-27)
+- API runtime already includes:
+  - auth session flow (`register`, `login`, `refresh`, `logout`, `me`)
+  - KYC session create/status
+  - KYC document ingestion metadata
+  - Admin KYC review action
+  - KYC status event audit history
+- Implemented migration baseline:
+  - `001_auth_tables.sql`
+  - `002_kyc_tables.sql`
+  - `003_kyc_status_events.sql`
+- Runtime contract is documented in `openapi-runtime-v0.yaml`.
+- Product target contract remains `openapi-v1.yaml`.
+
 ## 1. Scope and Objective
 - Build a trust-first migration platform for Indonesia to Japan.
 - Deliver MVP 1.0 with anti-fraud core: identity verification, legal entity verification, safe matching, evidence/reporting.
@@ -188,10 +202,11 @@ erDiagram
 ```
 
 ## 9. API Contract Strategy
-- OpenAPI contract in `openapi-v1.yaml`.
+- Runtime contract in `openapi-runtime-v0.yaml`.
+- Target contract in `openapi-v1.yaml`.
 - REST JSON for external/client APIs.
 - Internal async events for side effects and SLA workflows.
-- Versioning policy: `/v1` path version.
+- Versioning policy target: `/v1` path version.
 
 ### 9.1 API Domains
 - Auth: register/login/refresh/logout/MFA.

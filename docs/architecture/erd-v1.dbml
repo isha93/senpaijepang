@@ -148,7 +148,7 @@ Table kyc_sessions {
   provider varchar(50) [not null]
   status varchar(40) [not null]
   submitted_at timestamptz
-  reviewed_by uuid
+  reviewed_by varchar(128)
   reviewed_at timestamptz
   created_at timestamptz [not null]
   updated_at timestamptz [not null]
@@ -158,10 +158,30 @@ Table identity_documents {
   id uuid [pk]
   kyc_session_id uuid [not null]
   document_type varchar(40) [not null]
-  object_key varchar(255) [not null]
-  checksum varchar(128)
+  file_url varchar(1024) [not null]
+  checksum_sha256 varchar(64) [not null]
   metadata_json jsonb
+  verified_at timestamptz
   created_at timestamptz [not null]
+
+  indexes {
+    (kyc_session_id, checksum_sha256) [unique]
+  }
+}
+
+Table kyc_status_events {
+  id uuid [pk]
+  kyc_session_id uuid [not null]
+  from_status varchar(40)
+  to_status varchar(40) [not null]
+  actor_type varchar(20) [not null]
+  actor_id varchar(128)
+  reason text
+  created_at timestamptz [not null]
+
+  indexes {
+    (kyc_session_id, created_at)
+  }
 }
 
 Table kyc_results {
@@ -393,8 +413,8 @@ Ref: org_members.org_id > organizations.id
 Ref: org_members.user_id > users.id
 
 Ref: kyc_sessions.user_id > users.id
-Ref: kyc_sessions.reviewed_by > users.id
 Ref: identity_documents.kyc_session_id > kyc_sessions.id
+Ref: kyc_status_events.kyc_session_id > kyc_sessions.id
 Ref: kyc_results.kyc_session_id > kyc_sessions.id
 
 Ref: tsk_registry_entities.snapshot_id > tsk_registry_snapshots.id

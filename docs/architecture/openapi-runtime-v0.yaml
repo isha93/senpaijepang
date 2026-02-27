@@ -1,0 +1,532 @@
+openapi: 3.0.3
+info:
+  title: SenpaiJepang API (Runtime v0)
+  version: 0.2.0
+  description: Runtime API contract implemented in repository as of 2026-02-27.
+servers:
+  - url: http://localhost:4000
+    description: Local development
+security:
+  - bearerAuth: []
+tags:
+  - name: Health
+  - name: Auth
+  - name: Identity
+  - name: Admin
+paths:
+  /health:
+    get:
+      tags: [Health]
+      summary: Health check
+      security: []
+      responses:
+        '200':
+          description: Service healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Register user
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '409':
+          $ref: '#/components/responses/ApiError'
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Login user
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          $ref: '#/components/responses/ApiError'
+
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Rotate refresh session and issue new tokens
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          $ref: '#/components/responses/ApiError'
+
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: Revoke refresh session
+      security: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LogoutRequest'
+      responses:
+        '204':
+          description: No Content
+
+  /auth/me:
+    get:
+      tags: [Auth]
+      summary: Get current authenticated user
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [user]
+                properties:
+                  user:
+                    $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/ApiError'
+
+  /identity/kyc/sessions:
+    post:
+      tags: [Identity]
+      summary: Start KYC session
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/KycCreateSessionRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KycSessionEnvelope'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/ApiError'
+
+  /identity/kyc/status:
+    get:
+      tags: [Identity]
+      summary: Get latest KYC status for authenticated user
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KycStatusEnvelope'
+        '401':
+          $ref: '#/components/responses/ApiError'
+
+  /identity/kyc/documents:
+    post:
+      tags: [Identity]
+      summary: Upload KYC document metadata
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/KycDocumentUploadRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KycDocumentUploadResponse'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/ApiError'
+        '404':
+          $ref: '#/components/responses/ApiError'
+        '409':
+          $ref: '#/components/responses/ApiError'
+
+  /identity/kyc/history:
+    get:
+      tags: [Identity]
+      summary: Get KYC status transition history for authenticated user
+      parameters:
+        - in: query
+          name: sessionId
+          required: false
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KycHistoryResponse'
+        '401':
+          $ref: '#/components/responses/ApiError'
+        '404':
+          $ref: '#/components/responses/ApiError'
+
+  /admin/kyc/review:
+    post:
+      tags: [Admin]
+      summary: Apply KYC review decision (admin shared API key)
+      security:
+        - adminApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminKycReviewRequest'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KycSessionEnvelope'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/ApiError'
+        '403':
+          $ref: '#/components/responses/ApiError'
+        '404':
+          $ref: '#/components/responses/ApiError'
+        '503':
+          $ref: '#/components/responses/ApiError'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    adminApiKeyAuth:
+      type: apiKey
+      in: header
+      name: x-admin-api-key
+
+  responses:
+    ApiError:
+      description: Error response
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiErrorEnvelope'
+
+  schemas:
+    HealthResponse:
+      type: object
+      required: [status, service, version]
+      properties:
+        status:
+          type: string
+          example: ok
+        service:
+          type: string
+          example: api
+        version:
+          type: string
+          example: 0.1.0
+
+    ApiErrorEnvelope:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+
+    RegisterRequest:
+      type: object
+      required: [fullName, email, password]
+      properties:
+        fullName:
+          type: string
+          minLength: 2
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+
+    LoginRequest:
+      type: object
+      required: [identifier, password]
+      properties:
+        identifier:
+          type: string
+          description: Email address
+        password:
+          type: string
+
+    RefreshRequest:
+      type: object
+      required: [refreshToken]
+      properties:
+        refreshToken:
+          type: string
+
+    LogoutRequest:
+      type: object
+      properties:
+        refreshToken:
+          type: string
+
+    User:
+      type: object
+      required: [id, fullName, email, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        fullName:
+          type: string
+        email:
+          type: string
+          format: email
+        createdAt:
+          type: string
+          format: date-time
+
+    AuthResponse:
+      type: object
+      required: [user, accessToken, refreshToken]
+      properties:
+        user:
+          $ref: '#/components/schemas/User'
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+
+    KycTrustStatus:
+      type: string
+      enum: [NOT_STARTED, IN_PROGRESS, MANUAL_REVIEW, VERIFIED, REJECTED]
+
+    KycRawStatus:
+      type: string
+      enum: [CREATED, SUBMITTED, MANUAL_REVIEW, VERIFIED, REJECTED]
+
+    KycSession:
+      type: object
+      required: [id, status, provider, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          $ref: '#/components/schemas/KycRawStatus'
+        provider:
+          type: string
+        submittedAt:
+          type: string
+          format: date-time
+          nullable: true
+        reviewedBy:
+          type: string
+          nullable: true
+        reviewedAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    KycSessionEnvelope:
+      type: object
+      required: [status, session]
+      properties:
+        status:
+          $ref: '#/components/schemas/KycTrustStatus'
+        session:
+          $ref: '#/components/schemas/KycSession'
+
+    KycStatusEnvelope:
+      type: object
+      required: [status]
+      properties:
+        status:
+          $ref: '#/components/schemas/KycTrustStatus'
+        session:
+          allOf:
+            - $ref: '#/components/schemas/KycSession'
+          nullable: true
+
+    KycCreateSessionRequest:
+      type: object
+      properties:
+        provider:
+          type: string
+          example: manual
+
+    KycDocumentUploadRequest:
+      type: object
+      required: [documentType, fileUrl, checksumSha256]
+      properties:
+        sessionId:
+          type: string
+          format: uuid
+          description: Optional, latest user session used when omitted
+        documentType:
+          type: string
+          example: KTP
+        fileUrl:
+          type: string
+          description: Must be https:// or s3://
+        checksumSha256:
+          type: string
+          pattern: '^[a-f0-9]{64}$'
+        metadata:
+          type: object
+          additionalProperties: true
+
+    KycDocument:
+      type: object
+      required: [id, kycSessionId, documentType, fileUrl, checksumSha256, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        kycSessionId:
+          type: string
+          format: uuid
+        documentType:
+          type: string
+        fileUrl:
+          type: string
+        checksumSha256:
+          type: string
+        metadata:
+          type: object
+          additionalProperties: true
+        verifiedAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+
+    KycDocumentUploadResponse:
+      type: object
+      required: [status, session, document]
+      properties:
+        status:
+          $ref: '#/components/schemas/KycTrustStatus'
+        session:
+          $ref: '#/components/schemas/KycSession'
+        document:
+          $ref: '#/components/schemas/KycDocument'
+
+    KycStatusEvent:
+      type: object
+      required: [id, kycSessionId, toStatus, actorType, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        kycSessionId:
+          type: string
+          format: uuid
+        fromStatus:
+          allOf:
+            - $ref: '#/components/schemas/KycRawStatus'
+          nullable: true
+        toStatus:
+          $ref: '#/components/schemas/KycRawStatus'
+        actorType:
+          type: string
+          enum: [USER, ADMIN, SYSTEM]
+        actorId:
+          type: string
+          nullable: true
+        reason:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+
+    KycHistoryResponse:
+      type: object
+      required: [session, events]
+      properties:
+        session:
+          allOf:
+            - $ref: '#/components/schemas/KycSession'
+          nullable: true
+        events:
+          type: array
+          items:
+            $ref: '#/components/schemas/KycStatusEvent'
+
+    AdminKycReviewRequest:
+      type: object
+      required: [sessionId, decision, reviewedBy]
+      properties:
+        sessionId:
+          type: string
+          format: uuid
+        decision:
+          type: string
+          enum: [MANUAL_REVIEW, VERIFIED, REJECTED]
+        reviewedBy:
+          type: string
+        reason:
+          type: string

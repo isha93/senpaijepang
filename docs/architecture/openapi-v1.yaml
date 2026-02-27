@@ -2,7 +2,10 @@ openapi: 3.0.3
 info:
   title: SenpaiJepang API
   version: 1.0.0
-  description: Trust-first migration platform API contract for MVP 1.0
+  description: Target v1 API contract for MVP 1.0 (future-state contract).
+externalDocs:
+  description: Current implemented runtime contract (v0)
+  url: ./openapi-runtime-v0.yaml
 servers:
   - url: https://api.senpaijepang.com
     description: Production

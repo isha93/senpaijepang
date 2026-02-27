@@ -1,5 +1,23 @@
 # SenpaiJepang MVP Sprint Plan v1 (Web + Dashboard First)
 
+## 0. Progress Snapshot (2026-02-27)
+Delivered baseline in repository:
+- Sprint 0 foundation:
+  - monorepo setup for `api`, `web-sdm`, `dashboard`, `admin`
+  - CI baseline (`lint`, `typecheck`, `test`)
+  - local infra setup (`PostgreSQL`, `Redis`, `MinIO`)
+- Sprint 1 partial:
+  - auth flow (`register`, `login`, `refresh`, `logout`, `me`)
+  - KYC session flow (`create`, `status`)
+  - KYC document metadata ingestion
+  - admin review endpoint with audit trail events
+  - migration files for auth and KYC (`001`, `002`, `003`)
+
+Current references:
+- Runtime contract: `openapi-runtime-v0.yaml`
+- Runtime status: `API-IMPLEMENTATION-STATUS-v0.md`
+- Target contract: `openapi-v1.yaml`
+
 ## 1. MVP Goal (12 Weeks)
 Deliver MVP yang siap pilot terbatas dengan fokus:
 - SDM mobile-web onboarding + KYC + apply + report fraud.
@@ -212,5 +230,7 @@ Definition of done:
 Companion docs:
 - `ARCHITECTURE-HLD-LLD-v1.md`
 - `SCALABLE-QUALITY-BUSINESS-PLAN-v1.md`
+- `API-IMPLEMENTATION-STATUS-v0.md`
+- `openapi-runtime-v0.yaml`
 - `openapi-v1.yaml`
 - `erd-v1.dbml`
