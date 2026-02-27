@@ -25,6 +25,7 @@ Implemented now:
 - Auth skeleton in API (`register`, `login`, `refresh`, `logout`, `me`).
 - Auth store adapters: `in-memory` and `postgres`.
 - KYC session skeleton in API (`create session`, `status`).
+- KYC document ingestion skeleton + admin review + status audit events.
 
 ## Auth Skeleton Endpoints (Current)
 - `POST /auth/register`
@@ -45,6 +46,17 @@ Implemented now:
 - `GET /identity/kyc/status`
   header: `Authorization: Bearer <accessToken>`
   response status enum: `NOT_STARTED | IN_PROGRESS | MANUAL_REVIEW | VERIFIED | REJECTED`
+- `POST /identity/kyc/documents`
+  header: `Authorization: Bearer <accessToken>`
+  body: `{ "sessionId"?: "uuid", "documentType": "KTP|PASSPORT|...", "fileUrl": "https://...|s3://...", "checksumSha256": "64hex", "metadata"?: {...} }`
+- `GET /identity/kyc/history?sessionId=<uuid>`
+  header: `Authorization: Bearer <accessToken>`
+  returns KYC status transition audit trail for user-owned session.
+
+## Admin KYC Endpoint (Current)
+- `POST /admin/kyc/review`
+  header: `x-admin-api-key: <ADMIN_API_KEY>`
+  body: `{ "sessionId": "uuid", "decision": "MANUAL_REVIEW|VERIFIED|REJECTED", "reviewedBy": "ops@...", "reason"?: "..." }`
 
 ## Visual Overview
 ### 1) System Context
@@ -217,6 +229,8 @@ Use `.env.example` as source of truth.
   refresh token TTL in seconds (default `604800`).
 - `DB_POOL_MAX`
   PostgreSQL pool size for API when `AUTH_STORE=postgres`.
+- `ADMIN_API_KEY`
+  shared key for admin review endpoints (`POST /admin/kyc/review`).
 - `POSTGRES_DB`
   database name.
 - `POSTGRES_USER`

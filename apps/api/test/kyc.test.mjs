@@ -2,8 +2,11 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createServer } from '../src/server.js';
 
-async function withServer(run) {
-  const server = createServer();
+const TEST_ADMIN_API_KEY = 'test-admin-key';
+const EXAMPLE_CHECKSUM = 'a3f9f6f30311d8e8860f5f5f5366f6544dc34e8e833b8f13294f129f0d4af167';
+
+async function withServer(run, options = {}) {
+  const server = createServer(options);
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
   const { port } = server.address();
 
@@ -16,15 +19,18 @@ async function withServer(run) {
   }
 }
 
-async function postJson(baseUrl, path, payload, accessToken) {
-  const headers = { 'Content-Type': 'application/json' };
+async function postJson(baseUrl, path, payload, { accessToken, headers: extraHeaders } = {}) {
+  const requestHeaders = { 'Content-Type': 'application/json' };
   if (accessToken) {
-    headers.Authorization = `Bearer ${accessToken}`;
+    requestHeaders.Authorization = `Bearer ${accessToken}`;
+  }
+  if (extraHeaders) {
+    Object.assign(requestHeaders, extraHeaders);
   }
 
   const res = await fetch(`${baseUrl}${path}`, {
     method: 'POST',
-    headers,
+    headers: requestHeaders,
     body: JSON.stringify(payload)
   });
 
@@ -37,13 +43,16 @@ async function postJson(baseUrl, path, payload, accessToken) {
   return { res, body };
 }
 
-async function getJson(baseUrl, path, accessToken) {
-  const headers = {};
+async function getJson(baseUrl, path, { accessToken, headers } = {}) {
+  const requestHeaders = {};
   if (accessToken) {
-    headers.Authorization = `Bearer ${accessToken}`;
+    requestHeaders.Authorization = `Bearer ${accessToken}`;
+  }
+  if (headers) {
+    Object.assign(requestHeaders, headers);
   }
 
-  const res = await fetch(`${baseUrl}${path}`, { headers });
+  const res = await fetch(`${baseUrl}${path}`, { headers: requestHeaders });
   const body = await res.json();
   return { res, body };
 }
@@ -57,29 +66,28 @@ test('kyc status requires access token', async () => {
   });
 });
 
-test('kyc flow: not started -> create session -> in progress', async () => {
+test('kyc flow: not started -> create session -> upload document -> history', async () => {
   await withServer(async (baseUrl) => {
-    const register = await postJson(baseUrl, '/auth/register', {
-      fullName: 'KYC User',
-      email: 'kyc@example.com',
-      password: 'pass1234'
-    });
+    const register = await postJson(
+      baseUrl,
+      '/auth/register',
+      {
+        fullName: 'KYC User',
+        email: 'kyc@example.com',
+        password: 'pass1234'
+      }
+    );
 
     assert.equal(register.res.status, 201);
     const accessToken = register.body.accessToken;
     assert.ok(accessToken);
 
-    const statusBefore = await getJson(baseUrl, '/identity/kyc/status', accessToken);
+    const statusBefore = await getJson(baseUrl, '/identity/kyc/status', { accessToken });
     assert.equal(statusBefore.res.status, 200);
     assert.equal(statusBefore.body.status, 'NOT_STARTED');
     assert.equal(statusBefore.body.session, null);
 
-    const createSession = await postJson(
-      baseUrl,
-      '/identity/kyc/sessions',
-      { provider: 'Sumsub' },
-      accessToken
-    );
+    const createSession = await postJson(baseUrl, '/identity/kyc/sessions', { provider: 'Sumsub' }, { accessToken });
 
     assert.equal(createSession.res.status, 201);
     assert.equal(createSession.body.status, 'IN_PROGRESS');
@@ -87,10 +95,126 @@ test('kyc flow: not started -> create session -> in progress', async () => {
     assert.equal(createSession.body.session.provider, 'sumsub');
     assert.ok(createSession.body.session.id);
 
-    const statusAfter = await getJson(baseUrl, '/identity/kyc/status', accessToken);
+    const uploadDocument = await postJson(
+      baseUrl,
+      '/identity/kyc/documents',
+      {
+        sessionId: createSession.body.session.id,
+        documentType: 'ktp',
+        fileUrl: 'https://example.com/ktp/front.jpg',
+        checksumSha256: EXAMPLE_CHECKSUM,
+        metadata: { side: 'front', country: 'ID' }
+      },
+      { accessToken }
+    );
+
+    assert.equal(uploadDocument.res.status, 201);
+    assert.equal(uploadDocument.body.session.status, 'SUBMITTED');
+    assert.equal(uploadDocument.body.document.documentType, 'KTP');
+    assert.equal(uploadDocument.body.document.checksumSha256, EXAMPLE_CHECKSUM);
+
+    const statusAfter = await getJson(baseUrl, '/identity/kyc/status', { accessToken });
     assert.equal(statusAfter.res.status, 200);
     assert.equal(statusAfter.body.status, 'IN_PROGRESS');
-    assert.equal(statusAfter.body.session.id, createSession.body.session.id);
-    assert.equal(statusAfter.body.session.status, 'CREATED');
+    assert.equal(statusAfter.body.session.status, 'SUBMITTED');
+
+    const history = await getJson(baseUrl, `/identity/kyc/history?sessionId=${createSession.body.session.id}`, {
+      accessToken
+    });
+
+    assert.equal(history.res.status, 200);
+    assert.equal(history.body.events.length, 2);
+    assert.equal(history.body.events[0].toStatus, 'CREATED');
+    assert.equal(history.body.events[1].toStatus, 'SUBMITTED');
+  });
+});
+
+test('admin review endpoint requires api key and updates status', async () => {
+  await withServer(
+    async (baseUrl) => {
+      const register = await postJson(baseUrl, '/auth/register', {
+        fullName: 'Review User',
+        email: 'review@example.com',
+        password: 'pass1234'
+      });
+      assert.equal(register.res.status, 201);
+      const accessToken = register.body.accessToken;
+
+      const createSession = await postJson(
+        baseUrl,
+        '/identity/kyc/sessions',
+        { provider: 'manual' },
+        { accessToken }
+      );
+      assert.equal(createSession.res.status, 201);
+      const sessionId = createSession.body.session.id;
+
+      const missingKey = await postJson(baseUrl, '/admin/kyc/review', {
+        sessionId,
+        decision: 'VERIFIED',
+        reviewedBy: 'ops@senpaijepang.com'
+      });
+      assert.equal(missingKey.res.status, 401);
+      assert.equal(missingKey.body.error.code, 'missing_admin_api_key');
+
+      const invalidKey = await postJson(
+        baseUrl,
+        '/admin/kyc/review',
+        {
+          sessionId,
+          decision: 'VERIFIED',
+          reviewedBy: 'ops@senpaijepang.com'
+        },
+        {
+          headers: { 'x-admin-api-key': 'wrong-key' }
+        }
+      );
+      assert.equal(invalidKey.res.status, 403);
+      assert.equal(invalidKey.body.error.code, 'invalid_admin_api_key');
+
+      const reviewed = await postJson(
+        baseUrl,
+        '/admin/kyc/review',
+        {
+          sessionId,
+          decision: 'VERIFIED',
+          reviewedBy: 'ops@senpaijepang.com',
+          reason: 'documents_valid'
+        },
+        {
+          headers: { 'x-admin-api-key': TEST_ADMIN_API_KEY }
+        }
+      );
+      assert.equal(reviewed.res.status, 200);
+      assert.equal(reviewed.body.status, 'VERIFIED');
+      assert.equal(reviewed.body.session.status, 'VERIFIED');
+
+      const statusAfterReview = await getJson(baseUrl, '/identity/kyc/status', { accessToken });
+      assert.equal(statusAfterReview.res.status, 200);
+      assert.equal(statusAfterReview.body.status, 'VERIFIED');
+
+      const history = await getJson(baseUrl, `/identity/kyc/history?sessionId=${sessionId}`, {
+        accessToken
+      });
+      assert.equal(history.res.status, 200);
+      assert.equal(history.body.events.length, 2);
+      assert.equal(history.body.events[0].toStatus, 'CREATED');
+      assert.equal(history.body.events[1].toStatus, 'VERIFIED');
+      assert.equal(history.body.events[1].actorType, 'ADMIN');
+    },
+    { adminApiKey: TEST_ADMIN_API_KEY }
+  );
+});
+
+test('admin review endpoint disabled when ADMIN_API_KEY is not configured', async () => {
+  await withServer(async (baseUrl) => {
+    const reviewed = await postJson(baseUrl, '/admin/kyc/review', {
+      sessionId: 'any',
+      decision: 'VERIFIED',
+      reviewedBy: 'ops@senpaijepang.com'
+    });
+
+    assert.equal(reviewed.res.status, 503);
+    assert.equal(reviewed.body.error.code, 'admin_api_disabled');
   });
 });

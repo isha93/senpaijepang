@@ -8,6 +8,10 @@ export class InMemoryAuthStore {
     this.sessionIdByTokenHash = new Map();
     this.kycSessionsById = new Map();
     this.kycSessionIdsByUserId = new Map();
+    this.identityDocumentsById = new Map();
+    this.identityDocumentIdsBySessionId = new Map();
+    this.kycStatusEventsById = new Map();
+    this.kycStatusEventIdsBySessionId = new Map();
   }
 
   createUser({ fullName, email, passwordHash }) {
@@ -96,5 +100,74 @@ export class InMemoryAuthStore {
 
     const latestId = ids[ids.length - 1];
     return this.kycSessionsById.get(latestId) || null;
+  }
+
+  findKycSessionById(sessionId) {
+    return this.kycSessionsById.get(sessionId) || null;
+  }
+
+  updateKycSessionStatus({ sessionId, status, submittedAt, reviewedBy, reviewedAt }) {
+    const session = this.kycSessionsById.get(sessionId);
+    if (!session) {
+      return null;
+    }
+
+    session.status = status;
+    if (submittedAt) {
+      session.submittedAt = submittedAt;
+    }
+    if (reviewedBy) {
+      session.reviewedBy = reviewedBy;
+    }
+    if (reviewedAt) {
+      session.reviewedAt = reviewedAt;
+    }
+    session.updatedAt = new Date().toISOString();
+    return session;
+  }
+
+  createIdentityDocument({ kycSessionId, documentType, fileUrl, checksumSha256, metadataJson }) {
+    const document = {
+      id: randomUUID(),
+      kycSessionId,
+      documentType,
+      fileUrl,
+      checksumSha256,
+      metadataJson,
+      verifiedAt: null,
+      createdAt: new Date().toISOString()
+    };
+
+    this.identityDocumentsById.set(document.id, document);
+    const ids = this.identityDocumentIdsBySessionId.get(kycSessionId) || [];
+    ids.push(document.id);
+    this.identityDocumentIdsBySessionId.set(kycSessionId, ids);
+    return document;
+  }
+
+  createKycStatusEvent({ kycSessionId, fromStatus, toStatus, actorType, actorId, reason }) {
+    const event = {
+      id: randomUUID(),
+      kycSessionId,
+      fromStatus: fromStatus || null,
+      toStatus,
+      actorType,
+      actorId: actorId || null,
+      reason: reason || null,
+      createdAt: new Date().toISOString()
+    };
+
+    this.kycStatusEventsById.set(event.id, event);
+    const ids = this.kycStatusEventIdsBySessionId.get(kycSessionId) || [];
+    ids.push(event.id);
+    this.kycStatusEventIdsBySessionId.set(kycSessionId, ids);
+    return event;
+  }
+
+  listKycStatusEventsBySessionId(kycSessionId) {
+    const ids = this.kycStatusEventIdsBySessionId.get(kycSessionId) || [];
+    return ids
+      .map((id) => this.kycStatusEventsById.get(id))
+      .filter(Boolean);
   }
 }

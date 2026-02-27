@@ -23,6 +23,10 @@ function getBearerToken(req) {
   return raw.slice('Bearer '.length).trim();
 }
 
+function getAdminApiKeyHeader(req) {
+  return String(req.headers['x-admin-api-key'] || '').trim();
+}
+
 async function readJsonBody(req) {
   return new Promise((resolve, reject) => {
     let raw = '';
@@ -69,7 +73,40 @@ async function authenticateRequest(req, res, authService) {
   return authService.authenticateAccessToken(token);
 }
 
-async function handleRequest(req, res, authService, kycService) {
+function authenticateAdminRequest(req, res, adminApiKey) {
+  if (!adminApiKey) {
+    sendJson(res, 503, {
+      error: {
+        code: 'admin_api_disabled',
+        message: 'admin API is disabled'
+      }
+    });
+    return false;
+  }
+
+  const providedApiKey = getAdminApiKeyHeader(req);
+  if (!providedApiKey) {
+    sendJson(res, 401, {
+      error: {
+        code: 'missing_admin_api_key',
+        message: 'x-admin-api-key header is required'
+      }
+    });
+    return false;
+  }
+  if (providedApiKey !== adminApiKey) {
+    sendJson(res, 403, {
+      error: {
+        code: 'invalid_admin_api_key',
+        message: 'x-admin-api-key is invalid'
+      }
+    });
+    return false;
+  }
+  return true;
+}
+
+async function handleRequest(req, res, authService, kycService, adminApiKey) {
   const url = new URL(req.url || '/', 'http://localhost');
 
   if (req.method === 'GET' && url.pathname === '/health') {
@@ -141,6 +178,57 @@ async function handleRequest(req, res, authService, kycService) {
     return;
   }
 
+  if (req.method === 'POST' && url.pathname === '/identity/kyc/documents') {
+    const user = await authenticateRequest(req, res, authService);
+    if (!user) {
+      return;
+    }
+
+    const body = await readJsonBody(req);
+    const result = await kycService.uploadDocument({
+      userId: user.id,
+      sessionId: body.sessionId,
+      documentType: body.documentType,
+      fileUrl: body.fileUrl,
+      checksumSha256: body.checksumSha256,
+      metadata: body.metadata
+    });
+    sendJson(res, 201, result);
+    return;
+  }
+
+  if (req.method === 'GET' && url.pathname === '/identity/kyc/history') {
+    const user = await authenticateRequest(req, res, authService);
+    if (!user) {
+      return;
+    }
+
+    const sessionId = url.searchParams.get('sessionId') || null;
+    const history = await kycService.getHistory({
+      userId: user.id,
+      sessionId
+    });
+    sendJson(res, 200, history);
+    return;
+  }
+
+  if (req.method === 'POST' && url.pathname === '/admin/kyc/review') {
+    const authorized = authenticateAdminRequest(req, res, adminApiKey);
+    if (!authorized) {
+      return;
+    }
+
+    const body = await readJsonBody(req);
+    const result = await kycService.reviewSession({
+      sessionId: body.sessionId,
+      decision: body.decision,
+      reviewedBy: body.reviewedBy,
+      reason: body.reason
+    });
+    sendJson(res, 200, result);
+    return;
+  }
+
   sendJson(res, 404, {
     error: {
       code: 'not_found',
@@ -149,12 +237,14 @@ async function handleRequest(req, res, authService, kycService) {
   });
 }
 
-export function createServer({ authService, kycService } = {}) {
+export function createServer({ authService, kycService, adminApiKey } = {}) {
   const resolvedAuthService = authService || createAuthService({ store: new InMemoryAuthStore() });
   const resolvedKycService = kycService || createKycService({ store: resolvedAuthService.store });
+  const resolvedAdminApiKey =
+    adminApiKey !== undefined ? String(adminApiKey).trim() : String(process.env.ADMIN_API_KEY || '').trim();
 
   return http.createServer((req, res) => {
-    handleRequest(req, res, resolvedAuthService, resolvedKycService).catch((error) => {
+    handleRequest(req, res, resolvedAuthService, resolvedKycService, resolvedAdminApiKey).catch((error) => {
       if (isApiError(error) || isKycApiError(error)) {
         sendJson(res, error.status, {
           error: {

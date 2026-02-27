@@ -6,6 +6,8 @@ class KycApiError extends Error {
   }
 }
 
+const KYC_REVIEW_STATUSES = new Set(['MANUAL_REVIEW', 'VERIFIED', 'REJECTED']);
+
 function mapTrustStatus(rawStatus) {
   switch (rawStatus) {
     case 'MANUAL_REVIEW':
@@ -21,20 +23,112 @@ function mapTrustStatus(rawStatus) {
   }
 }
 
+function normalizeProvider(provider) {
+  const normalizedProvider = String(provider || 'manual').trim().toLowerCase() || 'manual';
+  if (normalizedProvider.length > 64) {
+    throw new KycApiError(400, 'invalid_provider', 'provider must be <= 64 characters');
+  }
+  return normalizedProvider;
+}
+
+function normalizeDocumentType(documentType) {
+  const normalized = String(documentType || '')
+    .trim()
+    .toUpperCase();
+  if (!normalized) {
+    throw new KycApiError(400, 'invalid_document_type', 'documentType is required');
+  }
+  if (normalized.length > 64) {
+    throw new KycApiError(400, 'invalid_document_type', 'documentType must be <= 64 characters');
+  }
+  return normalized;
+}
+
+function normalizeFileUrl(fileUrl) {
+  const normalized = String(fileUrl || '').trim();
+  if (!normalized) {
+    throw new KycApiError(400, 'invalid_file_url', 'fileUrl is required');
+  }
+
+  if (normalized.startsWith('s3://')) {
+    return normalized;
+  }
+
+  try {
+    const parsed = new URL(normalized);
+    if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
+      return normalized;
+    }
+  } catch {}
+
+  throw new KycApiError(400, 'invalid_file_url', 'fileUrl must be http(s):// or s3://');
+}
+
+function normalizeChecksumSha256(checksumSha256) {
+  const normalized = String(checksumSha256 || '')
+    .trim()
+    .toLowerCase();
+  if (!/^[a-f0-9]{64}$/.test(normalized)) {
+    throw new KycApiError(400, 'invalid_checksum_sha256', 'checksumSha256 must be 64 hex characters');
+  }
+  return normalized;
+}
+
+function normalizeMetadata(metadata) {
+  if (metadata === null || metadata === undefined) {
+    return {};
+  }
+  if (typeof metadata !== 'object' || Array.isArray(metadata)) {
+    throw new KycApiError(400, 'invalid_metadata', 'metadata must be a JSON object');
+  }
+  return metadata;
+}
+
+function normalizeDecision(decision) {
+  const normalized = String(decision || '')
+    .trim()
+    .toUpperCase();
+  if (!KYC_REVIEW_STATUSES.has(normalized)) {
+    throw new KycApiError(
+      400,
+      'invalid_decision',
+      'decision must be one of MANUAL_REVIEW, VERIFIED, REJECTED'
+    );
+  }
+  return normalized;
+}
+
+function normalizeReviewedBy(reviewedBy) {
+  const normalized = String(reviewedBy || '')
+    .trim();
+  if (!normalized) {
+    throw new KycApiError(400, 'invalid_reviewed_by', 'reviewedBy is required');
+  }
+  if (normalized.length > 128) {
+    throw new KycApiError(400, 'invalid_reviewed_by', 'reviewedBy must be <= 128 characters');
+  }
+  return normalized;
+}
+
 export class KycService {
   constructor({ store }) {
     this.store = store;
   }
 
   async startSession({ userId, provider }) {
-    const normalizedProvider = String(provider || 'manual').trim().toLowerCase() || 'manual';
-    if (normalizedProvider.length > 64) {
-      throw new KycApiError(400, 'invalid_provider', 'provider must be <= 64 characters');
-    }
+    const normalizedProvider = normalizeProvider(provider);
 
     const session = await this.store.createKycSession({
       userId,
       provider: normalizedProvider
+    });
+    await this.store.createKycStatusEvent({
+      kycSessionId: session.id,
+      fromStatus: null,
+      toStatus: session.status,
+      actorType: 'USER',
+      actorId: userId,
+      reason: 'session_created'
     });
 
     return {
@@ -58,6 +152,120 @@ export class KycService {
     };
   }
 
+  async uploadDocument({ userId, sessionId, documentType, fileUrl, checksumSha256, metadata }) {
+    const targetSession = await this.resolveUserSession({ userId, sessionId });
+    if (!targetSession) {
+      throw new KycApiError(404, 'kyc_session_not_found', 'kyc session not found');
+    }
+    if (targetSession.status === 'VERIFIED' || targetSession.status === 'REJECTED') {
+      throw new KycApiError(
+        409,
+        'kyc_session_locked',
+        'cannot upload documents for verified or rejected session'
+      );
+    }
+
+    const document = await this.store.createIdentityDocument({
+      kycSessionId: targetSession.id,
+      documentType: normalizeDocumentType(documentType),
+      fileUrl: normalizeFileUrl(fileUrl),
+      checksumSha256: normalizeChecksumSha256(checksumSha256),
+      metadataJson: normalizeMetadata(metadata)
+    });
+
+    let updatedSession = targetSession;
+    const previousStatus = targetSession.status;
+    if (previousStatus === 'CREATED') {
+      updatedSession = await this.store.updateKycSessionStatus({
+        sessionId: targetSession.id,
+        status: 'SUBMITTED',
+        submittedAt: new Date().toISOString()
+      });
+
+      await this.store.createKycStatusEvent({
+        kycSessionId: targetSession.id,
+        fromStatus: previousStatus,
+        toStatus: updatedSession.status,
+        actorType: 'USER',
+        actorId: userId,
+        reason: 'document_uploaded'
+      });
+    }
+
+    return {
+      status: mapTrustStatus(updatedSession.status),
+      session: this.publicSession(updatedSession),
+      document: this.publicDocument(document)
+    };
+  }
+
+  async reviewSession({ sessionId, decision, reviewedBy, reason }) {
+    const normalizedSessionId = String(sessionId || '').trim();
+    if (!normalizedSessionId) {
+      throw new KycApiError(400, 'invalid_session_id', 'sessionId is required');
+    }
+
+    const session = await this.store.findKycSessionById(normalizedSessionId);
+    if (!session) {
+      throw new KycApiError(404, 'kyc_session_not_found', 'kyc session not found');
+    }
+
+    const normalizedDecision = normalizeDecision(decision);
+    const normalizedReviewedBy = normalizeReviewedBy(reviewedBy);
+
+    const previousStatus = session.status;
+    const updatedSession = await this.store.updateKycSessionStatus({
+      sessionId: normalizedSessionId,
+      status: normalizedDecision,
+      reviewedBy: normalizedReviewedBy,
+      reviewedAt: new Date().toISOString()
+    });
+
+    if (previousStatus !== normalizedDecision) {
+      await this.store.createKycStatusEvent({
+        kycSessionId: session.id,
+        fromStatus: previousStatus,
+        toStatus: normalizedDecision,
+        actorType: 'ADMIN',
+        actorId: normalizedReviewedBy,
+        reason: String(reason || '').trim() || null
+      });
+    }
+
+    return {
+      status: mapTrustStatus(updatedSession.status),
+      session: this.publicSession(updatedSession)
+    };
+  }
+
+  async getHistory({ userId, sessionId }) {
+    const targetSession = await this.resolveUserSession({ userId, sessionId });
+    if (!targetSession) {
+      if (sessionId) {
+        throw new KycApiError(404, 'kyc_session_not_found', 'kyc session not found');
+      }
+      return { session: null, events: [] };
+    }
+
+    const events = await this.store.listKycStatusEventsBySessionId(targetSession.id);
+    return {
+      session: this.publicSession(targetSession),
+      events: events.map((event) => this.publicEvent(event))
+    };
+  }
+
+  async resolveUserSession({ userId, sessionId }) {
+    const normalizedSessionId = String(sessionId || '').trim();
+    if (normalizedSessionId) {
+      const session = await this.store.findKycSessionById(normalizedSessionId);
+      if (!session || session.userId !== userId) {
+        return null;
+      }
+      return session;
+    }
+    return this.store.findLatestKycSessionByUserId(userId);
+  }
+
   publicSession(session) {
     return {
       id: session.id,
@@ -70,10 +278,45 @@ export class KycService {
       updatedAt: session.updatedAt
     };
   }
+
+  publicDocument(document) {
+    return {
+      id: document.id,
+      kycSessionId: document.kycSessionId,
+      documentType: document.documentType,
+      fileUrl: document.fileUrl,
+      checksumSha256: document.checksumSha256,
+      metadata: document.metadataJson,
+      verifiedAt: document.verifiedAt,
+      createdAt: document.createdAt
+    };
+  }
+
+  publicEvent(event) {
+    return {
+      id: event.id,
+      kycSessionId: event.kycSessionId,
+      fromStatus: event.fromStatus,
+      toStatus: event.toStatus,
+      actorType: event.actorType,
+      actorId: event.actorId,
+      reason: event.reason,
+      createdAt: event.createdAt
+    };
+  }
 }
 
 export function createKycService({ store }) {
-  if (!store || typeof store.createKycSession !== 'function' || typeof store.findLatestKycSessionByUserId !== 'function') {
+  if (
+    !store ||
+    typeof store.createKycSession !== 'function' ||
+    typeof store.findLatestKycSessionByUserId !== 'function' ||
+    typeof store.findKycSessionById !== 'function' ||
+    typeof store.updateKycSessionStatus !== 'function' ||
+    typeof store.createIdentityDocument !== 'function' ||
+    typeof store.createKycStatusEvent !== 'function' ||
+    typeof store.listKycStatusEventsBySessionId !== 'function'
+  ) {
     throw new Error('KYC store is missing required methods');
   }
   return new KycService({ store });
