@@ -21,6 +21,61 @@ Not yet implemented in this codebase:
 - TG matching engine and anti-fraud case workflow.
 - Native mobile apps.
 
+## Visual Overview
+### 1) System Context
+```mermaid
+flowchart LR
+    SDM[SDM Web<br/>apps/web-sdm] --> API[API<br/>apps/api]
+    TSK[TSK/LPK Dashboard<br/>apps/dashboard] --> API
+    OPS[Ops/Admin Console<br/>apps/admin] --> API
+
+    API --> PG[(PostgreSQL)]
+    API --> RD[(Redis)]
+    API --> S3[(MinIO / S3 Compatible)]
+
+    CU[ClickUp Tracking] -. planning and delivery .-> TEAM[Product and Engineering Team]
+    TEAM --> SDM
+    TEAM --> TSK
+    TEAM --> OPS
+```
+
+### 2) Repository Map
+```mermaid
+graph TD
+    ROOT[senpaijepang/] --> APPS[apps/]
+    ROOT --> PKGS[packages/]
+    ROOT --> DOCS[docs/architecture/]
+    ROOT --> TRACK[tracking/]
+    ROOT --> SCRIPTS[scripts/]
+    ROOT --> INFRA[docker-compose.yml]
+
+    APPS --> API[api]
+    APPS --> WEBSDM[web-sdm]
+    APPS --> DASH[dashboard]
+    APPS --> ADMIN[admin]
+
+    PKGS --> TYPES[types]
+    PKGS --> CONFIG[config]
+    PKGS --> UI[ui]
+
+    TRACK --> CLICKUP[clickup]
+    TRACK --> TRELLO[trello]
+```
+
+### 3) MVP Sprint Timeline (Reference)
+```mermaid
+gantt
+    title SenpaiJepang MVP Timeline (2026)
+    dateFormat  YYYY-MM-DD
+    section Sprint
+    S0 Foundation                  :s0, 2026-03-02, 12d
+    S1 Identity and KYC            :s1, 2026-03-16, 12d
+    S2 TSK Verification + Dashboard:s2, 2026-03-30, 12d
+    S3 Matching + Applications     :s3, 2026-04-13, 12d
+    S4 Evidence + Trust Layer      :s4, 2026-04-27, 12d
+    S5 Hardening + Pilot           :s5, 2026-05-11, 12d
+```
+
 ## Monorepo Layout
 - `apps/api`:
   backend API starter (`/health` endpoint + test).
