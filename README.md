@@ -170,6 +170,19 @@ gantt
 - Git
 
 ## First-Time Setup
+Fast path (start everything with one command after install):
+```bash
+cd /path/to/senpaijepang
+cp .env.example .env
+npm install
+npm run dev:all
+```
+
+Stop all services:
+```bash
+npm run stop:all
+```
+
 1. Clone and enter repo.
 2. Copy environment file.
 3. Install dependencies.
@@ -213,6 +226,8 @@ AUTH_STORE=postgres
   scan tracked files for potential leaked credentials.
 - `npm run check:openapi`
   validate OpenAPI runtime/target specs + Sprint 1 freeze policy.
+- `npm run check:dev-all`
+  start all local services via orchestrator, probe health endpoints, then stop all services.
 - `npm run smoke:api`
   run endpoint smoke flow against already-running API.
   default target is `http://localhost:4000` and can be overridden via `SMOKE_BASE_URL`.

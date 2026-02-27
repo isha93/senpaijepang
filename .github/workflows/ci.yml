@@ -38,3 +38,6 @@ jobs:
 
       - name: OpenAPI Contract Check
         run: npm run check:openapi
+
+      - name: Dev All Orchestration Check
+        run: npm run check:dev-all

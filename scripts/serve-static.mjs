@@ -3,7 +3,6 @@
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
-import url from 'node:url';
 
 function parseArgs(argv) {
   const out = {};
@@ -26,10 +25,30 @@ if (!fs.existsSync(path.join(dir, 'index.html'))) {
 }
 
 const server = http.createServer((req, res) => {
-  const pathname = url.parse(req.url).pathname || '/';
-  const filePath = pathname === '/' ? path.join(dir, 'index.html') : path.join(dir, pathname);
+  const requestUrl = new URL(req.url || '/', 'http://localhost');
+  const pathname = requestUrl.pathname || '/';
+  let relativeRequestPath = 'index.html';
+  if (pathname !== '/') {
+    try {
+      relativeRequestPath = pathname
+        .replace(/^\/+/, '')
+        .split('/')
+        .map((segment) => decodeURIComponent(segment))
+        .join(path.sep);
+    } catch {
+      res.writeHead(400, { 'Content-Type': 'text/plain; charset=utf-8' });
+      res.end('Bad request');
+      return;
+    }
+  }
+  const filePath = path.resolve(dir, relativeRequestPath);
+  const relativeFilePath = path.relative(dir, filePath);
 
-  if (!filePath.startsWith(dir)) {
+  if (
+    !relativeFilePath ||
+    relativeFilePath.startsWith('..') ||
+    path.isAbsolute(relativeFilePath)
+  ) {
     res.writeHead(403);
     res.end('Forbidden');
     return;
