@@ -217,6 +217,8 @@ AUTH_STORE=postgres
   run endpoint smoke flow against already-running API (`SMOKE_BASE_URL`).
 - `npm run smoke:local`
   full local smoke (docker compose + migration + start API postgres/s3 + endpoint checks).
+  default uses isolated Postgres host port `55432` to avoid clashing with local PostgreSQL.
+  override with `SMOKE_POSTGRES_PORT` or full `SMOKE_DATABASE_URL` when needed.
 - `npm run dev:api`
   start API in watch mode.
 - `npm run dev:web-sdm`
