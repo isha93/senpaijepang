@@ -23,6 +23,21 @@ function mapSessionRow(row) {
   };
 }
 
+function mapKycSessionRow(row) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    userId: row.user_id,
+    status: row.status,
+    provider: row.provider,
+    submittedAt: row.submitted_at ? new Date(row.submitted_at).toISOString() : null,
+    reviewedBy: row.reviewed_by,
+    reviewedAt: row.reviewed_at ? new Date(row.reviewed_at).toISOString() : null,
+    createdAt: new Date(row.created_at).toISOString(),
+    updatedAt: new Date(row.updated_at).toISOString()
+  };
+}
+
 export class PostgresAuthStore {
   constructor({ pool }) {
     this.pool = pool;
@@ -98,5 +113,52 @@ export class PostgresAuthStore {
       `,
       [sessionId]
     );
+  }
+
+  async createKycSession({ userId, provider = 'manual' }) {
+    const normalizedProvider = String(provider || 'manual').trim().toLowerCase() || 'manual';
+    const result = await this.pool.query(
+      `
+        INSERT INTO kyc_sessions (id, user_id, status, provider)
+        VALUES ($1, $2, $3, $4)
+        RETURNING
+          id,
+          user_id,
+          status,
+          provider,
+          submitted_at,
+          reviewed_by,
+          reviewed_at,
+          created_at,
+          updated_at
+      `,
+      [randomUUID(), userId, 'CREATED', normalizedProvider]
+    );
+
+    return mapKycSessionRow(result.rows[0]);
+  }
+
+  async findLatestKycSessionByUserId(userId) {
+    const result = await this.pool.query(
+      `
+        SELECT
+          id,
+          user_id,
+          status,
+          provider,
+          submitted_at,
+          reviewed_by,
+          reviewed_at,
+          created_at,
+          updated_at
+        FROM kyc_sessions
+        WHERE user_id = $1
+        ORDER BY created_at DESC
+        LIMIT 1
+      `,
+      [userId]
+    );
+
+    return mapKycSessionRow(result.rows[0]);
   }
 }

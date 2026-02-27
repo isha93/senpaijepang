@@ -16,7 +16,7 @@ This repository currently contains MVP foundation only:
 - ClickUp/Trello provisioning scripts for delivery tracking.
 
 Not yet implemented in this codebase:
-- Full production auth and KYC flow.
+- Full production-grade KYC provider integration and review workflow.
 - Production-grade database schema and migrations.
 - TG matching engine and anti-fraud case workflow.
 - Native mobile apps.
@@ -24,6 +24,7 @@ Not yet implemented in this codebase:
 Implemented now:
 - Auth skeleton in API (`register`, `login`, `refresh`, `logout`, `me`).
 - Auth store adapters: `in-memory` and `postgres`.
+- KYC session skeleton in API (`create session`, `status`).
 
 ## Auth Skeleton Endpoints (Current)
 - `POST /auth/register`
@@ -36,6 +37,14 @@ Implemented now:
   body: `{ "refreshToken": "..." }`
 - `GET /auth/me`
   header: `Authorization: Bearer <accessToken>`
+
+## Identity/KYC Skeleton Endpoints (Current)
+- `POST /identity/kyc/sessions`
+  header: `Authorization: Bearer <accessToken>`
+  body: `{ "provider": "manual|sumsub|..." }` (`provider` optional, default `manual`)
+- `GET /identity/kyc/status`
+  header: `Authorization: Bearer <accessToken>`
+  response status enum: `NOT_STARTED | IN_PROGRESS | MANUAL_REVIEW | VERIFIED | REJECTED`
 
 ## Visual Overview
 ### 1) System Context

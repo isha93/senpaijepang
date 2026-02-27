@@ -1,6 +1,7 @@
 import http from 'node:http';
 import { createAuthService, isApiError } from './auth/service.js';
 import { InMemoryAuthStore } from './auth/store.js';
+import { createKycService, isKycApiError } from './identity/kyc-service.js';
 
 const JSON_HEADERS = { 'Content-Type': 'application/json' };
 
@@ -50,7 +51,25 @@ async function readJsonBody(req) {
   });
 }
 
-async function handleRequest(req, res, authService) {
+function sendMissingAccessTokenError(res) {
+  sendJson(res, 401, {
+    error: {
+      code: 'missing_access_token',
+      message: 'authorization header with bearer token is required'
+    }
+  });
+}
+
+async function authenticateRequest(req, res, authService) {
+  const token = getBearerToken(req);
+  if (!token) {
+    sendMissingAccessTokenError(res);
+    return null;
+  }
+  return authService.authenticateAccessToken(token);
+}
+
+async function handleRequest(req, res, authService, kycService) {
   const url = new URL(req.url || '/', 'http://localhost');
 
   if (req.method === 'GET' && url.pathname === '/health') {
@@ -87,19 +106,38 @@ async function handleRequest(req, res, authService) {
   }
 
   if (req.method === 'GET' && url.pathname === '/auth/me') {
-    const token = getBearerToken(req);
-    if (!token) {
-      sendJson(res, 401, {
-        error: {
-          code: 'missing_access_token',
-          message: 'authorization header with bearer token is required'
-        }
-      });
+    const user = await authenticateRequest(req, res, authService);
+    if (!user) {
       return;
     }
 
-    const user = await authService.authenticateAccessToken(token);
     sendJson(res, 200, { user });
+    return;
+  }
+
+  if (req.method === 'POST' && url.pathname === '/identity/kyc/sessions') {
+    const user = await authenticateRequest(req, res, authService);
+    if (!user) {
+      return;
+    }
+
+    const body = await readJsonBody(req);
+    const result = await kycService.startSession({
+      userId: user.id,
+      provider: body.provider
+    });
+    sendJson(res, 201, result);
+    return;
+  }
+
+  if (req.method === 'GET' && url.pathname === '/identity/kyc/status') {
+    const user = await authenticateRequest(req, res, authService);
+    if (!user) {
+      return;
+    }
+
+    const status = await kycService.getStatus({ userId: user.id });
+    sendJson(res, 200, status);
     return;
   }
 
@@ -111,12 +149,13 @@ async function handleRequest(req, res, authService) {
   });
 }
 
-export function createServer({ authService } = {}) {
-  const service = authService || createAuthService({ store: new InMemoryAuthStore() });
+export function createServer({ authService, kycService } = {}) {
+  const resolvedAuthService = authService || createAuthService({ store: new InMemoryAuthStore() });
+  const resolvedKycService = kycService || createKycService({ store: resolvedAuthService.store });
 
   return http.createServer((req, res) => {
-    handleRequest(req, res, service).catch((error) => {
-      if (isApiError(error)) {
+    handleRequest(req, res, resolvedAuthService, resolvedKycService).catch((error) => {
+      if (isApiError(error) || isKycApiError(error)) {
         sendJson(res, error.status, {
           error: {
             code: error.code,

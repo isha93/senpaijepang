@@ -6,6 +6,8 @@ export class InMemoryAuthStore {
     this.userIdByEmail = new Map();
     this.sessionsById = new Map();
     this.sessionIdByTokenHash = new Map();
+    this.kycSessionsById = new Map();
+    this.kycSessionIdsByUserId = new Map();
   }
 
   createUser({ fullName, email, passwordHash }) {
@@ -63,5 +65,36 @@ export class InMemoryAuthStore {
       return;
     }
     session.revokedAt = new Date().toISOString();
+  }
+
+  createKycSession({ userId, provider = 'manual' }) {
+    const now = new Date().toISOString();
+    const session = {
+      id: randomUUID(),
+      userId,
+      status: 'CREATED',
+      provider,
+      submittedAt: null,
+      reviewedBy: null,
+      reviewedAt: null,
+      createdAt: now,
+      updatedAt: now
+    };
+
+    this.kycSessionsById.set(session.id, session);
+    const userSessionIds = this.kycSessionIdsByUserId.get(userId) || [];
+    userSessionIds.push(session.id);
+    this.kycSessionIdsByUserId.set(userId, userSessionIds);
+    return session;
+  }
+
+  findLatestKycSessionByUserId(userId) {
+    const ids = this.kycSessionIdsByUserId.get(userId) || [];
+    if (ids.length === 0) {
+      return null;
+    }
+
+    const latestId = ids[ids.length - 1];
+    return this.kycSessionsById.get(latestId) || null;
   }
 }
