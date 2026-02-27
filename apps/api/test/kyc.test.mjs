@@ -351,6 +351,55 @@ test('admin review endpoint requires api key and updates status', async () => {
       assert.equal(invalidKey.res.status, 403);
       assert.equal(invalidKey.body.error.code, 'invalid_admin_api_key');
 
+      const beforeSubmit = await postJson(
+        baseUrl,
+        '/admin/kyc/review',
+        {
+          sessionId,
+          decision: 'VERIFIED',
+          reviewedBy: 'ops@senpaijepang.com',
+          reason: 'documents_valid'
+        },
+        {
+          headers: { 'x-admin-api-key': TEST_ADMIN_API_KEY }
+        }
+      );
+      assert.equal(beforeSubmit.res.status, 409);
+      assert.equal(beforeSubmit.body.error.code, 'kyc_session_not_submitted');
+
+      const uploadUrl = await postJson(
+        baseUrl,
+        '/identity/kyc/upload-url',
+        {
+          sessionId,
+          documentType: 'passport',
+          fileName: 'passport.pdf',
+          contentType: 'application/pdf',
+          contentLength: 420000,
+          checksumSha256: EXAMPLE_CHECKSUM
+        },
+        { accessToken }
+      );
+      assert.equal(uploadUrl.res.status, 201);
+
+      const uploadDocument = await postJson(
+        baseUrl,
+        '/identity/kyc/documents',
+        {
+          sessionId,
+          documentType: 'passport',
+          objectKey: uploadUrl.body.upload.objectKey,
+          checksumSha256: EXAMPLE_CHECKSUM
+        },
+        { accessToken }
+      );
+      assert.equal(uploadDocument.res.status, 201);
+      assert.equal(uploadDocument.body.session.status, 'CREATED');
+
+      const submit = await postJson(baseUrl, `/identity/kyc/sessions/${sessionId}/submit`, {}, { accessToken });
+      assert.equal(submit.res.status, 200);
+      assert.equal(submit.body.session.status, 'SUBMITTED');
+
       const reviewed = await postJson(
         baseUrl,
         '/admin/kyc/review',
@@ -376,10 +425,12 @@ test('admin review endpoint requires api key and updates status', async () => {
         accessToken
       });
       assert.equal(history.res.status, 200);
-      assert.equal(history.body.events.length, 2);
+      assert.equal(history.body.events.length, 3);
       assert.equal(history.body.events[0].toStatus, 'CREATED');
-      assert.equal(history.body.events[1].toStatus, 'VERIFIED');
-      assert.equal(history.body.events[1].actorType, 'ADMIN');
+      assert.equal(history.body.events[1].toStatus, 'SUBMITTED');
+      assert.equal(history.body.events[1].actorType, 'USER');
+      assert.equal(history.body.events[2].toStatus, 'VERIFIED');
+      assert.equal(history.body.events[2].actorType, 'ADMIN');
     },
     { adminApiKey: TEST_ADMIN_API_KEY }
   );

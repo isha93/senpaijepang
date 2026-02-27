@@ -16,6 +16,7 @@ class KycApiError extends Error {
 }
 
 const KYC_REVIEW_STATUSES = new Set(['MANUAL_REVIEW', 'VERIFIED', 'REJECTED']);
+const KYC_REVIEWABLE_STATUSES = new Set(['SUBMITTED', 'MANUAL_REVIEW']);
 const KYC_RAW_STATUSES = new Set(['CREATED', 'SUBMITTED', 'MANUAL_REVIEW', 'VERIFIED', 'REJECTED']);
 
 function mapTrustStatus(rawStatus) {
@@ -456,6 +457,20 @@ export class KycService {
     const session = await this.store.findKycSessionById(normalizedSessionId);
     if (!session) {
       throw new KycApiError(404, 'kyc_session_not_found', 'kyc session not found');
+    }
+    if (!KYC_REVIEWABLE_STATUSES.has(session.status)) {
+      if (session.status === 'VERIFIED' || session.status === 'REJECTED') {
+        throw new KycApiError(
+          409,
+          'kyc_session_locked',
+          'cannot review kyc session in verified or rejected state'
+        );
+      }
+      throw new KycApiError(
+        409,
+        'kyc_session_not_submitted',
+        'cannot review kyc session before it is submitted'
+      );
     }
 
     const normalizedDecision = normalizeDecision(decision);
