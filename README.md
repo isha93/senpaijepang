@@ -28,11 +28,11 @@ Trust-first platform for verified migration infrastructure (Indonesia -> Japan).
 - Admin dev: `npm run dev:admin`
 
 ## Planning and Architecture Docs
-- `ARCHITECTURE-HLD-LLD-v1.md`
-- `SCALABLE-QUALITY-BUSINESS-PLAN-v1.md`
-- `MVP-SPRINT-PLAN-v1.md`
-- `erd-v1.dbml`
-- `openapi-v1.yaml`
+- `docs/architecture/ARCHITECTURE-HLD-LLD-v1.md`
+- `docs/architecture/SCALABLE-QUALITY-BUSINESS-PLAN-v1.md`
+- `docs/architecture/MVP-SPRINT-PLAN-v1.md`
+- `docs/architecture/erd-v1.dbml`
+- `docs/architecture/openapi-v1.yaml`
 
 ## Delivery Tracking
 - Primary: `tracking/clickup/README.md`
