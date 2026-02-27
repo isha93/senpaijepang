@@ -5,6 +5,7 @@ import { PostgresAuthStore } from './auth/postgres-store.js';
 import { createDbPool } from './db/pool.js';
 import { createKycService } from './identity/kyc-service.js';
 import { createObjectStorageFromEnv } from './identity/object-storage.js';
+import { createLogger } from './observability/logger.js';
 
 async function createAuthStoreFromEnv(env = process.env) {
   const mode = String(env.AUTH_STORE || 'memory').trim().toLowerCase();
@@ -33,6 +34,7 @@ async function createAuthStoreFromEnv(env = process.env) {
 }
 
 async function main() {
+  const logger = createLogger({ env: process.env, service: 'api' });
   const port = Number(process.env.API_PORT || 4000);
   const authStore = await createAuthStoreFromEnv(process.env);
   const objectStorage = await createObjectStorageFromEnv(process.env);
@@ -40,18 +42,21 @@ async function main() {
   const kycService = createKycService({
     store: authStore.store,
     objectStorage: objectStorage.storage,
-    env: process.env
+    env: process.env,
+    logger
   });
   const server = createServer({ authService, kycService });
 
   server.listen(port, () => {
-    console.log(
-      `API listening on http://localhost:${port} (authStore=${authStore.mode}, objectStorage=${objectStorage.mode})`
-    );
+    logger.info('api.started', {
+      port,
+      authStore: authStore.mode,
+      objectStorage: objectStorage.mode
+    });
   });
 
   async function gracefulShutdown(signal) {
-    console.log(`${signal} received, shutting down API`);
+    logger.info('api.shutdown.started', { signal });
 
     await new Promise((resolve, reject) => {
       server.close((error) => (error ? reject(error) : resolve()));
@@ -59,6 +64,7 @@ async function main() {
 
     await authStore.close();
     await objectStorage.close();
+    logger.info('api.shutdown.completed', { signal });
     process.exit(0);
   }
 

@@ -29,3 +29,12 @@ jobs:
 
       - name: Test
         run: npm run test
+
+      - name: SAST Check
+        run: npm run scan:sast
+
+      - name: Secret Scan
+        run: npm run scan:secrets
+
+      - name: OpenAPI Contract Check
+        run: npm run check:openapi

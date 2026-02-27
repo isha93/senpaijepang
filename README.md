@@ -24,10 +24,15 @@ Not yet implemented in this codebase:
 Implemented now:
 - Auth skeleton in API (`register`, `login`, `refresh`, `logout`, `me`).
 - Auth store adapters: `in-memory` and `postgres`.
+- RBAC skeleton (`roles`, `user_roles`, default role assignment on register).
 - KYC session skeleton in API (`create session`, `status`).
 - KYC document ingestion skeleton + admin review + status audit events.
+- Observability baseline (`/metrics`, `x-request-id`, structured JSON logs).
+- Sprint 0 quality gates: SAST scan, secret scan, OpenAPI/versioning checks.
 
 ## Auth Skeleton Endpoints (Current)
+- `GET /health`
+- `GET /metrics`
 - `POST /auth/register`
   body: `{ "fullName": "...", "email": "...", "password": "min8chars" }`
 - `POST /auth/login`
@@ -193,13 +198,21 @@ AUTH_STORE=postgres
 
 ## Development Commands (Root)
 - `npm run ci`
-  run lint + typecheck + test for all workspaces.
+  run lint + typecheck + test + security/openapi checks.
 - `npm run lint`
   run workspace lint checks.
 - `npm run typecheck`
   run workspace type checks (currently placeholder for non-API apps).
 - `npm run test`
   run workspace tests.
+- `npm run ci:security`
+  run SAST + secret scan + OpenAPI contract checks.
+- `npm run scan:sast`
+  run lightweight static security checks on `apps/*` and `packages/*`.
+- `npm run scan:secrets`
+  scan tracked files for potential leaked credentials.
+- `npm run check:openapi`
+  validate OpenAPI runtime/target specs + Sprint 1 freeze policy.
 - `npm run dev:api`
   start API in watch mode.
 - `npm run dev:web-sdm`
@@ -210,6 +223,8 @@ AUTH_STORE=postgres
   start admin static app.
 - `npm run migrate:api`
   run PostgreSQL migrations for API (`apps/api/migrations`).
+- `npm run deploy:staging`
+  one-command staging bootstrap (quality gates + infra up + migration).
 
 ## Quick Smoke Check
 1. Start API:
@@ -238,10 +253,14 @@ Use `.env.example` as source of truth.
   access token TTL in seconds (default `900`).
 - `AUTH_REFRESH_TOKEN_TTL_SEC`
   refresh token TTL in seconds (default `604800`).
+- `AUTH_DEFAULT_ROLE_CODE`
+  default role assigned to newly registered users (default `sdm`).
 - `DB_POOL_MAX`
   PostgreSQL pool size for API when `AUTH_STORE=postgres`.
 - `ADMIN_API_KEY`
   shared key for admin review endpoints (`POST /admin/kyc/review`).
+- `LOG_LEVEL`
+  structured log level (`debug|info|warn|error`), default `info`.
 - `POSTGRES_DB`
   database name.
 - `POSTGRES_USER`
@@ -294,6 +313,9 @@ GitHub Actions workflow:
   - `npm run lint`
   - `npm run typecheck`
   - `npm run test`
+  - `npm run scan:sast`
+  - `npm run scan:secrets`
+  - `npm run check:openapi`
 
 ## Architecture and Product Documents
 Recommended reading order:
@@ -304,6 +326,7 @@ Recommended reading order:
 5. `docs/architecture/openapi-runtime-v0.yaml`
 6. `docs/architecture/erd-v1.dbml`
 7. `docs/architecture/openapi-v1.yaml`
+8. `docs/architecture/sprint1-contract-freeze.json`
 
 ## Delivery Tracking
 Primary tracking is ClickUp:
@@ -333,6 +356,11 @@ Fallback tracking is Trello:
 - Repo initialized and pushed to `main`.
 - Workspace scaffolding done.
 - Local infra compose file available.
-- Auth skeleton and KYC skeleton endpoints implemented.
-- KYC audit trail events implemented for status transitions.
-- API tests passing on CI baseline.
+- Sprint 0 engineering foundation done in-repo:
+  - CI + security + OpenAPI quality gates
+  - RBAC baseline and default role assignment
+  - observability baseline (logs/metrics/request-id)
+  - staging bootstrap command
+- Sprint 1 API baseline active:
+  - auth + KYC + admin review queue
+  - KYC audit trail status transitions

@@ -7,6 +7,9 @@
     "apps/*",
     "packages/*"
   ],
+  "dependencies": {
+    "js-yaml": "^4.1.1"
+  },
   "engines": {
     "node": ">=22"
   },
@@ -15,10 +18,15 @@
     "dev:web-sdm": "npm run dev -w @senpaijepang/web-sdm",
     "dev:dashboard": "npm run dev -w @senpaijepang/dashboard",
     "dev:admin": "npm run dev -w @senpaijepang/admin",
+    "deploy:staging": "node scripts/deploy-staging.mjs",
     "migrate:api": "npm run migrate -w @senpaijepang/api",
     "lint": "npm run lint --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
-    "ci": "npm run lint && npm run typecheck && npm run test"
+    "scan:sast": "node scripts/sast-check.mjs",
+    "scan:secrets": "node scripts/secret-scan.mjs",
+    "check:openapi": "node scripts/openapi-check.mjs",
+    "ci:security": "npm run scan:sast && npm run scan:secrets && npm run check:openapi",
+    "ci": "npm run lint && npm run typecheck && npm run test && npm run ci:security"
   }
 }

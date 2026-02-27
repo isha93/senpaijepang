@@ -13,6 +13,14 @@ test('GET /health returns 200', async () => {
 
   assert.equal(res.status, 200);
   assert.equal(body.status, 'ok');
+  assert.ok(res.headers.get('x-request-id'));
+
+  const metricsRes = await fetch(`http://127.0.0.1:${port}/metrics`);
+  const metricsBody = await metricsRes.json();
+  assert.equal(metricsRes.status, 200);
+  assert.ok(Number.isInteger(metricsBody.totalRequests));
+  assert.ok(metricsBody.totalRequests >= 1);
+  assert.ok(typeof metricsBody.byStatus === 'object');
 
   await new Promise((resolve, reject) => {
     server.close((err) => (err ? reject(err) : resolve()));

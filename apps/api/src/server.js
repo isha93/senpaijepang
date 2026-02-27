@@ -1,13 +1,17 @@
 import http from 'node:http';
+import { randomUUID } from 'node:crypto';
 import { createAuthService, isApiError } from './auth/service.js';
 import { InMemoryAuthStore } from './auth/store.js';
 import { createKycService, isKycApiError } from './identity/kyc-service.js';
+import { createLogger } from './observability/logger.js';
+import { InMemoryApiMetrics } from './observability/metrics.js';
 
 const JSON_HEADERS = { 'Content-Type': 'application/json' };
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-admin-api-key',
-  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS'
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  'Access-Control-Expose-Headers': 'x-request-id'
 };
 
 function sendJson(res, status, payload) {
@@ -119,7 +123,7 @@ function authenticateAdminRequest(req, res, adminApiKey) {
   return true;
 }
 
-async function handleRequest(req, res, authService, kycService, adminApiKey) {
+async function handleRequest(req, res, authService, kycService, adminApiKey, metrics) {
   const url = new URL(req.url || '/', 'http://localhost');
 
   if (req.method === 'OPTIONS') {
@@ -129,6 +133,11 @@ async function handleRequest(req, res, authService, kycService, adminApiKey) {
 
   if (req.method === 'GET' && url.pathname === '/health') {
     sendJson(res, 200, { status: 'ok', service: 'api', version: '0.1.0' });
+    return;
+  }
+
+  if (req.method === 'GET' && url.pathname === '/metrics') {
+    sendJson(res, 200, metrics.snapshot());
     return;
   }
 
@@ -296,9 +305,47 @@ export function createServer({ authService, kycService, adminApiKey } = {}) {
   const resolvedKycService = kycService || createKycService({ store: resolvedAuthService.store });
   const resolvedAdminApiKey =
     adminApiKey !== undefined ? String(adminApiKey).trim() : String(process.env.ADMIN_API_KEY || '').trim();
+  const logger = createLogger({ env: process.env, service: 'api' });
+  const metrics = new InMemoryApiMetrics();
 
   return http.createServer((req, res) => {
-    handleRequest(req, res, resolvedAuthService, resolvedKycService, resolvedAdminApiKey).catch((error) => {
+    const pathname = new URL(req.url || '/', 'http://localhost').pathname;
+    const requestId = randomUUID();
+    const startedAtMs = Date.now();
+    let finalized = false;
+
+    res.setHeader('x-request-id', requestId);
+    logger.info('http.request.started', {
+      requestId,
+      method: req.method,
+      path: pathname
+    });
+
+    function finalize() {
+      if (finalized) {
+        return;
+      }
+      finalized = true;
+      const durationMs = Date.now() - startedAtMs;
+      metrics.observeHttpRequest({
+        method: req.method,
+        route: pathname,
+        statusCode: res.statusCode,
+        durationMs
+      });
+      logger.info('http.request.finished', {
+        requestId,
+        method: req.method,
+        path: pathname,
+        statusCode: res.statusCode,
+        durationMs
+      });
+    }
+
+    res.on('finish', finalize);
+    res.on('close', finalize);
+
+    handleRequest(req, res, resolvedAuthService, resolvedKycService, resolvedAdminApiKey, metrics).catch((error) => {
       if (isApiError(error) || isKycApiError(error)) {
         sendJson(res, error.status, {
           error: {
@@ -318,6 +365,14 @@ export function createServer({ authService, kycService, adminApiKey } = {}) {
         });
         return;
       }
+
+      logger.error('http.request.failed', {
+        requestId,
+        method: req.method,
+        path: pathname,
+        errorName: error?.name || 'Error',
+        errorMessage: error?.message || 'unknown error'
+      });
 
       sendJson(res, 500, {
         error: {

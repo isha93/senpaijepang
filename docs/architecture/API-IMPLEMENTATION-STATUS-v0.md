@@ -13,6 +13,7 @@ Date: 2026-02-27
 ## 3. Implemented Endpoints
 Auth:
 - `GET /health`
+- `GET /metrics`
 - `POST /auth/register`
 - `POST /auth/login`
 - `POST /auth/refresh`
@@ -34,6 +35,9 @@ Admin:
 - `001_auth_tables.sql`:
   - `users`
   - `sessions`
+- `004_rbac_tables.sql`:
+  - `roles`
+  - `user_roles`
 - `002_kyc_tables.sql`:
   - `kyc_sessions`
   - `identity_documents`
@@ -59,8 +63,18 @@ Trust status (API response):
 ## 6. Current Security Model
 - User endpoints: Bearer access token.
 - Admin review endpoint: shared secret `ADMIN_API_KEY`.
+- Role baseline: user gets default role `sdm` at registration (`AUTH_DEFAULT_ROLE_CODE`).
 - Note: `ADMIN_API_KEY` adalah sementara untuk MVP bootstrap; target next step adalah RBAC admin account + scoped permissions.
 - Development CORS headers are enabled for web dashboard integration (`GET/POST/OPTIONS`, headers include `Authorization` and `x-admin-api-key`).
+
+## 6.2 Observability Baseline
+- Structured JSON logs (`LOG_LEVEL`) for:
+  - request start / finish
+  - KYC status transition audit events (`audit.kyc.status_transition`)
+- Request correlation header:
+  - `x-request-id`
+- Runtime metrics endpoint:
+  - `GET /metrics` (in-memory counters and latency summary by route/method)
 
 ## 6.1 Current KYC Upload Model
 - API generates pre-signed upload URL via `POST /identity/kyc/upload-url`.

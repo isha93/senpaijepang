@@ -1,0 +1,26 @@
+{
+  "frozenOn": "2026-02-27",
+  "targetSpec": "docs/architecture/openapi-v1.yaml",
+  "runtimeSpec": "docs/architecture/openapi-runtime-v0.yaml",
+  "lockedPrefixes": [
+    "/v1/auth",
+    "/v1/identity/kyc",
+    "/v1/admin"
+  ],
+  "runtimeRequiredPaths": [
+    "/health",
+    "/metrics",
+    "/auth/register",
+    "/auth/login",
+    "/auth/refresh",
+    "/auth/logout",
+    "/auth/me",
+    "/identity/kyc/sessions",
+    "/identity/kyc/status",
+    "/identity/kyc/upload-url",
+    "/identity/kyc/documents",
+    "/identity/kyc/history",
+    "/admin/kyc/review",
+    "/admin/kyc/review-queue"
+  ]
+}

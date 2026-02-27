@@ -1,5 +1,12 @@
 import { createInMemoryObjectStorage } from './object-storage.js';
 
+const NOOP_LOGGER = {
+  info() {},
+  warn() {},
+  error() {},
+  debug() {}
+};
+
 class KycApiError extends Error {
   constructor(status, code, message) {
     super(message);
@@ -216,11 +223,12 @@ function normalizeReviewedBy(reviewedBy) {
 }
 
 export class KycService {
-  constructor({ store, objectStorage, maxUploadBytes, allowedContentTypes }) {
+  constructor({ store, objectStorage, maxUploadBytes, allowedContentTypes, logger }) {
     this.store = store;
     this.objectStorage = objectStorage;
     this.maxUploadBytes = maxUploadBytes;
     this.allowedContentTypes = allowedContentTypes;
+    this.logger = logger || NOOP_LOGGER;
   }
 
   async startSession({ userId, provider }) {
@@ -230,7 +238,7 @@ export class KycService {
       userId,
       provider: normalizedProvider
     });
-    await this.store.createKycStatusEvent({
+    const event = await this.store.createKycStatusEvent({
       kycSessionId: session.id,
       fromStatus: null,
       toStatus: session.status,
@@ -238,6 +246,7 @@ export class KycService {
       actorId: userId,
       reason: 'session_created'
     });
+    this.logKycStatusTransition(event);
 
     return {
       status: mapTrustStatus(session.status),
@@ -362,7 +371,7 @@ export class KycService {
         submittedAt: new Date().toISOString()
       });
 
-      await this.store.createKycStatusEvent({
+      const event = await this.store.createKycStatusEvent({
         kycSessionId: targetSession.id,
         fromStatus: previousStatus,
         toStatus: updatedSession.status,
@@ -370,6 +379,7 @@ export class KycService {
         actorId: userId,
         reason: 'document_uploaded'
       });
+      this.logKycStatusTransition(event);
     }
 
     return {
@@ -423,7 +433,7 @@ export class KycService {
     });
 
     if (previousStatus !== normalizedDecision) {
-      await this.store.createKycStatusEvent({
+      const event = await this.store.createKycStatusEvent({
         kycSessionId: session.id,
         fromStatus: previousStatus,
         toStatus: normalizedDecision,
@@ -431,6 +441,7 @@ export class KycService {
         actorId: normalizedReviewedBy,
         reason: String(reason || '').trim() || null
       });
+      this.logKycStatusTransition(event);
     }
 
     return {
@@ -526,6 +537,18 @@ export class KycService {
     return Array.from(new Set(flags));
   }
 
+  logKycStatusTransition(event) {
+    this.logger.info('audit.kyc.status_transition', {
+      kycSessionId: event.kycSessionId,
+      fromStatus: event.fromStatus,
+      toStatus: event.toStatus,
+      actorType: event.actorType,
+      actorId: event.actorId,
+      reason: event.reason,
+      createdAt: event.createdAt
+    });
+  }
+
   async resolveUserSession({ userId, sessionId }) {
     const normalizedSessionId = String(sessionId || '').trim();
     if (normalizedSessionId) {
@@ -580,7 +603,7 @@ export class KycService {
   }
 }
 
-export function createKycService({ store, objectStorage, env = process.env } = {}) {
+export function createKycService({ store, objectStorage, env = process.env, logger } = {}) {
   if (
     !store ||
     typeof store.findUserById !== 'function' ||
@@ -616,7 +639,8 @@ export function createKycService({ store, objectStorage, env = process.env } = {
     store,
     objectStorage: resolvedObjectStorage,
     maxUploadBytes,
-    allowedContentTypes: normalizeAllowedContentTypes(env.OBJECT_STORAGE_ALLOWED_CONTENT_TYPES)
+    allowedContentTypes: normalizeAllowedContentTypes(env.OBJECT_STORAGE_ALLOWED_CONTENT_TYPES),
+    logger
   });
 }
 

@@ -12,6 +12,41 @@ export class InMemoryAuthStore {
     this.identityDocumentIdsBySessionId = new Map();
     this.kycStatusEventsById = new Map();
     this.kycStatusEventIdsBySessionId = new Map();
+    this.rolesByCode = new Map([
+      [
+        'sdm',
+        {
+          id: '00000000-0000-0000-0000-000000000001',
+          code: 'sdm',
+          description: 'Default SDM candidate role'
+        }
+      ],
+      [
+        'tsk_operator',
+        {
+          id: '00000000-0000-0000-0000-000000000002',
+          code: 'tsk_operator',
+          description: 'TSK/LPK operator role'
+        }
+      ],
+      [
+        'admin_ops',
+        {
+          id: '00000000-0000-0000-0000-000000000003',
+          code: 'admin_ops',
+          description: 'Internal operations admin role'
+        }
+      ],
+      [
+        'compliance_officer',
+        {
+          id: '00000000-0000-0000-0000-000000000004',
+          code: 'compliance_officer',
+          description: 'Compliance/audit role'
+        }
+      ]
+    ]);
+    this.userRoleCodesByUserId = new Map();
   }
 
   createUser({ fullName, email, passwordHash }) {
@@ -41,6 +76,28 @@ export class InMemoryAuthStore {
 
   findUserById(id) {
     return this.usersById.get(id) || null;
+  }
+
+  ensureUserRole({ userId, roleCode }) {
+    if (!this.usersById.has(userId)) {
+      return false;
+    }
+    const normalizedRoleCode = String(roleCode || '')
+      .trim()
+      .toLowerCase();
+    if (!this.rolesByCode.has(normalizedRoleCode)) {
+      return false;
+    }
+
+    const roleCodes = this.userRoleCodesByUserId.get(userId) || new Set();
+    roleCodes.add(normalizedRoleCode);
+    this.userRoleCodesByUserId.set(userId, roleCodes);
+    return true;
+  }
+
+  listUserRolesByUserId(userId) {
+    const roleCodes = this.userRoleCodesByUserId.get(userId) || new Set();
+    return Array.from(roleCodes).sort();
   }
 
   createSession({ userId, tokenHash, expiresAt }) {

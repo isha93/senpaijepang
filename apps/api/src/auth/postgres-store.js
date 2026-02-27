@@ -105,6 +105,44 @@ export class PostgresAuthStore {
     return mapUserRow(result.rows[0]);
   }
 
+  async ensureUserRole({ userId, roleCode }) {
+    const normalizedRoleCode = String(roleCode || '')
+      .trim()
+      .toLowerCase();
+    const roleResult = await this.pool.query('SELECT id FROM roles WHERE code = $1 LIMIT 1', [
+      normalizedRoleCode
+    ]);
+    const role = roleResult.rows[0];
+    if (!role) {
+      return false;
+    }
+
+    await this.pool.query(
+      `
+        INSERT INTO user_roles (id, user_id, role_id)
+        VALUES ($1, $2, $3)
+        ON CONFLICT (user_id, role_id) DO NOTHING
+      `,
+      [randomUUID(), userId, role.id]
+    );
+
+    return true;
+  }
+
+  async listUserRolesByUserId(userId) {
+    const result = await this.pool.query(
+      `
+        SELECT r.code
+        FROM roles r
+        JOIN user_roles ur ON ur.role_id = r.id
+        WHERE ur.user_id = $1
+        ORDER BY r.code ASC
+      `,
+      [userId]
+    );
+    return result.rows.map((row) => row.code);
+  }
+
   async createSession({ userId, tokenHash, expiresAt }) {
     const result = await this.pool.query(
       `

@@ -4,8 +4,11 @@
 Delivered baseline in repository:
 - Sprint 0 foundation:
   - monorepo setup for `api`, `web-sdm`, `dashboard`, `admin`
-  - CI baseline (`lint`, `typecheck`, `test`)
+  - CI pipeline gates (`lint`, `typecheck`, `test`, `scan:sast`, `scan:secrets`, `check:openapi`)
   - local infra setup (`PostgreSQL`, `Redis`, `MinIO`)
+  - RBAC skeleton + default role assignment (`sdm`)
+  - observability baseline (`/metrics`, `x-request-id`, JSON request logs)
+  - staging bootstrap command (`npm run deploy:staging`)
 - Sprint 1 partial:
   - auth flow (`register`, `login`, `refresh`, `logout`, `me`)
   - KYC session flow (`create`, `status`)

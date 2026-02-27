@@ -20,11 +20,12 @@ function hashToken(token) {
 }
 
 export class AuthService {
-  constructor({ store, accessTokenSecret, accessTokenTtlSec, refreshTokenTtlSec }) {
+  constructor({ store, accessTokenSecret, accessTokenTtlSec, refreshTokenTtlSec, defaultRoleCode }) {
     this.store = store;
     this.accessTokenSecret = accessTokenSecret;
     this.accessTokenTtlSec = accessTokenTtlSec;
     this.refreshTokenTtlSec = refreshTokenTtlSec;
+    this.defaultRoleCode = defaultRoleCode;
   }
 
   async register({ fullName, email, password }) {
@@ -51,6 +52,7 @@ export class AuthService {
       throw new ApiError(409, 'email_exists', 'email already registered');
     }
 
+    await this.assignDefaultRole(user.id);
     return this.issueSession(user);
   }
 
@@ -136,19 +138,42 @@ export class AuthService {
     });
 
     return {
-      user: this.publicUser(user),
+      user: await this.publicUser(user),
       accessToken,
       refreshToken
     };
   }
 
-  publicUser(user) {
+  async assignDefaultRole(userId) {
+    if (typeof this.store.ensureUserRole !== 'function') {
+      return;
+    }
+    const ok = await this.store.ensureUserRole({
+      userId,
+      roleCode: this.defaultRoleCode
+    });
+    if (!ok) {
+      throw new ApiError(500, 'role_assignment_failed', `unable to assign default role '${this.defaultRoleCode}'`);
+    }
+  }
+
+  async publicUser(user) {
+    const roles = await this.listRolesForUser(user.id);
     return {
       id: user.id,
       fullName: user.fullName,
       email: user.email,
-      createdAt: user.createdAt
+      createdAt: user.createdAt,
+      roles
     };
+  }
+
+  async listRolesForUser(userId) {
+    if (typeof this.store.listUserRolesByUserId !== 'function') {
+      return [];
+    }
+    const roles = await this.store.listUserRolesByUserId(userId);
+    return Array.isArray(roles) ? roles : [];
   }
 }
 
@@ -157,7 +182,10 @@ export function createAuthService({ store, env = process.env } = {}) {
     store: store || new InMemoryAuthStore(),
     accessTokenSecret: env.AUTH_TOKEN_SECRET || 'dev-insecure-token-secret-change-me',
     accessTokenTtlSec: Number(env.AUTH_ACCESS_TOKEN_TTL_SEC || 900),
-    refreshTokenTtlSec: Number(env.AUTH_REFRESH_TOKEN_TTL_SEC || 604800)
+    refreshTokenTtlSec: Number(env.AUTH_REFRESH_TOKEN_TTL_SEC || 604800),
+    defaultRoleCode: String(env.AUTH_DEFAULT_ROLE_CODE || 'sdm')
+      .trim()
+      .toLowerCase()
   });
 }
 

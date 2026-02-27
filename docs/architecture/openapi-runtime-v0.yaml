@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: SenpaiJepang API (Runtime v0)
-  version: 0.4.0
+  version: 0.5.0
   description: Runtime API contract implemented in repository as of 2026-02-27.
 servers:
   - url: http://localhost:4000
@@ -26,6 +26,19 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HealthResponse'
+
+  /metrics:
+    get:
+      tags: [Health]
+      summary: In-memory API metrics snapshot
+      security: []
+      responses:
+        '200':
+          description: Metrics snapshot
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MetricsResponse'
 
   /auth/register:
     post:
@@ -336,6 +349,39 @@ components:
           type: string
           example: 0.1.0
 
+    MetricsResponse:
+      type: object
+      required: [uptimeSec, totalRequests, totalErrors, byStatus, routes]
+      properties:
+        uptimeSec:
+          type: integer
+        totalRequests:
+          type: integer
+        totalErrors:
+          type: integer
+        byStatus:
+          type: object
+          additionalProperties:
+            type: integer
+        routes:
+          type: array
+          items:
+            type: object
+            required: [method, route, count, avgDurationMs, minDurationMs, maxDurationMs]
+            properties:
+              method:
+                type: string
+              route:
+                type: string
+              count:
+                type: integer
+              avgDurationMs:
+                type: number
+              minDurationMs:
+                type: number
+              maxDurationMs:
+                type: number
+
     ApiErrorEnvelope:
       type: object
       required: [error]
@@ -388,7 +434,7 @@ components:
 
     User:
       type: object
-      required: [id, fullName, email, createdAt]
+      required: [id, fullName, email, createdAt, roles]
       properties:
         id:
           type: string
@@ -401,6 +447,10 @@ components:
         createdAt:
           type: string
           format: date-time
+        roles:
+          type: array
+          items:
+            type: string
 
     AuthResponse:
       type: object

@@ -11,7 +11,16 @@
   - `001_auth_tables.sql`
   - `002_kyc_tables.sql`
   - `003_kyc_status_events.sql`
+  - `004_rbac_tables.sql`
+- Sprint 0 quality gates in repository:
+  - `scan:sast` (static checks)
+  - `scan:secrets` (credential leak guard)
+  - `check:openapi` (schema + versioning + freeze policy)
+- Observability baseline:
+  - JSON request logs with request-id correlation
+  - `GET /metrics` in-memory route metrics snapshot
 - Runtime contract is documented in `openapi-runtime-v0.yaml`.
+- Sprint 1 contract freeze policy is documented in `sprint1-contract-freeze.json`.
 - Product target contract remains `openapi-v1.yaml`.
 
 ## 1. Scope and Objective

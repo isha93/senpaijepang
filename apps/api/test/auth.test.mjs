@@ -42,6 +42,7 @@ test('auth flow: register -> login -> me -> refresh -> logout', async () => {
 
     assert.equal(register.res.status, 201);
     assert.equal(register.body.user.email, 'isa@example.com');
+    assert.deepEqual(register.body.user.roles, ['sdm']);
     assert.ok(register.body.accessToken);
     assert.ok(register.body.refreshToken);
 
@@ -52,6 +53,7 @@ test('auth flow: register -> login -> me -> refresh -> logout', async () => {
 
     assert.equal(me.status, 200);
     assert.equal(meBody.user.email, 'isa@example.com');
+    assert.deepEqual(meBody.user.roles, ['sdm']);
 
     const login = await postJson(baseUrl, '/auth/login', {
       identifier: 'isa@example.com',
