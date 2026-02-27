@@ -213,6 +213,10 @@ AUTH_STORE=postgres
   scan tracked files for potential leaked credentials.
 - `npm run check:openapi`
   validate OpenAPI runtime/target specs + Sprint 1 freeze policy.
+- `npm run smoke:api`
+  run endpoint smoke flow against already-running API (`SMOKE_BASE_URL`).
+- `npm run smoke:local`
+  full local smoke (docker compose + migration + start API postgres/s3 + endpoint checks).
 - `npm run dev:api`
   start API in watch mode.
 - `npm run dev:web-sdm`

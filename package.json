@@ -27,6 +27,8 @@
     "scan:secrets": "node scripts/secret-scan.mjs",
     "check:openapi": "node scripts/openapi-check.mjs",
     "ci:security": "npm run scan:sast && npm run scan:secrets && npm run check:openapi",
+    "smoke:local": "bash scripts/smoke-local.sh",
+    "smoke:api": "node scripts/smoke-api-flow.mjs",
     "ci": "npm run lint && npm run typecheck && npm run test && npm run ci:security"
   }
 }
