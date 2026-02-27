@@ -1,0 +1,13 @@
+{
+  "name": "@senpaijepang/web-sdm",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node ../../scripts/serve-static.mjs --dir . --port 3000 --title SDM-Web",
+    "start": "node ../../scripts/serve-static.mjs --dir . --port 3000 --title SDM-Web",
+    "lint": "node ../../scripts/task-check.mjs --task lint --scope .",
+    "typecheck": "node ../../scripts/task-check.mjs --task typecheck --scope .",
+    "test": "node ../../scripts/task-check.mjs --task test --scope ."
+  }
+}

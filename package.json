@@ -1,0 +1,23 @@
+{
+  "name": "senpaijepang",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Verified Migration Infrastructure monorepo (MVP)",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev:api": "npm run dev -w @senpaijepang/api",
+    "dev:web-sdm": "npm run dev -w @senpaijepang/web-sdm",
+    "dev:dashboard": "npm run dev -w @senpaijepang/dashboard",
+    "dev:admin": "npm run dev -w @senpaijepang/admin",
+    "lint": "npm run lint --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "ci": "npm run lint && npm run typecheck && npm run test"
+  }
+}

@@ -1,0 +1,726 @@
+openapi: 3.0.3
+info:
+  title: SenpaiJepang API
+  version: 1.0.0
+  description: Trust-first migration platform API contract for MVP 1.0
+servers:
+  - url: https://api.senpaijepang.com
+    description: Production
+  - url: https://staging-api.senpaijepang.com
+    description: Staging
+security:
+  - bearerAuth: []
+tags:
+  - name: Auth
+  - name: Identity
+  - name: Organizations
+  - name: Jobs
+  - name: Applications
+  - name: Trust
+  - name: Evidence
+  - name: Admin
+paths:
+  /v1/auth/register:
+    post:
+      tags: [Auth]
+      summary: Register SDM account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+  /v1/auth/login:
+    post:
+      tags: [Auth]
+      summary: Login with email/phone and password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+  /v1/auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Refresh access token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refreshToken]
+              properties:
+                refreshToken:
+                  type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+
+  /v1/identity/kyc/sessions:
+    post:
+      tags: [Identity]
+      summary: Create KYC session
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KycSession'
+  /v1/identity/kyc/sessions/{sessionId}/documents:
+    post:
+      tags: [Identity]
+      summary: Upload KYC document metadata
+      parameters:
+        - in: path
+          name: sessionId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/KycDocumentUploadRequest'
+      responses:
+        '201':
+          description: Created
+  /v1/identity/kyc/sessions/{sessionId}/submit:
+    post:
+      tags: [Identity]
+      summary: Submit KYC session for processing
+      parameters:
+        - in: path
+          name: sessionId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Submitted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KycStatusResponse'
+  /v1/identity/kyc/status:
+    get:
+      tags: [Identity]
+      summary: Get current user KYC status
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KycStatusResponse'
+
+  /v1/organizations:
+    post:
+      tags: [Organizations]
+      summary: Create organization profile (TSK/LPK)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateOrganizationRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Organization'
+  /v1/organizations/{orgId}/verification:
+    post:
+      tags: [Organizations]
+      summary: Submit organization verification request
+      parameters:
+        - in: path
+          name: orgId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrganizationVerificationRequest'
+      responses:
+        '202':
+          description: Accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrganizationVerification'
+  /v1/organizations/{orgId}/verification/status:
+    get:
+      tags: [Organizations]
+      summary: Get organization verification status
+      parameters:
+        - in: path
+          name: orgId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrganizationVerification'
+
+  /v1/jobs:
+    get:
+      tags: [Jobs]
+      summary: Search jobs
+      parameters:
+        - in: query
+          name: sector
+          schema:
+            type: string
+        - in: query
+          name: prefecture
+          schema:
+            type: string
+        - in: query
+          name: verifiedOnly
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Job'
+    post:
+      tags: [Jobs]
+      summary: Create job post (TSK/LPK)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateJobRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Job'
+
+  /v1/jobs/{jobId}/applications:
+    post:
+      tags: [Applications]
+      summary: Submit application to a job
+      parameters:
+        - in: path
+          name: jobId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateApplicationRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application'
+  /v1/applications/{applicationId}:
+    get:
+      tags: [Applications]
+      summary: Get application detail/status
+      parameters:
+        - in: path
+          name: applicationId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application'
+
+  /v1/trust/profile:
+    get:
+      tags: [Trust]
+      summary: Get trust profile with explainable factors
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrustProfile'
+
+  /v1/evidence/fraud-reports:
+    post:
+      tags: [Evidence]
+      summary: Create fraud report
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateFraudReportRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FraudReport'
+  /v1/evidence/fraud-reports/{reportId}:
+    get:
+      tags: [Evidence]
+      summary: Get fraud report status
+      parameters:
+        - in: path
+          name: reportId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FraudReport'
+
+  /v1/admin/cases:
+    get:
+      tags: [Admin]
+      summary: List case tickets for ops
+      parameters:
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [OPEN, IN_REVIEW, WAITING_EVIDENCE, RESOLVED, REJECTED]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CaseTicket'
+  /v1/admin/cases/{caseId}/action:
+    post:
+      tags: [Admin]
+      summary: Apply case action
+      parameters:
+        - in: path
+          name: caseId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CaseActionRequest'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CaseTicket'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    RegisterRequest:
+      type: object
+      required: [fullName, email, phone, password, countryCode, acceptedPolicyVersion]
+      properties:
+        fullName:
+          type: string
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+        countryCode:
+          type: string
+          example: ID
+        password:
+          type: string
+          minLength: 8
+        acceptedPolicyVersion:
+          type: string
+          example: consent-v1.0
+
+    LoginRequest:
+      type: object
+      required: [identifier, password]
+      properties:
+        identifier:
+          type: string
+          description: email or phone
+        password:
+          type: string
+
+    AuthResponse:
+      type: object
+      required: [accessToken, refreshToken, user]
+      properties:
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+        user:
+          $ref: '#/components/schemas/User'
+
+    User:
+      type: object
+      required: [id, fullName, email, phone, kycStatus]
+      properties:
+        id:
+          type: string
+          format: uuid
+        fullName:
+          type: string
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+        kycStatus:
+          type: string
+          enum: [NOT_STARTED, IN_PROGRESS, MANUAL_REVIEW, VERIFIED, REJECTED]
+
+    KycSession:
+      type: object
+      required: [id, userId, status, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [CREATED, DOCS_UPLOADED, SUBMITTED, PROCESSING, MANUAL_REVIEW, VERIFIED, REJECTED]
+        createdAt:
+          type: string
+          format: date-time
+
+    KycDocumentUploadRequest:
+      type: object
+      required: [documentType, objectKey]
+      properties:
+        documentType:
+          type: string
+          enum: [ID_CARD, PASSPORT, SELFIE, SUPPORTING_DOC]
+        objectKey:
+          type: string
+        metadata:
+          type: object
+          additionalProperties: true
+
+    KycStatusResponse:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [NOT_STARTED, IN_PROGRESS, MANUAL_REVIEW, VERIFIED, REJECTED]
+        confidence:
+          type: number
+          format: float
+        riskFlags:
+          type: array
+          items:
+            type: string
+
+    CreateOrganizationRequest:
+      type: object
+      required: [name, orgType, countryCode]
+      properties:
+        name:
+          type: string
+        orgType:
+          type: string
+          enum: [TSK, LPK, EMPLOYER]
+        countryCode:
+          type: string
+          example: JP
+
+    Organization:
+      type: object
+      required: [id, name, orgType, countryCode]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        orgType:
+          type: string
+          enum: [TSK, LPK, EMPLOYER]
+        countryCode:
+          type: string
+
+    OrganizationVerificationRequest:
+      type: object
+      required: [registrationNumber, legalName]
+      properties:
+        registrationNumber:
+          type: string
+        legalName:
+          type: string
+        supportingObjectKeys:
+          type: array
+          items:
+            type: string
+
+    OrganizationVerification:
+      type: object
+      required: [id, orgId, status]
+      properties:
+        id:
+          type: string
+          format: uuid
+        orgId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [PENDING, VERIFIED, MISMATCH, NOT_FOUND, REJECTED]
+        reasonCodes:
+          type: array
+          items:
+            type: string
+        lastCheckedAt:
+          type: string
+          format: date-time
+
+    CreateJobRequest:
+      type: object
+      required: [title, sector, prefecture, employmentType]
+      properties:
+        title:
+          type: string
+        sector:
+          type: string
+        prefecture:
+          type: string
+        employmentType:
+          type: string
+          enum: [FULL_TIME, CONTRACT]
+        minJapaneseLevel:
+          type: string
+          example: N4
+        salaryRange:
+          type: string
+
+    Job:
+      type: object
+      required: [id, organizationId, title, sector, prefecture, status]
+      properties:
+        id:
+          type: string
+          format: uuid
+        organizationId:
+          type: string
+          format: uuid
+        title:
+          type: string
+        sector:
+          type: string
+        prefecture:
+          type: string
+        status:
+          type: string
+          enum: [DRAFT, PUBLISHED, CLOSED]
+
+    CreateApplicationRequest:
+      type: object
+      required: [criticalConsentVersion]
+      properties:
+        criticalConsentVersion:
+          type: string
+        note:
+          type: string
+
+    Application:
+      type: object
+      required: [id, jobId, candidateUserId, status, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        jobId:
+          type: string
+          format: uuid
+        candidateUserId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [SUBMITTED, SHORTLISTED, REJECTED, OFFERED, WITHDRAWN]
+        createdAt:
+          type: string
+          format: date-time
+
+    TrustProfile:
+      type: object
+      required: [userId, trustLevel, score, factors]
+      properties:
+        userId:
+          type: string
+          format: uuid
+        trustLevel:
+          type: string
+          enum: [LOW, MEDIUM, HIGH]
+        score:
+          type: integer
+          minimum: 0
+          maximum: 100
+        factors:
+          type: array
+          items:
+            $ref: '#/components/schemas/TrustFactor'
+
+    TrustFactor:
+      type: object
+      required: [code, weight, value, reason]
+      properties:
+        code:
+          type: string
+        weight:
+          type: number
+          format: float
+        value:
+          type: string
+        reason:
+          type: string
+
+    CreateFraudReportRequest:
+      type: object
+      required: [reportedEntityType, reportedEntityId, category, description]
+      properties:
+        reportedEntityType:
+          type: string
+          enum: [USER, ORGANIZATION, JOB, PAYMENT]
+        reportedEntityId:
+          type: string
+        category:
+          type: string
+          enum: [FAKE_DOCUMENT, ILLEGAL_FEE, IMPERSONATION, HARASSMENT, OTHER]
+        description:
+          type: string
+        evidenceObjectKeys:
+          type: array
+          items:
+            type: string
+
+    FraudReport:
+      type: object
+      required: [id, status, category, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [OPEN, IN_REVIEW, WAITING_EVIDENCE, RESOLVED, REJECTED]
+        category:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    CaseActionRequest:
+      type: object
+      required: [action]
+      properties:
+        action:
+          type: string
+          enum: [REQUEST_EVIDENCE, ESCALATE, RESOLVE_VALID, RESOLVE_INVALID, BLACKLIST_ENTITY]
+        note:
+          type: string
+
+    CaseTicket:
+      type: object
+      required: [id, reportId, status, priority]
+      properties:
+        id:
+          type: string
+          format: uuid
+        reportId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [OPEN, IN_REVIEW, WAITING_EVIDENCE, RESOLVED, REJECTED]
+        priority:
+          type: string
+          enum: [LOW, MEDIUM, HIGH, CRITICAL]
+        assignedTo:
+          type: string
+          format: uuid
+        dueAt:
+          type: string
+          format: date-time

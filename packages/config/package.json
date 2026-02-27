@@ -1,0 +1,12 @@
+{
+  "name": "@senpaijepang/config",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.js",
+  "scripts": {
+    "lint": "node ../../scripts/task-check.mjs --task lint --scope .",
+    "typecheck": "node ../../scripts/task-check.mjs --task typecheck --scope .",
+    "test": "node ../../scripts/task-check.mjs --task test --scope ."
+  }
+}

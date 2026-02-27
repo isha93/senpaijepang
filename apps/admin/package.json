@@ -1,0 +1,13 @@
+{
+  "name": "@senpaijepang/admin",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node ../../scripts/serve-static.mjs --dir . --port 3002 --title Admin",
+    "start": "node ../../scripts/serve-static.mjs --dir . --port 3002 --title Admin",
+    "lint": "node ../../scripts/task-check.mjs --task lint --scope .",
+    "typecheck": "node ../../scripts/task-check.mjs --task typecheck --scope .",
+    "test": "node ../../scripts/task-check.mjs --task test --scope ."
+  }
+}

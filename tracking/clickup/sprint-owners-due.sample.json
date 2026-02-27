@@ -1,0 +1,15 @@
+{
+  "folderId": "901812548733",
+  "rules": [
+    {
+      "sprint": "S0",
+      "dueDate": "2026-03-13",
+      "assignees": ["CLICKUP_USER_ID_TECH_LEAD"]
+    },
+    {
+      "sprint": "S1",
+      "dueDate": "2026-03-27",
+      "assignees": ["CLICKUP_USER_ID_BACKEND_LEAD"]
+    }
+  ]
+}

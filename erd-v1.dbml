@@ -1,0 +1,423 @@
+Project senpaijepang_v1 {
+  database_type: "PostgreSQL"
+  note: "MVP 1.0 trust-first migration platform"
+}
+
+Enum user_status {
+  ACTIVE
+  SUSPENDED
+  DELETED
+}
+
+Enum kyc_status {
+  NOT_STARTED
+  IN_PROGRESS
+  MANUAL_REVIEW
+  VERIFIED
+  REJECTED
+}
+
+Enum org_type {
+  TSK
+  LPK
+  EMPLOYER
+}
+
+Enum verification_status {
+  PENDING
+  VERIFIED
+  MISMATCH
+  NOT_FOUND
+  REJECTED
+}
+
+Enum job_status {
+  DRAFT
+  PUBLISHED
+  CLOSED
+}
+
+Enum application_status {
+  SUBMITTED
+  SHORTLISTED
+  REJECTED
+  OFFERED
+  WITHDRAWN
+}
+
+Enum report_status {
+  OPEN
+  IN_REVIEW
+  WAITING_EVIDENCE
+  RESOLVED
+  REJECTED
+}
+
+Enum trust_level {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+Table users {
+  id uuid [pk]
+  full_name varchar(150) [not null]
+  email varchar(255) [not null, unique]
+  phone varchar(30) [not null, unique]
+  country_code char(2) [not null]
+  password_hash varchar(255) [not null]
+  status user_status [not null, default: 'ACTIVE']
+  kyc_status kyc_status [not null, default: 'NOT_STARTED']
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+}
+
+Table roles {
+  id uuid [pk]
+  code varchar(50) [not null, unique]
+  description varchar(255)
+}
+
+Table user_roles {
+  id uuid [pk]
+  user_id uuid [not null]
+  role_id uuid [not null]
+  created_at timestamptz [not null]
+
+  indexes {
+    (user_id, role_id) [unique]
+  }
+}
+
+Table sessions {
+  id uuid [pk]
+  user_id uuid [not null]
+  refresh_token_hash varchar(255) [not null]
+  device_id varchar(120)
+  ip_address varchar(64)
+  expires_at timestamptz [not null]
+  revoked_at timestamptz
+  created_at timestamptz [not null]
+}
+
+Table consent_versions {
+  id uuid [pk]
+  code varchar(50) [not null, unique]
+  title varchar(255) [not null]
+  content_hash varchar(128) [not null]
+  is_active boolean [not null, default: true]
+  created_at timestamptz [not null]
+}
+
+Table consents {
+  id uuid [pk]
+  user_id uuid [not null]
+  consent_version_id uuid [not null]
+  consent_type varchar(50) [not null]
+  accepted_at timestamptz [not null]
+  ip_address varchar(64)
+  user_agent varchar(255)
+}
+
+Table organizations {
+  id uuid [pk]
+  name varchar(255) [not null]
+  legal_name varchar(255)
+  org_type org_type [not null]
+  country_code char(2) [not null]
+  status varchar(30) [not null, default: 'ACTIVE']
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+}
+
+Table org_members {
+  id uuid [pk]
+  org_id uuid [not null]
+  user_id uuid [not null]
+  member_role varchar(50) [not null]
+  created_at timestamptz [not null]
+
+  indexes {
+    (org_id, user_id) [unique]
+  }
+}
+
+Table kyc_sessions {
+  id uuid [pk]
+  user_id uuid [not null]
+  provider varchar(50) [not null]
+  status varchar(40) [not null]
+  submitted_at timestamptz
+  reviewed_by uuid
+  reviewed_at timestamptz
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+}
+
+Table identity_documents {
+  id uuid [pk]
+  kyc_session_id uuid [not null]
+  document_type varchar(40) [not null]
+  object_key varchar(255) [not null]
+  checksum varchar(128)
+  metadata_json jsonb
+  created_at timestamptz [not null]
+}
+
+Table kyc_results {
+  id uuid [pk]
+  kyc_session_id uuid [not null]
+  provider_case_id varchar(100)
+  decision varchar(40) [not null]
+  confidence numeric(5,2)
+  risk_flags jsonb
+  reason_codes jsonb
+  raw_payload jsonb
+  created_at timestamptz [not null]
+}
+
+Table tsk_registry_snapshots {
+  id uuid [pk]
+  source_name varchar(100) [not null]
+  source_url varchar(255)
+  source_hash varchar(128) [not null]
+  fetched_at timestamptz [not null]
+  record_count int [not null]
+}
+
+Table tsk_registry_entities {
+  id uuid [pk]
+  snapshot_id uuid [not null]
+  registration_number varchar(80) [not null]
+  entity_name varchar(255) [not null]
+  status varchar(50)
+  effective_date date
+  raw_data jsonb
+
+  indexes {
+    registration_number
+    entity_name
+  }
+}
+
+Table org_verifications {
+  id uuid [pk]
+  org_id uuid [not null]
+  registration_number varchar(80)
+  legal_name_submitted varchar(255)
+  status verification_status [not null, default: 'PENDING']
+  matched_registry_entity_id uuid
+  reason_codes jsonb
+  checked_at timestamptz
+  expires_at timestamptz
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+}
+
+Table jobs {
+  id uuid [pk]
+  organization_id uuid [not null]
+  title varchar(255) [not null]
+  sector varchar(120) [not null]
+  prefecture varchar(120) [not null]
+  employment_type varchar(40) [not null]
+  min_japanese_level varchar(10)
+  salary_range varchar(120)
+  status job_status [not null, default: 'DRAFT']
+  published_at timestamptz
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+
+  indexes {
+    (sector, prefecture)
+    status
+  }
+}
+
+Table candidate_profiles {
+  user_id uuid [pk]
+  date_of_birth date
+  gender varchar(30)
+  domicile_city varchar(120)
+  preferred_sectors jsonb
+  preferred_locations jsonb
+  current_japanese_level varchar(10)
+  years_of_experience int
+  training_summary text
+  updated_at timestamptz [not null]
+}
+
+Table applications {
+  id uuid [pk]
+  job_id uuid [not null]
+  candidate_user_id uuid [not null]
+  status application_status [not null, default: 'SUBMITTED']
+  critical_consent_version varchar(50) [not null]
+  note text
+  submitted_at timestamptz [not null]
+  updated_at timestamptz [not null]
+
+  indexes {
+    (job_id, candidate_user_id) [unique]
+    status
+  }
+}
+
+Table trust_signals {
+  id uuid [pk]
+  user_id uuid [not null]
+  signal_code varchar(80) [not null]
+  signal_value varchar(255)
+  weight numeric(6,2) [not null]
+  source varchar(50) [not null]
+  observed_at timestamptz [not null]
+}
+
+Table trust_scores {
+  id uuid [pk]
+  user_id uuid [not null]
+  score int [not null]
+  trust_level trust_level [not null]
+  computed_at timestamptz [not null]
+
+  indexes {
+    (user_id, computed_at)
+  }
+}
+
+Table trust_score_factors {
+  id uuid [pk]
+  trust_score_id uuid [not null]
+  factor_code varchar(80) [not null]
+  factor_weight numeric(6,2) [not null]
+  factor_value varchar(255)
+  reason_text varchar(255)
+}
+
+Table fraud_reports {
+  id uuid [pk]
+  reporter_user_id uuid [not null]
+  reported_entity_type varchar(30) [not null]
+  reported_entity_id uuid [not null]
+  category varchar(50) [not null]
+  description text [not null]
+  status report_status [not null, default: 'OPEN']
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+}
+
+Table evidence_items {
+  id uuid [pk]
+  fraud_report_id uuid [not null]
+  object_key varchar(255) [not null]
+  file_type varchar(40)
+  checksum varchar(128)
+  metadata_json jsonb
+  created_at timestamptz [not null]
+}
+
+Table case_tickets {
+  id uuid [pk]
+  fraud_report_id uuid [not null, unique]
+  status report_status [not null, default: 'OPEN']
+  priority varchar(20) [not null, default: 'MEDIUM']
+  assigned_to uuid
+  due_at timestamptz
+  resolved_at timestamptz
+  resolution_note text
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+}
+
+Table case_actions {
+  id uuid [pk]
+  case_ticket_id uuid [not null]
+  actor_user_id uuid [not null]
+  action_code varchar(60) [not null]
+  note text
+  created_at timestamptz [not null]
+}
+
+Table blacklists {
+  id uuid [pk]
+  entity_type varchar(30) [not null]
+  entity_id uuid [not null]
+  reason_code varchar(80) [not null]
+  reason_note text
+  active boolean [not null, default: true]
+  created_by uuid [not null]
+  created_at timestamptz [not null]
+  expires_at timestamptz
+
+  indexes {
+    (entity_type, entity_id, active)
+  }
+}
+
+Table notifications {
+  id uuid [pk]
+  user_id uuid [not null]
+  channel varchar(20) [not null]
+  template_code varchar(80) [not null]
+  payload_json jsonb
+  status varchar(20) [not null]
+  sent_at timestamptz
+  created_at timestamptz [not null]
+}
+
+Table audit_logs {
+  id uuid [pk]
+  actor_user_id uuid
+  actor_org_id uuid
+  action_code varchar(80) [not null]
+  target_type varchar(40) [not null]
+  target_id uuid
+  metadata_json jsonb
+  ip_address varchar(64)
+  user_agent varchar(255)
+  created_at timestamptz [not null]
+
+  indexes {
+    created_at
+    (target_type, target_id)
+  }
+}
+
+Ref: user_roles.user_id > users.id
+Ref: user_roles.role_id > roles.id
+Ref: sessions.user_id > users.id
+Ref: consents.user_id > users.id
+Ref: consents.consent_version_id > consent_versions.id
+
+Ref: org_members.org_id > organizations.id
+Ref: org_members.user_id > users.id
+
+Ref: kyc_sessions.user_id > users.id
+Ref: kyc_sessions.reviewed_by > users.id
+Ref: identity_documents.kyc_session_id > kyc_sessions.id
+Ref: kyc_results.kyc_session_id > kyc_sessions.id
+
+Ref: tsk_registry_entities.snapshot_id > tsk_registry_snapshots.id
+Ref: org_verifications.org_id > organizations.id
+Ref: org_verifications.matched_registry_entity_id > tsk_registry_entities.id
+
+Ref: jobs.organization_id > organizations.id
+Ref: candidate_profiles.user_id > users.id
+Ref: applications.job_id > jobs.id
+Ref: applications.candidate_user_id > users.id
+
+Ref: trust_signals.user_id > users.id
+Ref: trust_scores.user_id > users.id
+Ref: trust_score_factors.trust_score_id > trust_scores.id
+
+Ref: fraud_reports.reporter_user_id > users.id
+Ref: evidence_items.fraud_report_id > fraud_reports.id
+Ref: case_tickets.fraud_report_id > fraud_reports.id
+Ref: case_tickets.assigned_to > users.id
+Ref: case_actions.case_ticket_id > case_tickets.id
+Ref: case_actions.actor_user_id > users.id
+
+Ref: blacklists.created_by > users.id
+Ref: notifications.user_id > users.id
+Ref: audit_logs.actor_user_id > users.id
+Ref: audit_logs.actor_org_id > organizations.id
