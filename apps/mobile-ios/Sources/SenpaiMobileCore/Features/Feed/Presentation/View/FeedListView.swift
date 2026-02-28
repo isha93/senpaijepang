@@ -3,6 +3,8 @@ import SwiftUI
 struct FeedListView: View {
     @ObservedObject private var viewModel: FeedListViewModel
     @ObservedObject private var langManager = LanguageManager.shared
+    @State private var showingAlert = false
+
     private let onNavigateToProfile: () -> Void
 
     init(viewModel: FeedListViewModel, onNavigateToProfile: @escaping () -> Void = {}) {
@@ -70,25 +72,34 @@ struct FeedListView: View {
                 .animation(AppTheme.animationDefault, value: viewModel.selectedCategory)
 
                 // Feed cards
-                LazyVStack(spacing: AppTheme.spacingL) {
-                    ForEach(Array(viewModel.posts.enumerated()), id: \.element.id) { index, post in
-                        FeedPostCard(post: post) {
-                            Task { await viewModel.toggleSave(post) }
+                if viewModel.posts.isEmpty {
+                    EmptyStateView(
+                        icon: "newspaper",
+                        title: "No Articles Found",
+                        message: "We couldn't find any news or articles matching your search or category filter. Please try a different query."
+                    )
+                    .padding(.top, AppTheme.spacingXXL)
+                } else {
+                    LazyVStack(spacing: AppTheme.spacingL) {
+                        ForEach(Array(viewModel.posts.enumerated()), id: \.element.id) { index, post in
+                            FeedPostCard(post: post) {
+                                Task { await viewModel.toggleSave(post) }
+                            }
+                            .cardStyle()
+                            .transition(.asymmetric(
+                                insertion: .opacity.combined(with: .offset(y: 12)),
+                                removal: .opacity
+                            ))
                         }
-                        .cardStyle()
-                        .transition(.asymmetric(
-                            insertion: .opacity.combined(with: .offset(y: 12)),
-                            removal: .opacity
-                        ))
                     }
+                    .padding(.horizontal, AppTheme.spacingL)
+                    .padding(.top, AppTheme.spacingS)
+                    .padding(.bottom, AppTheme.spacingXXL)
                 }
-                .padding(.horizontal, AppTheme.spacingL)
-                .padding(.top, AppTheme.spacingS)
-                .padding(.bottom, AppTheme.spacingXXL)
-                .animation(AppTheme.animationSoft, value: viewModel.selectedCategory)
-                .animation(AppTheme.animationSoft, value: viewModel.searchText)
             }
         }
+        .animation(AppTheme.animationSoft, value: viewModel.selectedCategory)
+        .animation(AppTheme.animationSoft, value: viewModel.searchText)
         .background(AppTheme.backgroundPrimary)
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
@@ -101,7 +112,7 @@ struct FeedListView: View {
             }
             ToolbarItem(placement: .topBarTrailing) {
                 HStack(spacing: 8) {
-                    Button { } label: {
+                    Button { showingAlert = true } label: {
                         Image(systemName: "bell")
                             .foregroundStyle(AppTheme.textSecondary)
                     }
@@ -115,6 +126,11 @@ struct FeedListView: View {
                         }
                 }
             }
+        }
+        .alert(langManager.localize(key: "Coming Soon"), isPresented: $showingAlert) {
+            Button(langManager.localize(key: "OK"), role: .cancel) { }
+        } message: {
+            Text(langManager.localize(key: "This feature is not yet available in the mock version."))
         }
         .overlay {
             if viewModel.isLoading { ProgressView() }

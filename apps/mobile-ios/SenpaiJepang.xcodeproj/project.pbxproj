@@ -3,11 +3,12 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 77;
+	objectVersion = 63;
 	objects = {
 
 /* Begin PBXBuildFile section */
 		019B45B9434D247AC030EF22 /* LanguageManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21B6576E5C82D2ED999F0B46 /* LanguageManager.swift */; };
+		021118E4EC16AAB8C1F5B992 /* EmptyStateView 2.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AD4392C052D6CAAD7118BAF /* EmptyStateView 2.swift */; };
 		029838FCF808E0AB23DE9D83 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5E986EC211B4658DA01A438 /* LoginView.swift */; };
 		05D139032546BE2EE09526C0 /* SearchBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = EDF0535B16A117D6C05E3C46 /* SearchBar.swift */; };
 		09CC8BA311884FF0004354B1 /* JobServiceProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56E7BAB258285C0B5A0A3D1C /* JobServiceProtocol.swift */; };
@@ -54,6 +55,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		0AD4392C052D6CAAD7118BAF /* EmptyStateView 2.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "EmptyStateView 2.swift"; sourceTree = "<group>"; };
 		0CD8378045CF61BF4E917163 /* LoginViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginViewModel.swift; sourceTree = "<group>"; };
 		13DE83CEBB2CBF4BB4D9673C /* FeedServiceProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedServiceProtocol.swift; sourceTree = "<group>"; };
 		154B167D1E77CBDCC4079313 /* DocumentRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentRow.swift; sourceTree = "<group>"; };
@@ -126,6 +128,14 @@
 			path = Data;
 			sourceTree = "<group>";
 		};
+		11F2BC8DBDD2E020325A0E29 /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				D21D7224F9DFC42F5A25757C /* Molecules */,
+			);
+			name = Components;
+			sourceTree = "<group>";
+		};
 		129C80082A0338E7131FD2C0 /* Service */ = {
 			isa = PBXGroup;
 			children = (
@@ -141,6 +151,7 @@
 				5E3FAF55B04C052ACC278E51 /* Products */,
 				21B6576E5C82D2ED999F0B46 /* LanguageManager.swift */,
 				34FCE9D3E728B038DBB96506 /* SettingsView.swift */,
+				88F04817FC1452EE0BD55658 /* Sources */,
 			);
 			sourceTree = "<group>";
 		};
@@ -171,6 +182,7 @@
 		2A3A76EAEE011D5DA1192FB0 /* Molecules */ = {
 			isa = PBXGroup;
 			children = (
+				0AD4392C052D6CAAD7118BAF /* EmptyStateView 2.swift */,
 				154B167D1E77CBDCC4079313 /* DocumentRow.swift */,
 				B9D62225132F9A6280AEA97F /* FeedPostCard.swift */,
 				CDC5FCBE16EF57E14EB1C47F /* JobCard.swift */,
@@ -188,6 +200,14 @@
 				F7E31FDE09D396C22F2CE6B3 /* Presentation */,
 			);
 			path = Feed;
+			sourceTree = "<group>";
+		};
+		3ACBE493794EEE56F0A6E69A /* SenpaiJepangApp */ = {
+			isa = PBXGroup;
+			children = (
+				DA353CC04B257C8D0A25D502 /* Components */,
+			);
+			name = SenpaiJepangApp;
 			sourceTree = "<group>";
 		};
 		3E486A54C802D76F3C7AA1F0 /* ViewModel */ = {
@@ -349,6 +369,15 @@
 			path = App;
 			sourceTree = "<group>";
 		};
+		88F04817FC1452EE0BD55658 /* Sources */ = {
+			isa = PBXGroup;
+			children = (
+				3ACBE493794EEE56F0A6E69A /* SenpaiJepangApp */,
+				FA19800AF0407CE7AD7A8F0B /* SenpaiMobileCore */,
+			);
+			name = Sources;
+			sourceTree = "<group>";
+		};
 		89DAD295865FFE28977D6916 /* View */ = {
 			isa = PBXGroup;
 			children = (
@@ -444,6 +473,13 @@
 			path = Profile;
 			sourceTree = "<group>";
 		};
+		B5533564ABD168CC22358A51 /* Molecules */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Molecules;
+			sourceTree = "<group>";
+		};
 		B7D6EE319A8CE59996483CC1 /* Presentation */ = {
 			isa = PBXGroup;
 			children = (
@@ -481,6 +517,13 @@
 			path = Navigation;
 			sourceTree = "<group>";
 		};
+		D21D7224F9DFC42F5A25757C /* Molecules */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Molecules;
+			sourceTree = "<group>";
+		};
 		D6CF587930DFEB65354478BA /* View */ = {
 			isa = PBXGroup;
 			children = (
@@ -495,6 +538,14 @@
 				259A7CB93FF0DA731BC412DC /* Service */,
 			);
 			path = Data;
+			sourceTree = "<group>";
+		};
+		DA353CC04B257C8D0A25D502 /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				B5533564ABD168CC22358A51 /* Molecules */,
+			);
+			name = Components;
 			sourceTree = "<group>";
 		};
 		E23EB0021107172DE4F42CFB /* Service */ = {
@@ -570,6 +621,14 @@
 			path = Service;
 			sourceTree = "<group>";
 		};
+		FA19800AF0407CE7AD7A8F0B /* SenpaiMobileCore */ = {
+			isa = PBXGroup;
+			children = (
+				11F2BC8DBDD2E020325A0E29 /* Components */,
+			);
+			name = SenpaiMobileCore;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -612,7 +671,6 @@
 			);
 			mainGroup = 14E01C53E539CE413ED89CE4;
 			minimizedProjectReferenceProxies = 1;
-			preferredProjectObjectVersion = 77;
 			productRefGroup = 5E3FAF55B04C052ACC278E51 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -671,6 +729,7 @@
 				13D7D66B9EE4A2546450B3DB /* TimelineStepRow.swift in Sources */,
 				019B45B9434D247AC030EF22 /* LanguageManager.swift in Sources */,
 				65C39093A457D1BD84912C0C /* SettingsView.swift in Sources */,
+				021118E4EC16AAB8C1F5B992 /* EmptyStateView 2.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

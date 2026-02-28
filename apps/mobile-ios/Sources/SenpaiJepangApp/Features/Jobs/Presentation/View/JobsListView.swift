@@ -2,6 +2,8 @@ import SwiftUI
 
 struct JobsListView: View {
     @ObservedObject private var viewModel: JobsListViewModel
+    @ObservedObject private var langManager = LanguageManager.shared
+    @State private var showingAlert = false
 
     init(viewModel: JobsListViewModel) {
         self.viewModel = viewModel
@@ -70,28 +72,37 @@ struct JobsListView: View {
                 .animation(AppTheme.animationDefault, value: viewModel.selectedFilter)
 
                 // Job cards
-                LazyVStack(spacing: AppTheme.spacingL) {
-                    ForEach(Array(viewModel.jobs.enumerated()), id: \.element.id) { index, job in
-                        JobCard(
-                            job: job,
-                            onTap: { viewModel.selectJob(job) },
-                            onBookmark: {
-                                Task { await viewModel.toggleSave(job) }
-                            }
-                        )
-                        .transition(.asymmetric(
-                            insertion: .opacity.combined(with: .offset(y: 12)),
-                            removal: .opacity
-                        ))
+                if viewModel.jobs.isEmpty {
+                    EmptyStateView(
+                        icon: "briefcase",
+                        title: "No Jobs Found",
+                        message: "We couldn't find any jobs matching your search or sector filter. Please try a different query."
+                    )
+                    .padding(.top, AppTheme.spacingXXL)
+                } else {
+                    LazyVStack(spacing: AppTheme.spacingL) {
+                        ForEach(Array(viewModel.jobs.enumerated()), id: \.element.id) { index, job in
+                            JobCard(
+                                job: job,
+                                onTap: { viewModel.selectJob(job) },
+                                onBookmark: {
+                                    Task { await viewModel.toggleSave(job) }
+                                }
+                            )
+                            .transition(.asymmetric(
+                                insertion: .opacity.combined(with: .offset(y: 12)),
+                                removal: .opacity
+                            ))
+                        }
                     }
+                    .padding(.horizontal, AppTheme.spacingL)
+                    .padding(.top, AppTheme.spacingM)
                 }
-                .padding(.horizontal, AppTheme.spacingL)
-                .padding(.top, AppTheme.spacingM)
-                .animation(AppTheme.animationSoft, value: viewModel.selectedFilter)
-                .animation(AppTheme.animationSoft, value: viewModel.searchText)
-                .animation(AppTheme.animationSoft, value: viewModel.selectedTab)
             }
             .padding(.bottom, AppTheme.spacingXXL)
+            .animation(AppTheme.animationSoft, value: viewModel.selectedFilter)
+            .animation(AppTheme.animationSoft, value: viewModel.searchText)
+            .animation(AppTheme.animationSoft, value: viewModel.selectedTab)
         }
         .background(AppTheme.backgroundPrimary)
         .navigationTitle("Jobs")
@@ -100,17 +111,22 @@ struct JobsListView: View {
         #endif
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
-                Button { } label: {
+                Button { showingAlert = true } label: {
                     Image(systemName: "line.3.horizontal")
                         .foregroundStyle(AppTheme.textPrimary)
                 }
             }
             ToolbarItem(placement: .topBarTrailing) {
-                Button { } label: {
+                Button { showingAlert = true } label: {
                     Image(systemName: "slider.horizontal.3")
                         .foregroundStyle(AppTheme.accent)
                 }
             }
+        }
+        .alert(langManager.localize(key: "Coming Soon"), isPresented: $showingAlert) {
+            Button(langManager.localize(key: "OK"), role: .cancel) { }
+        } message: {
+            Text(langManager.localize(key: "This feature is not yet available in the mock version."))
         }
         .overlay {
             if viewModel.isLoading {
