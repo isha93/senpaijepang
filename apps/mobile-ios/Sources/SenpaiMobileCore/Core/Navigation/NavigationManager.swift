@@ -1,32 +1,33 @@
 import Combine
 import Foundation
+import SwiftUI
 
 @MainActor
-public final class NavigationManager: ObservableObject, NavigationHandling {
-    @Published public private(set) var path: [AppRoute]
+final class NavigationManager: ObservableObject, NavigationHandling {
+    @Published var path: [AppRoute]
 
-    public init(path: [AppRoute] = []) {
+    init(path: [AppRoute] = []) {
         self.path = path
     }
 
-    public func push(_ route: AppRoute) {
+    func push(_ route: AppRoute) {
         path.append(route)
     }
 
-    public func pop() {
+    func pop() {
         guard !path.isEmpty else { return }
         path.removeLast()
     }
 
-    public func popToRoot() {
+    func popToRoot() {
         path.removeAll(keepingCapacity: false)
     }
 
-    public func replace(with route: AppRoute) {
+    func replace(with route: AppRoute) {
         path = [route]
     }
 
-    public func sync(path newPath: [AppRoute]) {
+    func sync(path newPath: [AppRoute]) {
         path = newPath
     }
 }

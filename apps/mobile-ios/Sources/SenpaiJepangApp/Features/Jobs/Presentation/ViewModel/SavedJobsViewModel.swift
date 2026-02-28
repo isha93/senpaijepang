@@ -26,6 +26,9 @@ final class SavedJobsViewModel: ObservableObject, ManagedTask {
             try await self.jobService.fetchSavedJobs()
         }) {
             savedJobs = result
+        } else {
+            // Fallback: show pre-saved jobs from mock data
+            savedJobs = JobsListViewModel.mockJobs.filter { $0.isSaved }
         }
     }
 

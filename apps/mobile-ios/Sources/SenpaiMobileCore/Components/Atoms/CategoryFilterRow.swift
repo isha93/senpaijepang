@@ -1,15 +1,15 @@
 import SwiftUI
 
-public struct CategoryFilterRow: View {
+struct CategoryFilterRow: View {
     private let categories: [String]
     @Binding private var selected: String
 
-    public init(categories: [String], selected: Binding<String>) {
+    init(categories: [String], selected: Binding<String>) {
         self.categories = categories
         self._selected = selected
     }
 
-    public var body: some View {
+    var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
                 ForEach(categories, id: \.self) { category in
@@ -17,7 +17,9 @@ public struct CategoryFilterRow: View {
                         title: category,
                         isSelected: selected == category
                     ) {
-                        selected = category
+                        withAnimation(AppTheme.animationDefault) {
+                            selected = category
+                        }
                     }
                 }
             }

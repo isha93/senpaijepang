@@ -31,27 +31,39 @@ struct FeedListView: View {
                 HStack(spacing: AppTheme.spacingS) {
                     Image(systemName: "newspaper.fill")
                         .foregroundStyle(AppTheme.accent)
-                    Text("Updates for Japan")
+                    Text(viewModel.selectedCategory == "All" ? "Updates for Japan" : viewModel.selectedCategory)
                         .font(.headline.bold())
                         .foregroundStyle(AppTheme.textPrimary)
+                        .contentTransition(.numericText())
+                    Spacer()
+                    Text("\(viewModel.posts.count) articles")
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.textTertiary)
+                        .contentTransition(.numericText())
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, AppTheme.spacingL)
                 .padding(.top, AppTheme.spacingL)
                 .padding(.bottom, AppTheme.spacingS)
+                .animation(AppTheme.animationDefault, value: viewModel.selectedCategory)
 
                 // Feed cards
                 LazyVStack(spacing: AppTheme.spacingL) {
-                    ForEach(viewModel.posts) { post in
+                    ForEach(Array(viewModel.posts.enumerated()), id: \.element.id) { index, post in
                         FeedPostCard(post: post) {
                             Task { await viewModel.toggleSave(post) }
                         }
                         .cardStyle()
+                        .transition(.asymmetric(
+                            insertion: .opacity.combined(with: .offset(y: 12)),
+                            removal: .opacity
+                        ))
                     }
                 }
                 .padding(.horizontal, AppTheme.spacingL)
                 .padding(.top, AppTheme.spacingS)
                 .padding(.bottom, AppTheme.spacingXXL)
+                .animation(AppTheme.animationSoft, value: viewModel.selectedCategory)
+                .animation(AppTheme.animationSoft, value: viewModel.searchText)
             }
         }
         .background(AppTheme.backgroundPrimary)
@@ -119,12 +131,13 @@ struct FeedListView: View {
                     .background(AppTheme.accent.opacity(0.9))
                     .clipShape(RoundedRectangle(cornerRadius: 4))
 
-                Text("Spring 2024: New SSW Visa quotas announced for Hospitality sector")
+                Text("Spring 2026: New SSW Visa quotas announced for Hospitality sector")
                     .font(.subheadline.weight(.bold))
                     .foregroundStyle(.white)
                     .lineLimit(3)
             }
             .padding(AppTheme.spacingL)
         }
+        .staggeredAppear()
     }
 }

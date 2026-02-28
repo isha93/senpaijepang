@@ -22,5 +22,6 @@ struct CategoryPill: View {
                 .clipShape(Capsule())
         }
         .buttonStyle(.plain)
+        .animation(AppTheme.animationDefault, value: isSelected)
     }
 }

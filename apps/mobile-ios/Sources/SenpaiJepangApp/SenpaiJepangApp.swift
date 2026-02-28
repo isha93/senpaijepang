@@ -1,5 +1,9 @@
 import SwiftUI
 
+private enum MockError: Error {
+    case notImplemented
+}
+
 @main
 struct SenpaiJepangApp: App {
     var body: some Scene {
@@ -9,48 +13,54 @@ struct SenpaiJepangApp: App {
                     AuthSession(accessToken: "demo", refreshToken: "demo")
                 },
                 jobService: JobService(
-                    fetchJobsHandler: { [] },
-                    fetchJobDetailHandler: { _ in
-                        JobDetail(
-                            job: Job(id: "0", title: "", companyName: "", location: ""),
-                            description: ""
-                        )
-                    },
+                    fetchJobsHandler: { throw MockError.notImplemented },
+                    fetchJobDetailHandler: { _ in throw MockError.notImplemented },
                     toggleSaveHandler: { id in
-                        Job(id: id, title: "", companyName: "", location: "")
+                        // Toggle save: find the job and flip isSaved
+                        if let job = JobsListViewModel.mockJobs.first(where: { $0.id == id }) {
+                            return Job(
+                                id: job.id,
+                                title: job.title,
+                                companyName: job.companyName,
+                                location: job.location,
+                                salaryRange: job.salaryRange,
+                                isSaved: !job.isSaved,
+                                sector: job.sector,
+                                postedAt: job.postedAt,
+                                companyLogoInitial: job.companyLogoInitial,
+                                isVerifiedEmployer: job.isVerifiedEmployer
+                            )
+                        }
+                        return Job(id: id, title: "", companyName: "", location: "", isSaved: true)
                     },
-                    fetchSavedJobsHandler: { [] }
-                ),
-                journeyService: JourneyService(
-                    applyHandler: { id in
-                        ApplicationJourney(
-                            applicationId: id,
-                            jobTitle: "",
-                            companyName: "",
-                            currentStatus: .applied,
-                            steps: []
-                        )
-                    },
-                    fetchHandler: { id in
-                        ApplicationJourney(
-                            applicationId: id,
-                            jobTitle: "",
-                            companyName: "",
-                            currentStatus: .applied,
-                            steps: []
-                        )
+                    fetchSavedJobsHandler: {
+                        JobsListViewModel.mockJobs.filter { $0.isSaved }
                     }
                 ),
+                journeyService: JourneyService(
+                    applyHandler: { _ in throw MockError.notImplemented },
+                    fetchHandler: { _ in throw MockError.notImplemented }
+                ),
                 profileService: ProfileService(
-                    fetchHandler: {
-                        UserProfile(id: "0", fullName: "Demo", phoneNumber: "0000")
-                    },
+                    fetchHandler: { throw MockError.notImplemented },
                     updateHandler: { $0 }
                 ),
                 feedService: FeedService(
-                    fetchHandler: { [] },
+                    fetchHandler: { throw MockError.notImplemented },
                     toggleSaveHandler: { id in
-                        FeedPost(id: id, authorName: "", content: "", createdAt: .now)
+                        if let post = FeedListViewModel.mockPosts.first(where: { $0.id == id }) {
+                            return FeedPost(
+                                id: post.id,
+                                authorName: post.authorName,
+                                content: post.content,
+                                createdAt: post.createdAt,
+                                isSaved: !post.isSaved,
+                                title: post.title,
+                                category: post.category,
+                                source: post.source
+                            )
+                        }
+                        return FeedPost(id: id, authorName: "", content: "", createdAt: .now, isSaved: true)
                     }
                 )
             )

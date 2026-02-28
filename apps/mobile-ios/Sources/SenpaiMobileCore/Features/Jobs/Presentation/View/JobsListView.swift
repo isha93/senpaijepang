@@ -1,22 +1,26 @@
 import SwiftUI
 
-public struct JobsListView: View {
+struct JobsListView: View {
     @ObservedObject private var viewModel: JobsListViewModel
 
-    public init(viewModel: JobsListViewModel) {
+    init(viewModel: JobsListViewModel) {
         self.viewModel = viewModel
     }
 
-    public var body: some View {
+    var body: some View {
         ScrollView {
             VStack(spacing: 0) {
                 // Tabs
                 HStack(spacing: 0) {
                     tabButton("Browse Jobs", isSelected: viewModel.selectedTab == 0) {
-                        viewModel.selectedTab = 0
+                        withAnimation(AppTheme.animationDefault) {
+                            viewModel.selectedTab = 0
+                        }
                     }
                     tabButton("My Jobs", isSelected: viewModel.selectedTab == 1) {
-                        viewModel.selectedTab = 1
+                        withAnimation(AppTheme.animationDefault) {
+                            viewModel.selectedTab = 1
+                        }
                     }
                 }
                 .padding(.horizontal, AppTheme.spacingL)
@@ -34,7 +38,9 @@ public struct JobsListView: View {
                                 title: filter,
                                 isSelected: viewModel.selectedFilter == filter
                             ) {
-                                viewModel.selectedFilter = filter
+                                withAnimation(AppTheme.animationDefault) {
+                                    viewModel.selectedFilter = filter
+                                }
                             }
                         }
                     }
@@ -42,9 +48,25 @@ public struct JobsListView: View {
                 }
                 .padding(.top, AppTheme.spacingM)
 
+                // Results header
+                HStack {
+                    Text(viewModel.selectedFilter == "All Jobs" ? "Available Jobs" : viewModel.selectedFilter)
+                        .font(.headline.bold())
+                        .foregroundStyle(AppTheme.textPrimary)
+                        .contentTransition(.numericText())
+                    Spacer()
+                    Text("\(viewModel.jobs.count) jobs")
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.textTertiary)
+                        .contentTransition(.numericText())
+                }
+                .padding(.horizontal, AppTheme.spacingL)
+                .padding(.top, AppTheme.spacingL)
+                .animation(AppTheme.animationDefault, value: viewModel.selectedFilter)
+
                 // Job cards
                 LazyVStack(spacing: AppTheme.spacingL) {
-                    ForEach(viewModel.jobs) { job in
+                    ForEach(Array(viewModel.jobs.enumerated()), id: \.element.id) { index, job in
                         JobCard(
                             job: job,
                             onTap: { viewModel.selectJob(job) },
@@ -52,10 +74,17 @@ public struct JobsListView: View {
                                 Task { await viewModel.toggleSave(job) }
                             }
                         )
+                        .transition(.asymmetric(
+                            insertion: .opacity.combined(with: .offset(y: 12)),
+                            removal: .opacity
+                        ))
                     }
                 }
                 .padding(.horizontal, AppTheme.spacingL)
-                .padding(.top, AppTheme.spacingL)
+                .padding(.top, AppTheme.spacingM)
+                .animation(AppTheme.animationSoft, value: viewModel.selectedFilter)
+                .animation(AppTheme.animationSoft, value: viewModel.searchText)
+                .animation(AppTheme.animationSoft, value: viewModel.selectedTab)
             }
             .padding(.bottom, AppTheme.spacingXXL)
         }

@@ -1,83 +1,80 @@
 import SwiftUI
 
-public struct MainTabView: View {
-    @EnvironmentObject private var navigation: NavigationManager
+@MainActor
+struct MainTabView: View {
+    @ObservedObject private var navigation: NavigationManager
+    @StateObject private var feedVM: FeedListViewModel
+    @StateObject private var jobsVM: JobsListViewModel
+    @StateObject private var journeyVM: ApplicationJourneyViewModel
+    @StateObject private var profileVM: ProfileViewModel
     private let jobService: JobServiceProtocol
     private let journeyService: JourneyServiceProtocol
-    private let profileService: ProfileServiceProtocol
-    private let feedService: FeedServiceProtocol
 
-    public init(
+    init(
+        navigation: NavigationManager,
         jobService: JobServiceProtocol,
         journeyService: JourneyServiceProtocol,
         profileService: ProfileServiceProtocol,
         feedService: FeedServiceProtocol
     ) {
+        self._navigation = ObservedObject(wrappedValue: navigation)
         self.jobService = jobService
         self.journeyService = journeyService
-        self.profileService = profileService
-        self.feedService = feedService
+        _feedVM = StateObject(wrappedValue: FeedListViewModel(feedService: feedService, navigation: navigation))
+        _jobsVM = StateObject(wrappedValue: JobsListViewModel(jobService: jobService, navigation: navigation))
+        _journeyVM = StateObject(wrappedValue: ApplicationJourneyViewModel(applicationId: "app-001", journeyService: journeyService, navigation: navigation))
+        _profileVM = StateObject(wrappedValue: ProfileViewModel(profileService: profileService, navigation: navigation))
     }
 
-    public var body: some View {
-        TabView {
-            // Feed Tab
+    @State private var selectedTab = 0
+
+    var body: some View {
+        TabView(selection: $selectedTab) {
+            // Home Tab
             NavigationStack {
-                FeedListView(
-                    viewModel: FeedListViewModel(
-                        feedService: feedService,
-                        navigation: navigation
-                    )
-                )
+                FeedListView(viewModel: feedVM)
             }
+            .background(AppTheme.backgroundPrimary)
+            .tag(0)
             .tabItem {
-                Label("Feed", systemImage: "newspaper")
+                Label("Home", systemImage: "house")
             }
 
             // Jobs Tab
-            NavigationStack {
-                JobsListView(
-                    viewModel: JobsListViewModel(
-                        jobService: jobService,
-                        navigation: navigation
-                    )
-                )
-                .navigationDestination(for: AppRoute.self) { route in
-                    routeView(route)
-                }
+            NavigationStack(path: $navigation.path) {
+                JobsListView(viewModel: jobsVM)
+                    .navigationDestination(for: AppRoute.self) { route in
+                        routeView(route)
+                    }
             }
+            .background(AppTheme.backgroundPrimary)
+            .tag(1)
             .tabItem {
                 Label("Jobs", systemImage: "briefcase")
             }
 
             // Journey Tab
             NavigationStack {
-                ApplicationJourneyView(
-                    viewModel: ApplicationJourneyViewModel(
-                        applicationId: "app-001",
-                        journeyService: journeyService,
-                        navigation: navigation
-                    )
-                )
+                ApplicationJourneyView(viewModel: journeyVM)
             }
+            .background(AppTheme.backgroundPrimary)
+            .tag(2)
             .tabItem {
                 Label("Journey", systemImage: "map")
             }
 
             // Profile Tab
             NavigationStack {
-                ProfileView(
-                    viewModel: ProfileViewModel(
-                        profileService: profileService,
-                        navigation: navigation
-                    )
-                )
+                ProfileView(viewModel: profileVM)
             }
+            .background(AppTheme.backgroundPrimary)
+            .tag(3)
             .tabItem {
                 Label("Profile", systemImage: "person")
             }
         }
         .tint(AppTheme.accent)
+        .animation(AppTheme.animationSoft, value: selectedTab)
     }
 
     @ViewBuilder

@@ -17,7 +17,9 @@ struct CategoryFilterRow: View {
                         title: category,
                         isSelected: selected == category
                     ) {
-                        selected = category
+                        withAnimation(AppTheme.animationDefault) {
+                            selected = category
+                        }
                     }
                 }
             }

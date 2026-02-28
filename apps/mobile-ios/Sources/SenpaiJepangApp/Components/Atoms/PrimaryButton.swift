@@ -19,6 +19,6 @@ struct PrimaryButton: View {
                 .background(Color.green)
                 .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressableButtonStyle())
     }
 }

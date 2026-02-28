@@ -22,6 +22,7 @@ struct LoginView: View {
                 Text(message)
                     .foregroundStyle(.red)
                     .font(.footnote)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
             }
 
             PrimaryButton(title: viewModel.isLoading ? "Loading..." : "Continue") {
@@ -30,6 +31,8 @@ struct LoginView: View {
                 }
             }
             .disabled(viewModel.isLoading)
+            .animation(AppTheme.animationDefault, value: viewModel.isLoading)
+            .animation(AppTheme.animationSoft, value: viewModel.errorMessage)
 
             Spacer()
         }

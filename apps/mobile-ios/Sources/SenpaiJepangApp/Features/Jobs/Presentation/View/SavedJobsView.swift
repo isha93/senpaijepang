@@ -1,10 +1,10 @@
 import SwiftUI
 
 struct SavedJobsView: View {
-    @ObservedObject private var viewModel: SavedJobsViewModel
+    @StateObject private var viewModel: SavedJobsViewModel
 
     init(viewModel: SavedJobsViewModel) {
-        self.viewModel = viewModel
+        _viewModel = StateObject(wrappedValue: viewModel)
     }
 
     var body: some View {

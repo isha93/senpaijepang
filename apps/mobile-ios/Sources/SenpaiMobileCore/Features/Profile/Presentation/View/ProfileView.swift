@@ -1,27 +1,31 @@
 import SwiftUI
 
-public struct ProfileView: View {
+struct ProfileView: View {
     @ObservedObject private var viewModel: ProfileViewModel
 
-    public init(viewModel: ProfileViewModel) {
+    init(viewModel: ProfileViewModel) {
         self.viewModel = viewModel
     }
 
-    public var body: some View {
+    var body: some View {
         ScrollView {
             if let profile = viewModel.profile {
                 VStack(spacing: AppTheme.spacingL) {
                     // Profile Card
                     profileCard(profile)
+                        .staggeredAppear()
 
                     // Profile Completion
                     completionCard(profile)
+                        .staggeredAppear(delay: 0.1)
 
                     // Verification Documents
                     documentsSection(profile.documents)
+                        .staggeredAppear(delay: 0.15)
 
                     // CTA
                     verificationCTA
+                        .staggeredAppear(delay: 0.2)
                 }
                 .padding(.horizontal, AppTheme.spacingL)
                 .padding(.bottom, AppTheme.spacingXXL)
@@ -175,17 +179,7 @@ public struct ProfileView: View {
                     .foregroundStyle(AppTheme.accent)
             }
 
-            GeometryReader { geo in
-                ZStack(alignment: .leading) {
-                    RoundedRectangle(cornerRadius: 4)
-                        .fill(AppTheme.grayMedium)
-                        .frame(height: 8)
-                    RoundedRectangle(cornerRadius: 4)
-                        .fill(AppTheme.accent)
-                        .frame(width: geo.size.width * CGFloat(profile.completionPercentage) / 100, height: 8)
-                }
-            }
-            .frame(height: 8)
+            ProfileCompletionBar(percentage: profile.completionPercentage)
         }
         .padding(AppTheme.spacingXL)
         .cardStyle()
@@ -234,5 +228,30 @@ public struct ProfileView: View {
         }
         .padding(AppTheme.spacingXL)
         .cardStyle()
+    }
+}
+
+// MARK: - Animated Completion Bar
+struct ProfileCompletionBar: View {
+    let percentage: Int
+    @State private var animatedWidth: CGFloat = 0
+
+    var body: some View {
+        GeometryReader { geo in
+            ZStack(alignment: .leading) {
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(AppTheme.grayMedium)
+                    .frame(height: 8)
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(AppTheme.accent)
+                    .frame(width: animatedWidth, height: 8)
+            }
+            .onAppear {
+                withAnimation(AppTheme.animationSoft.delay(0.3)) {
+                    animatedWidth = geo.size.width * CGFloat(percentage) / 100
+                }
+            }
+        }
+        .frame(height: 8)
     }
 }

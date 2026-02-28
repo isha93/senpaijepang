@@ -53,13 +53,18 @@ struct FeedPostCard: View {
 
             // Action row
             HStack(spacing: 16) {
-                Button(action: onSave) {
+                Button {
+                    withAnimation(AppTheme.animationSpring) {
+                        onSave()
+                    }
+                } label: {
                     Label(
                         post.isSaved ? "Saved" : "Login to save",
                         systemImage: post.isSaved ? "bookmark.fill" : "arrow.right.square"
                     )
                     .font(.caption)
                     .foregroundStyle(post.isSaved ? AppTheme.accent : AppTheme.textSecondary)
+                    .contentTransition(.symbolEffect(.replace))
                 }
                 .buttonStyle(.plain)
 

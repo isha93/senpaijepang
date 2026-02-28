@@ -1,15 +1,15 @@
 import SwiftUI
 
-public struct FeedPostCard: View {
+struct FeedPostCard: View {
     private let post: FeedPost
     private let onSave: () -> Void
 
-    public init(post: FeedPost, onSave: @escaping () -> Void) {
+    init(post: FeedPost, onSave: @escaping () -> Void) {
         self.post = post
         self.onSave = onSave
     }
 
-    public var body: some View {
+    var body: some View {
         VStack(alignment: .leading, spacing: AppTheme.spacingS) {
             // Category + time
             HStack {
@@ -53,13 +53,18 @@ public struct FeedPostCard: View {
 
             // Action row
             HStack(spacing: 16) {
-                Button(action: onSave) {
+                Button {
+                    withAnimation(AppTheme.animationSpring) {
+                        onSave()
+                    }
+                } label: {
                     Label(
                         post.isSaved ? "Saved" : "Login to save",
                         systemImage: post.isSaved ? "bookmark.fill" : "arrow.right.square"
                     )
                     .font(.caption)
                     .foregroundStyle(post.isSaved ? AppTheme.accent : AppTheme.textSecondary)
+                    .contentTransition(.symbolEffect(.replace))
                 }
                 .buttonStyle(.plain)
 

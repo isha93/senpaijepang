@@ -21,11 +21,14 @@ struct SearchBar: View {
 
             if !text.isEmpty {
                 Button {
-                    text = ""
+                    withAnimation(AppTheme.animationSoft) {
+                        text = ""
+                    }
                 } label: {
                     Image(systemName: "xmark.circle.fill")
                         .foregroundStyle(AppTheme.textTertiary)
                 }
+                .transition(.opacity.combined(with: .scale(scale: 0.8)))
             }
         }
         .padding(.horizontal, 14)

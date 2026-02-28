@@ -1,13 +1,13 @@
 import SwiftUI
 
-public struct LoginView: View {
+struct LoginView: View {
     @ObservedObject private var viewModel: LoginViewModel
 
-    public init(viewModel: LoginViewModel) {
+    init(viewModel: LoginViewModel) {
         self.viewModel = viewModel
     }
 
-    public var body: some View {
+    var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Login")
                 .font(.title.bold())
@@ -22,6 +22,7 @@ public struct LoginView: View {
                 Text(message)
                     .foregroundStyle(.red)
                     .font(.footnote)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
             }
 
             PrimaryButton(title: viewModel.isLoading ? "Loading..." : "Continue") {
@@ -30,6 +31,8 @@ public struct LoginView: View {
                 }
             }
             .disabled(viewModel.isLoading)
+            .animation(AppTheme.animationDefault, value: viewModel.isLoading)
+            .animation(AppTheme.animationSoft, value: viewModel.errorMessage)
 
             Spacer()
         }

@@ -1,15 +1,15 @@
 import SwiftUI
 
-public struct SearchBar: View {
+struct SearchBar: View {
     @Binding private var text: String
     private let placeholder: String
 
-    public init(text: Binding<String>, placeholder: String = "Search...") {
+    init(text: Binding<String>, placeholder: String = "Search...") {
         self._text = text
         self.placeholder = placeholder
     }
 
-    public var body: some View {
+    var body: some View {
         HStack(spacing: 10) {
             Image(systemName: "magnifyingglass")
                 .foregroundStyle(AppTheme.accent)
@@ -21,11 +21,14 @@ public struct SearchBar: View {
 
             if !text.isEmpty {
                 Button {
-                    text = ""
+                    withAnimation(AppTheme.animationSoft) {
+                        text = ""
+                    }
                 } label: {
                     Image(systemName: "xmark.circle.fill")
                         .foregroundStyle(AppTheme.textTertiary)
                 }
+                .transition(.opacity.combined(with: .scale(scale: 0.8)))
             }
         }
         .padding(.horizontal, 14)

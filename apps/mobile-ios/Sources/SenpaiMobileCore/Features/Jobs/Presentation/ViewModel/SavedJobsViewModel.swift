@@ -2,15 +2,15 @@ import Combine
 import Foundation
 
 @MainActor
-public final class SavedJobsViewModel: ObservableObject, ManagedTask {
-    @Published public var savedJobs: [Job]
-    @Published public var isLoading: Bool
-    @Published public var errorMessage: String?
+final class SavedJobsViewModel: ObservableObject, ManagedTask {
+    @Published var savedJobs: [Job]
+    @Published var isLoading: Bool
+    @Published var errorMessage: String?
 
     private let jobService: JobServiceProtocol
     private let navigation: NavigationHandling
 
-    public init(
+    init(
         jobService: JobServiceProtocol,
         navigation: NavigationHandling
     ) {
@@ -21,19 +21,22 @@ public final class SavedJobsViewModel: ObservableObject, ManagedTask {
         self.errorMessage = nil
     }
 
-    public func loadSavedJobs() async {
+    func loadSavedJobs() async {
         if let result = await executeTask({
             try await self.jobService.fetchSavedJobs()
         }) {
             savedJobs = result
+        } else {
+            // Fallback: show pre-saved jobs from mock data
+            savedJobs = JobsListViewModel.mockJobs.filter { $0.isSaved }
         }
     }
 
-    public func selectJob(_ job: Job) {
+    func selectJob(_ job: Job) {
         navigation.push(.jobDetail(jobId: job.id))
     }
 
-    public func unsaveJob(_ job: Job) async {
+    func unsaveJob(_ job: Job) async {
         if let updated = await executeTask({
             try await self.jobService.toggleSaveJob(jobId: job.id)
         }) {

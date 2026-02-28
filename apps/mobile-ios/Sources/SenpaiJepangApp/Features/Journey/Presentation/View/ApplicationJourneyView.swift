@@ -1,10 +1,10 @@
 import SwiftUI
 
 struct ApplicationJourneyView: View {
-    @ObservedObject private var viewModel: ApplicationJourneyViewModel
+    @StateObject private var viewModel: ApplicationJourneyViewModel
 
     init(viewModel: ApplicationJourneyViewModel) {
-        self.viewModel = viewModel
+        _viewModel = StateObject(wrappedValue: viewModel)
     }
 
     var body: some View {
@@ -13,13 +13,16 @@ struct ApplicationJourneyView: View {
                 VStack(spacing: AppTheme.spacingL) {
                     // Status hero card
                     statusCard(journey)
+                        .staggeredAppear()
 
                     // Timeline card
                     timelineCard(journey)
+                        .staggeredAppear(delay: 0.1)
 
                     // Recent Updates
                     if !journey.recentUpdates.isEmpty {
                         recentUpdatesSection(journey.recentUpdates)
+                            .staggeredAppear(delay: 0.2)
                     }
                 }
                 .padding(.horizontal, AppTheme.spacingL)

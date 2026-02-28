@@ -1,15 +1,15 @@
 import SwiftUI
 
-public struct PrimaryButton: View {
+struct PrimaryButton: View {
     private let title: String
     private let action: () -> Void
 
-    public init(title: String, action: @escaping () -> Void) {
+    init(title: String, action: @escaping () -> Void) {
         self.title = title
         self.action = action
     }
 
-    public var body: some View {
+    var body: some View {
         Button(action: action) {
             Text(title)
                 .font(.headline)
@@ -19,6 +19,6 @@ public struct PrimaryButton: View {
                 .background(Color.green)
                 .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressableButtonStyle())
     }
 }

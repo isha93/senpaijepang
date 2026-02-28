@@ -1,25 +1,28 @@
 import SwiftUI
 
-public struct ApplicationJourneyView: View {
-    @ObservedObject private var viewModel: ApplicationJourneyViewModel
+struct ApplicationJourneyView: View {
+    @StateObject private var viewModel: ApplicationJourneyViewModel
 
-    public init(viewModel: ApplicationJourneyViewModel) {
-        self.viewModel = viewModel
+    init(viewModel: ApplicationJourneyViewModel) {
+        _viewModel = StateObject(wrappedValue: viewModel)
     }
 
-    public var body: some View {
+    var body: some View {
         ScrollView {
             if let journey = viewModel.journey {
                 VStack(spacing: AppTheme.spacingL) {
                     // Status hero card
                     statusCard(journey)
+                        .staggeredAppear()
 
                     // Timeline card
                     timelineCard(journey)
+                        .staggeredAppear(delay: 0.1)
 
                     // Recent Updates
                     if !journey.recentUpdates.isEmpty {
                         recentUpdatesSection(journey.recentUpdates)
+                            .staggeredAppear(delay: 0.2)
                     }
                 }
                 .padding(.horizontal, AppTheme.spacingL)

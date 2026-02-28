@@ -1,13 +1,13 @@
 import SwiftUI
 
-public struct JobDetailView: View {
-    @ObservedObject private var viewModel: JobDetailViewModel
+struct JobDetailView: View {
+    @StateObject private var viewModel: JobDetailViewModel
 
-    public init(viewModel: JobDetailViewModel) {
-        self.viewModel = viewModel
+    init(viewModel: JobDetailViewModel) {
+        _viewModel = StateObject(wrappedValue: viewModel)
     }
 
-    public var body: some View {
+    var body: some View {
         ZStack(alignment: .bottom) {
             ScrollView {
                 if let detail = viewModel.detail {
@@ -80,6 +80,24 @@ public struct JobDetailView: View {
                         .padding(.top, AppTheme.spacingXL)
                         .padding(.horizontal, AppTheme.spacingL)
 
+                        // Salary Range
+                        if let salary = detail.job.salaryRange {
+                            HStack(spacing: AppTheme.spacingS) {
+                                Image(systemName: "yensign.circle.fill")
+                                    .font(.title3)
+                                    .foregroundStyle(AppTheme.accent)
+                                Text(salary)
+                                    .font(.headline.bold())
+                                    .foregroundStyle(AppTheme.textPrimary)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(AppTheme.spacingL)
+                            .background(AppTheme.accentLight)
+                            .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadiusMedium, style: .continuous))
+                            .padding(.horizontal, AppTheme.spacingXL)
+                            .padding(.top, AppTheme.spacingL)
+                        }
+
                         // About the Role
                         VStack(alignment: .leading, spacing: AppTheme.spacingM) {
                             sectionTitle("About the Role")
@@ -112,7 +130,31 @@ public struct JobDetailView: View {
                             .padding(.top, AppTheme.spacingXXL)
                         }
 
-                        // Location placeholder
+                        // Benefits
+                        if !detail.benefits.isEmpty {
+                            VStack(alignment: .leading, spacing: AppTheme.spacingM) {
+                                sectionTitle("Benefits")
+                                ForEach(detail.benefits, id: \.self) { benefit in
+                                    HStack(alignment: .top, spacing: AppTheme.spacingM) {
+                                        Image(systemName: "star.fill")
+                                            .foregroundStyle(.orange)
+                                            .font(.caption)
+                                            .padding(.top, 3)
+                                        Text(benefit)
+                                            .font(.subheadline)
+                                            .foregroundStyle(AppTheme.textSecondary)
+                                            .lineSpacing(3)
+                                    }
+                                }
+                            }
+                            .padding(AppTheme.spacingXL)
+                            .background(Color.orange.opacity(0.05))
+                            .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadiusLarge, style: .continuous))
+                            .padding(.horizontal, AppTheme.spacingL)
+                            .padding(.top, AppTheme.spacingXL)
+                        }
+
+                        // Location
                         VStack(alignment: .leading, spacing: AppTheme.spacingM) {
                             sectionTitle("Location")
                             RoundedRectangle(cornerRadius: AppTheme.cornerRadiusLarge, style: .continuous)
@@ -138,6 +180,7 @@ public struct JobDetailView: View {
                         .padding(.top, AppTheme.spacingXXL)
                         .padding(.bottom, 100) // Bottom padding for CTA
                     }
+                    .transition(.opacity)
                 }
             }
             .background(AppTheme.backgroundPrimary)
@@ -151,6 +194,7 @@ public struct JobDetailView: View {
             }
             .padding(.vertical, AppTheme.spacingL)
             .background(.ultraThinMaterial)
+            .transition(.move(edge: .bottom).combined(with: .opacity))
         }
         .navigationTitle("Job Details")
         #if os(iOS)

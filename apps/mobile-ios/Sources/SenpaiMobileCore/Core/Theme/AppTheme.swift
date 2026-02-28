@@ -1,39 +1,54 @@
 import SwiftUI
 
-public enum AppTheme {
+enum AppTheme {
     // MARK: - Colors
-    public static let accent = Color(red: 0.20, green: 0.78, blue: 0.35)       // #34C759
-    public static let accentLight = Color(red: 0.20, green: 0.78, blue: 0.35).opacity(0.12)
-    public static let accentDark = Color(red: 0.15, green: 0.60, blue: 0.28)
-    public static let backgroundPrimary = Color(red: 0.97, green: 0.98, blue: 0.97) // light mint
-    public static let backgroundCard = Color.white
-    public static let textPrimary = Color(red: 0.12, green: 0.14, blue: 0.17)
-    public static let textSecondary = Color(red: 0.44, green: 0.47, blue: 0.50)
-    public static let textTertiary = Color(red: 0.65, green: 0.67, blue: 0.70)
-    public static let border = Color(red: 0.91, green: 0.92, blue: 0.93)
-    public static let destructive = Color.red
-    public static let warning = Color.orange
-    public static let pending = Color.orange
-    public static let grayLight = Color(red: 0.94, green: 0.94, blue: 0.96)   // ~systemGray6
-    public static let grayMedium = Color(red: 0.90, green: 0.90, blue: 0.92)  // ~systemGray5
+    static let accent = Color(red: 0.20, green: 0.78, blue: 0.35)       // #34C759
+    static let accentLight = Color(red: 0.20, green: 0.78, blue: 0.35).opacity(0.12)
+    static let accentDark = Color(red: 0.15, green: 0.60, blue: 0.28)
+    static let backgroundPrimary = Color(red: 0.97, green: 0.98, blue: 0.97) // light mint
+    static let backgroundCard = Color.white
+    static let textPrimary = Color(red: 0.12, green: 0.14, blue: 0.17)
+    static let textSecondary = Color(red: 0.44, green: 0.47, blue: 0.50)
+    static let textTertiary = Color(red: 0.65, green: 0.67, blue: 0.70)
+    static let border = Color(red: 0.91, green: 0.92, blue: 0.93)
+    static let destructive = Color.red
+    static let warning = Color.orange
+    static let pending = Color.orange
+    static let grayLight = Color(red: 0.94, green: 0.94, blue: 0.96)   // ~systemGray6
+    static let grayMedium = Color(red: 0.90, green: 0.90, blue: 0.92)  // ~systemGray5
 
     // MARK: - Corner Radius
-    public static let cornerRadiusSmall: CGFloat = 8
-    public static let cornerRadiusMedium: CGFloat = 12
-    public static let cornerRadiusLarge: CGFloat = 16
-    public static let cornerRadiusXL: CGFloat = 20
+    static let cornerRadiusSmall: CGFloat = 8
+    static let cornerRadiusMedium: CGFloat = 12
+    static let cornerRadiusLarge: CGFloat = 16
+    static let cornerRadiusXL: CGFloat = 20
 
     // MARK: - Spacing
-    public static let spacingXS: CGFloat = 4
-    public static let spacingS: CGFloat = 8
-    public static let spacingM: CGFloat = 12
-    public static let spacingL: CGFloat = 16
-    public static let spacingXL: CGFloat = 20
-    public static let spacingXXL: CGFloat = 24
+    static let spacingXS: CGFloat = 4
+    static let spacingS: CGFloat = 8
+    static let spacingM: CGFloat = 12
+    static let spacingL: CGFloat = 16
+    static let spacingXL: CGFloat = 20
+    static let spacingXXL: CGFloat = 24
+
+    // MARK: - Animation
+    static let animationDefault: Animation = .easeInOut(duration: 0.2)
+    static let animationSpring: Animation = .spring(response: 0.35, dampingFraction: 0.7)
+    static let animationSoft: Animation = .easeOut(duration: 0.25)
 
     // MARK: - Card Style
-    public static func cardBackground() -> some ViewModifier {
+    static func cardBackground() -> some ViewModifier {
         CardBackgroundModifier()
+    }
+}
+
+// MARK: - Press-Scale Button Style
+struct PressableButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.97 : 1.0)
+            .opacity(configuration.isPressed ? 0.9 : 1.0)
+            .animation(AppTheme.animationSpring, value: configuration.isPressed)
     }
 }
 
@@ -46,8 +61,29 @@ struct CardBackgroundModifier: ViewModifier {
     }
 }
 
-public extension View {
+extension View {
     func cardStyle() -> some View {
         modifier(CardBackgroundModifier())
+    }
+
+    func staggeredAppear(delay: Double = 0) -> some View {
+        modifier(AppearAnimationModifier(delay: delay))
+    }
+}
+
+// MARK: - Appear Animation Modifier
+struct AppearAnimationModifier: ViewModifier {
+    let delay: Double
+    @State private var isVisible = false
+
+    func body(content: Content) -> some View {
+        content
+            .opacity(isVisible ? 1 : 0)
+            .offset(y: isVisible ? 0 : 16)
+            .onAppear {
+                withAnimation(AppTheme.animationSoft.delay(delay)) {
+                    isVisible = true
+                }
+            }
     }
 }

@@ -1,17 +1,17 @@
 import SwiftUI
 
-public struct JobCard: View {
+struct JobCard: View {
     private let job: Job
     private let onTap: () -> Void
     private let onBookmark: () -> Void
 
-    public init(job: Job, onTap: @escaping () -> Void, onBookmark: @escaping () -> Void) {
+    init(job: Job, onTap: @escaping () -> Void, onBookmark: @escaping () -> Void) {
         self.job = job
         self.onTap = onTap
         self.onBookmark = onBookmark
     }
 
-    public var body: some View {
+    var body: some View {
         VStack(alignment: .leading, spacing: AppTheme.spacingM) {
             // Company header row
             HStack(alignment: .top) {
@@ -43,10 +43,15 @@ public struct JobCard: View {
 
                 Spacer()
 
-                Button(action: onBookmark) {
+                Button {
+                    withAnimation(AppTheme.animationSpring) {
+                        onBookmark()
+                    }
+                } label: {
                     Image(systemName: job.isSaved ? "bookmark.fill" : "bookmark")
                         .font(.title3)
                         .foregroundStyle(job.isSaved ? AppTheme.accent : AppTheme.textSecondary)
+                        .symbolEffect(.bounce, value: job.isSaved)
                 }
                 .buttonStyle(.plain)
             }
@@ -89,7 +94,7 @@ public struct JobCard: View {
                         .background(AppTheme.accent)
                         .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadiusSmall, style: .continuous))
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(PressableButtonStyle())
             }
         }
         .padding(AppTheme.spacingL)

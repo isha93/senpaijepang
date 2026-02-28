@@ -1,13 +1,13 @@
 import SwiftUI
 
-public struct SavedJobsView: View {
-    @ObservedObject private var viewModel: SavedJobsViewModel
+struct SavedJobsView: View {
+    @StateObject private var viewModel: SavedJobsViewModel
 
-    public init(viewModel: SavedJobsViewModel) {
-        self.viewModel = viewModel
+    init(viewModel: SavedJobsViewModel) {
+        _viewModel = StateObject(wrappedValue: viewModel)
     }
 
-    public var body: some View {
+    var body: some View {
         List {
             ForEach(viewModel.savedJobs) { job in
                 Button {

@@ -43,10 +43,15 @@ struct JobCard: View {
 
                 Spacer()
 
-                Button(action: onBookmark) {
+                Button {
+                    withAnimation(AppTheme.animationSpring) {
+                        onBookmark()
+                    }
+                } label: {
                     Image(systemName: job.isSaved ? "bookmark.fill" : "bookmark")
                         .font(.title3)
                         .foregroundStyle(job.isSaved ? AppTheme.accent : AppTheme.textSecondary)
+                        .symbolEffect(.bounce, value: job.isSaved)
                 }
                 .buttonStyle(.plain)
             }
@@ -89,7 +94,7 @@ struct JobCard: View {
                         .background(AppTheme.accent)
                         .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadiusSmall, style: .continuous))
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(PressableButtonStyle())
             }
         }
         .padding(AppTheme.spacingL)

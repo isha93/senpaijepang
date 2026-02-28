@@ -1,9 +1,10 @@
 import Combine
 import Foundation
+import SwiftUI
 
 @MainActor
 final class NavigationManager: ObservableObject, NavigationHandling {
-    @Published private(set) var path: [AppRoute]
+    @Published var path: [AppRoute]
 
     init(path: [AppRoute] = []) {
         self.path = path

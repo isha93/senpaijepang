@@ -1,17 +1,18 @@
 import SwiftUI
 
-public struct TimelineStepRow: View {
+struct TimelineStepRow: View {
     private let step: ApplicationStep
     private let isLast: Bool
     private let isCurrent: Bool
+    @State private var isPulsing = false
 
-    public init(step: ApplicationStep, isLast: Bool = false, isCurrent: Bool = false) {
+    init(step: ApplicationStep, isLast: Bool = false, isCurrent: Bool = false) {
         self.step = step
         self.isLast = isLast
         self.isCurrent = isCurrent
     }
 
-    public var body: some View {
+    var body: some View {
         HStack(alignment: .top, spacing: AppTheme.spacingM) {
             // Timeline indicator
             VStack(spacing: 0) {
@@ -27,6 +28,13 @@ public struct TimelineStepRow: View {
                             Circle()
                                 .fill(.white)
                                 .frame(width: 8, height: 8)
+                                .scaleEffect(isPulsing ? 1.3 : 1.0)
+                                .opacity(isPulsing ? 0.7 : 1.0)
+                                .animation(
+                                    .easeInOut(duration: 1.2).repeatForever(autoreverses: true),
+                                    value: isPulsing
+                                )
+                                .onAppear { isPulsing = true }
                         }
                     }
 
@@ -83,6 +91,7 @@ public struct TimelineStepRow: View {
                             RoundedRectangle(cornerRadius: 3)
                                 .fill(AppTheme.accent)
                                 .frame(width: geo.size.width * 0.7, height: 6)
+                                .animation(AppTheme.animationSoft, value: isCurrent)
                         }
                     }
                     .frame(height: 6)

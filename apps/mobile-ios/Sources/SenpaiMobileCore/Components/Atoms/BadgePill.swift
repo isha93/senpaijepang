@@ -1,17 +1,17 @@
 import SwiftUI
 
-public struct CategoryPill: View {
+struct CategoryPill: View {
     private let title: String
     private let isSelected: Bool
     private let action: () -> Void
 
-    public init(title: String, isSelected: Bool, action: @escaping () -> Void) {
+    init(title: String, isSelected: Bool, action: @escaping () -> Void) {
         self.title = title
         self.isSelected = isSelected
         self.action = action
     }
 
-    public var body: some View {
+    var body: some View {
         Button(action: action) {
             Text(title)
                 .font(.footnote.weight(.semibold))
@@ -22,5 +22,6 @@ public struct CategoryPill: View {
                 .clipShape(Capsule())
         }
         .buttonStyle(.plain)
+        .animation(AppTheme.animationDefault, value: isSelected)
     }
 }

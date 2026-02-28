@@ -31,9 +31,24 @@ enum AppTheme {
     static let spacingXL: CGFloat = 20
     static let spacingXXL: CGFloat = 24
 
+    // MARK: - Animation
+    static let animationDefault: Animation = .easeInOut(duration: 0.2)
+    static let animationSpring: Animation = .spring(response: 0.35, dampingFraction: 0.7)
+    static let animationSoft: Animation = .easeOut(duration: 0.25)
+
     // MARK: - Card Style
     static func cardBackground() -> some ViewModifier {
         CardBackgroundModifier()
+    }
+}
+
+// MARK: - Press-Scale Button Style
+struct PressableButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.97 : 1.0)
+            .opacity(configuration.isPressed ? 0.9 : 1.0)
+            .animation(AppTheme.animationSpring, value: configuration.isPressed)
     }
 }
 
@@ -49,5 +64,26 @@ struct CardBackgroundModifier: ViewModifier {
 extension View {
     func cardStyle() -> some View {
         modifier(CardBackgroundModifier())
+    }
+
+    func staggeredAppear(delay: Double = 0) -> some View {
+        modifier(AppearAnimationModifier(delay: delay))
+    }
+}
+
+// MARK: - Appear Animation Modifier
+struct AppearAnimationModifier: ViewModifier {
+    let delay: Double
+    @State private var isVisible = false
+
+    func body(content: Content) -> some View {
+        content
+            .opacity(isVisible ? 1 : 0)
+            .offset(y: isVisible ? 0 : 16)
+            .onAppear {
+                withAnimation(AppTheme.animationSoft.delay(delay)) {
+                    isVisible = true
+                }
+            }
     }
 }
