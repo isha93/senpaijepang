@@ -8,7 +8,6 @@
 
 /* Begin PBXBuildFile section */
 		019B45B9434D247AC030EF22 /* LanguageManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21B6576E5C82D2ED999F0B46 /* LanguageManager.swift */; };
-		021118E4EC16AAB8C1F5B992 /* EmptyStateView 2.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AD4392C052D6CAAD7118BAF /* EmptyStateView 2.swift */; };
 		029838FCF808E0AB23DE9D83 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5E986EC211B4658DA01A438 /* LoginView.swift */; };
 		05D139032546BE2EE09526C0 /* SearchBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = EDF0535B16A117D6C05E3C46 /* SearchBar.swift */; };
 		09CC8BA311884FF0004354B1 /* JobServiceProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56E7BAB258285C0B5A0A3D1C /* JobServiceProtocol.swift */; };
@@ -33,6 +32,7 @@
 		887D0C1C718576AB8DB3352E /* FeedServiceProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13DE83CEBB2CBF4BB4D9673C /* FeedServiceProtocol.swift */; };
 		8CADED6FD67C60DFE4B16D5D /* LoginViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CD8378045CF61BF4E917163 /* LoginViewModel.swift */; };
 		8D4529F85B34B9FC65F5753B /* NavigationHandling.swift in Sources */ = {isa = PBXBuildFile; fileRef = 659DD4EC92A17779D5C214A3 /* NavigationHandling.swift */; };
+		9C7C5DB52F5348B2006BE581 /* EmptyStateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C7C5DB42F5348B2006BE581 /* EmptyStateView.swift */; };
 		A7E24CFF92132A1D41A70D56 /* JourneyService.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3B71E2D2641F7B62DE61CF0 /* JourneyService.swift */; };
 		A987B9ED62D1F615E08EE00F /* FeedListViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C48356ADF41B7CDA706FC71 /* FeedListViewModel.swift */; };
 		B1669A4174B6D0CC23E3E6FA /* JourneyServiceProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BEF57A827BDD7F9AB24DB44 /* JourneyServiceProtocol.swift */; };
@@ -55,7 +55,6 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		0AD4392C052D6CAAD7118BAF /* EmptyStateView 2.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "EmptyStateView 2.swift"; sourceTree = "<group>"; };
 		0CD8378045CF61BF4E917163 /* LoginViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginViewModel.swift; sourceTree = "<group>"; };
 		13DE83CEBB2CBF4BB4D9673C /* FeedServiceProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedServiceProtocol.swift; sourceTree = "<group>"; };
 		154B167D1E77CBDCC4079313 /* DocumentRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentRow.swift; sourceTree = "<group>"; };
@@ -83,6 +82,7 @@
 		95232A9DB62B0BB9658BF01E /* ProfileServiceProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileServiceProtocol.swift; sourceTree = "<group>"; };
 		9A0664A938F23DB900C7284B /* TimelineStepRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelineStepRow.swift; sourceTree = "<group>"; };
 		9C48356ADF41B7CDA706FC71 /* FeedListViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedListViewModel.swift; sourceTree = "<group>"; };
+		9C7C5DB42F5348B2006BE581 /* EmptyStateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmptyStateView.swift; sourceTree = "<group>"; };
 		A462532254D46B1889651F02 /* SavedJobsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedJobsView.swift; sourceTree = "<group>"; };
 		A5E986EC211B4658DA01A438 /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
 		A7179D0124A1626B7A1FE86C /* JobsListViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JobsListViewModel.swift; sourceTree = "<group>"; };
@@ -128,14 +128,6 @@
 			path = Data;
 			sourceTree = "<group>";
 		};
-		11F2BC8DBDD2E020325A0E29 /* Components */ = {
-			isa = PBXGroup;
-			children = (
-				D21D7224F9DFC42F5A25757C /* Molecules */,
-			);
-			name = Components;
-			sourceTree = "<group>";
-		};
 		129C80082A0338E7131FD2C0 /* Service */ = {
 			isa = PBXGroup;
 			children = (
@@ -151,7 +143,6 @@
 				5E3FAF55B04C052ACC278E51 /* Products */,
 				21B6576E5C82D2ED999F0B46 /* LanguageManager.swift */,
 				34FCE9D3E728B038DBB96506 /* SettingsView.swift */,
-				88F04817FC1452EE0BD55658 /* Sources */,
 			);
 			sourceTree = "<group>";
 		};
@@ -182,7 +173,7 @@
 		2A3A76EAEE011D5DA1192FB0 /* Molecules */ = {
 			isa = PBXGroup;
 			children = (
-				0AD4392C052D6CAAD7118BAF /* EmptyStateView 2.swift */,
+				9C7C5DB42F5348B2006BE581 /* EmptyStateView.swift */,
 				154B167D1E77CBDCC4079313 /* DocumentRow.swift */,
 				B9D62225132F9A6280AEA97F /* FeedPostCard.swift */,
 				CDC5FCBE16EF57E14EB1C47F /* JobCard.swift */,
@@ -200,14 +191,6 @@
 				F7E31FDE09D396C22F2CE6B3 /* Presentation */,
 			);
 			path = Feed;
-			sourceTree = "<group>";
-		};
-		3ACBE493794EEE56F0A6E69A /* SenpaiJepangApp */ = {
-			isa = PBXGroup;
-			children = (
-				DA353CC04B257C8D0A25D502 /* Components */,
-			);
-			name = SenpaiJepangApp;
 			sourceTree = "<group>";
 		};
 		3E486A54C802D76F3C7AA1F0 /* ViewModel */ = {
@@ -369,15 +352,6 @@
 			path = App;
 			sourceTree = "<group>";
 		};
-		88F04817FC1452EE0BD55658 /* Sources */ = {
-			isa = PBXGroup;
-			children = (
-				3ACBE493794EEE56F0A6E69A /* SenpaiJepangApp */,
-				FA19800AF0407CE7AD7A8F0B /* SenpaiMobileCore */,
-			);
-			name = Sources;
-			sourceTree = "<group>";
-		};
 		89DAD295865FFE28977D6916 /* View */ = {
 			isa = PBXGroup;
 			children = (
@@ -473,13 +447,6 @@
 			path = Profile;
 			sourceTree = "<group>";
 		};
-		B5533564ABD168CC22358A51 /* Molecules */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			name = Molecules;
-			sourceTree = "<group>";
-		};
 		B7D6EE319A8CE59996483CC1 /* Presentation */ = {
 			isa = PBXGroup;
 			children = (
@@ -517,13 +484,6 @@
 			path = Navigation;
 			sourceTree = "<group>";
 		};
-		D21D7224F9DFC42F5A25757C /* Molecules */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			name = Molecules;
-			sourceTree = "<group>";
-		};
 		D6CF587930DFEB65354478BA /* View */ = {
 			isa = PBXGroup;
 			children = (
@@ -538,14 +498,6 @@
 				259A7CB93FF0DA731BC412DC /* Service */,
 			);
 			path = Data;
-			sourceTree = "<group>";
-		};
-		DA353CC04B257C8D0A25D502 /* Components */ = {
-			isa = PBXGroup;
-			children = (
-				B5533564ABD168CC22358A51 /* Molecules */,
-			);
-			name = Components;
 			sourceTree = "<group>";
 		};
 		E23EB0021107172DE4F42CFB /* Service */ = {
@@ -619,14 +571,6 @@
 				4BEF57A827BDD7F9AB24DB44 /* JourneyServiceProtocol.swift */,
 			);
 			path = Service;
-			sourceTree = "<group>";
-		};
-		FA19800AF0407CE7AD7A8F0B /* SenpaiMobileCore */ = {
-			isa = PBXGroup;
-			children = (
-				11F2BC8DBDD2E020325A0E29 /* Components */,
-			);
-			name = SenpaiMobileCore;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -712,6 +656,7 @@
 				B1669A4174B6D0CC23E3E6FA /* JourneyServiceProtocol.swift in Sources */,
 				029838FCF808E0AB23DE9D83 /* LoginView.swift in Sources */,
 				8CADED6FD67C60DFE4B16D5D /* LoginViewModel.swift in Sources */,
+				9C7C5DB52F5348B2006BE581 /* EmptyStateView.swift in Sources */,
 				F27EED6C60AB439AEFF9F239 /* MainTabView.swift in Sources */,
 				3735010785017EA9FA60AB7D /* ManagedTask.swift in Sources */,
 				322BC92C5383B5DCFD9CF091 /* MetaChipRow.swift in Sources */,
@@ -729,7 +674,6 @@
 				13D7D66B9EE4A2546450B3DB /* TimelineStepRow.swift in Sources */,
 				019B45B9434D247AC030EF22 /* LanguageManager.swift in Sources */,
 				65C39093A457D1BD84912C0C /* SettingsView.swift in Sources */,
-				021118E4EC16AAB8C1F5B992 /* EmptyStateView 2.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
