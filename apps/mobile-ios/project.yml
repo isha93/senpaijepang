@@ -1,0 +1,16 @@
+name: SenpaiJepang
+options:
+  bundleIdPrefix: com.senpaijepang
+targets:
+  SenpaiJepang:
+    type: application
+    platform: iOS
+    deploymentTarget: "17.0"
+    infoPlist: Info.plist
+    settings:
+      base:
+        INFOPLIST_FILE: Info.plist
+        GENERATE_INFOPLIST_FILE: NO
+        DEVELOPMENT_TEAM: "" # Can be empty for local simulator builds
+    sources:
+      - path: Sources/SenpaiJepangApp

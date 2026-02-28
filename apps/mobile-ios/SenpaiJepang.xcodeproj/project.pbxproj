@@ -1,0 +1,852 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		029838FCF808E0AB23DE9D83 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5E986EC211B4658DA01A438 /* LoginView.swift */; };
+		05D139032546BE2EE09526C0 /* SearchBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = EDF0535B16A117D6C05E3C46 /* SearchBar.swift */; };
+		09CC8BA311884FF0004354B1 /* JobServiceProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56E7BAB258285C0B5A0A3D1C /* JobServiceProtocol.swift */; };
+		0D9F2EB68BD1ABBE9B9E7863 /* SavedJobsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A462532254D46B1889651F02 /* SavedJobsView.swift */; };
+		13D7D66B9EE4A2546450B3DB /* TimelineStepRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A0664A938F23DB900C7284B /* TimelineStepRow.swift */; };
+		2235EABE86F6CB8AFC747605 /* ApplicationJourneyViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = E78BBC0FC1B326D944C437E6 /* ApplicationJourneyViewModel.swift */; };
+		237B8AC2223E6DD6D622754C /* ProfileServiceProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95232A9DB62B0BB9658BF01E /* ProfileServiceProtocol.swift */; };
+		243BCD923362E34EC11061BD /* JobSummarySection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 721E9AE06DA3025A5DA440A3 /* JobSummarySection.swift */; };
+		2F42989629B45CD8AA942949 /* FeedPostCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9D62225132F9A6280AEA97F /* FeedPostCard.swift */; };
+		322BC92C5383B5DCFD9CF091 /* MetaChipRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26D96FCEF0D1B634402760C9 /* MetaChipRow.swift */; };
+		3735010785017EA9FA60AB7D /* ManagedTask.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD70124E2E5D7952050F55E8 /* ManagedTask.swift */; };
+		38CCE0371508A9B731D54C62 /* AppRoute.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8002F32ADF944393432D57F /* AppRoute.swift */; };
+		40D7A478D7EB2EBA90C7B336 /* JobCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDC5FCBE16EF57E14EB1C47F /* JobCard.swift */; };
+		4825C89F5FB746E4CB6DA598 /* CategoryFilterRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF546357F1F129BBAB8FCD08 /* CategoryFilterRow.swift */; };
+		4A5BBB26573C6E714AF16FF3 /* BadgePill.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94EED8D7FC03804A56ADC5B4 /* BadgePill.swift */; };
+		553BCACD1579B16018EA6CE4 /* JobsListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E27662E18DED29932199066 /* JobsListView.swift */; };
+		5721A643303E1F41E78EE5F1 /* SenpaiJepangApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A956ADAD7E2657081C687A3 /* SenpaiJepangApp.swift */; };
+		64B690AF20FB1BA9DFDC00E7 /* JobDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49F496EA8B0D08EF1FD37237 /* JobDetailView.swift */; };
+		6660DE25EC871BC63D9B4338 /* AuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42EBFEC98B633FAE59F5E562 /* AuthService.swift */; };
+		6E0CEF1BBB90348946198EDB /* NavigationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4333224033A5864F004FD3D /* NavigationManager.swift */; };
+		887D0C1C718576AB8DB3352E /* FeedServiceProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13DE83CEBB2CBF4BB4D9673C /* FeedServiceProtocol.swift */; };
+		8CADED6FD67C60DFE4B16D5D /* LoginViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CD8378045CF61BF4E917163 /* LoginViewModel.swift */; };
+		8D4529F85B34B9FC65F5753B /* NavigationHandling.swift in Sources */ = {isa = PBXBuildFile; fileRef = 659DD4EC92A17779D5C214A3 /* NavigationHandling.swift */; };
+		A7E24CFF92132A1D41A70D56 /* JourneyService.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3B71E2D2641F7B62DE61CF0 /* JourneyService.swift */; };
+		A987B9ED62D1F615E08EE00F /* FeedListViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C48356ADF41B7CDA706FC71 /* FeedListViewModel.swift */; };
+		B1669A4174B6D0CC23E3E6FA /* JourneyServiceProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BEF57A827BDD7F9AB24DB44 /* JourneyServiceProtocol.swift */; };
+		B9CEBD66A5D1134455513C82 /* FeedListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F13CABDCBF60EF786445502 /* FeedListView.swift */; };
+		BB4662DB2D38975D6831F0B8 /* JobDetailViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83322DC818F85F4243D03D4A /* JobDetailViewModel.swift */; };
+		BCB663685E6CB86C3B0FD9C9 /* DocumentRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 154B167D1E77CBDCC4079313 /* DocumentRow.swift */; };
+		CAACFC21B3622DB8C664FFDE /* ProfileViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBD408DBE62077007A6F9A87 /* ProfileViewModel.swift */; };
+		CAB2B06D131AEABC9FE2C21B /* FeedService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26DBD83BC463F60881E1E2AA /* FeedService.swift */; };
+		CDB69D5703298E67C3F17673 /* AppRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A89771D2640131244CCD0493 /* AppRootView.swift */; };
+		CE717BA8B8E3ABC6032A17EF /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD5B8B405DCCDEB915AAA125 /* ProfileView.swift */; };
+		E4E52953B2E3684345C4534A /* ApplicationJourneyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6693B3D66659B51643A3E40D /* ApplicationJourneyView.swift */; };
+		E586FAFFF5ECB3B875396F3D /* JobService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 727C8F082EA466E7C1232D38 /* JobService.swift */; };
+		E8E370912D04EF52EECBF0F5 /* ProfileService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5CBC2CDEA9992C8E1DF69F7 /* ProfileService.swift */; };
+		EC2E322893E334D586BC87FA /* JobsListViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7179D0124A1626B7A1FE86C /* JobsListViewModel.swift */; };
+		F030FCB8DEAAC15DB9B3FDDD /* SavedJobsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4DF96486F786085EDD7562BE /* SavedJobsViewModel.swift */; };
+		F27EED6C60AB439AEFF9F239 /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C33EB1B505B758B6E4BCA99 /* MainTabView.swift */; };
+		FAEDEEF9E5F8E93857FF4ACD /* AppTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F0729F2F8B466D3E157EADF /* AppTheme.swift */; };
+		FE3C692F747AC6493612D7EC /* AuthServiceProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE106AA656EC0CFEE236A27D /* AuthServiceProtocol.swift */; };
+		FF2F2C9A89E1833A4061F4AF /* PrimaryButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1EEAAFFD85F67C47BA12E8F9 /* PrimaryButton.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		0CD8378045CF61BF4E917163 /* LoginViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginViewModel.swift; sourceTree = "<group>"; };
+		13DE83CEBB2CBF4BB4D9673C /* FeedServiceProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedServiceProtocol.swift; sourceTree = "<group>"; };
+		154B167D1E77CBDCC4079313 /* DocumentRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentRow.swift; sourceTree = "<group>"; };
+		1EEAAFFD85F67C47BA12E8F9 /* PrimaryButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrimaryButton.swift; sourceTree = "<group>"; };
+		26D96FCEF0D1B634402760C9 /* MetaChipRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetaChipRow.swift; sourceTree = "<group>"; };
+		26DBD83BC463F60881E1E2AA /* FeedService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedService.swift; sourceTree = "<group>"; };
+		3A956ADAD7E2657081C687A3 /* SenpaiJepangApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SenpaiJepangApp.swift; sourceTree = "<group>"; };
+		3E27662E18DED29932199066 /* JobsListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JobsListView.swift; sourceTree = "<group>"; };
+		42EBFEC98B633FAE59F5E562 /* AuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthService.swift; sourceTree = "<group>"; };
+		49F496EA8B0D08EF1FD37237 /* JobDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JobDetailView.swift; sourceTree = "<group>"; };
+		4BEF57A827BDD7F9AB24DB44 /* JourneyServiceProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JourneyServiceProtocol.swift; sourceTree = "<group>"; };
+		4C33EB1B505B758B6E4BCA99 /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
+		4DF96486F786085EDD7562BE /* SavedJobsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedJobsViewModel.swift; sourceTree = "<group>"; };
+		56E7BAB258285C0B5A0A3D1C /* JobServiceProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JobServiceProtocol.swift; sourceTree = "<group>"; };
+		5F0729F2F8B466D3E157EADF /* AppTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppTheme.swift; sourceTree = "<group>"; };
+		659DD4EC92A17779D5C214A3 /* NavigationHandling.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NavigationHandling.swift; sourceTree = "<group>"; };
+		6693B3D66659B51643A3E40D /* ApplicationJourneyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApplicationJourneyView.swift; sourceTree = "<group>"; };
+		721E9AE06DA3025A5DA440A3 /* JobSummarySection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JobSummarySection.swift; sourceTree = "<group>"; };
+		727C8F082EA466E7C1232D38 /* JobService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JobService.swift; sourceTree = "<group>"; };
+		83322DC818F85F4243D03D4A /* JobDetailViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JobDetailViewModel.swift; sourceTree = "<group>"; };
+		8F13CABDCBF60EF786445502 /* FeedListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedListView.swift; sourceTree = "<group>"; };
+		94EED8D7FC03804A56ADC5B4 /* BadgePill.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BadgePill.swift; sourceTree = "<group>"; };
+		95232A9DB62B0BB9658BF01E /* ProfileServiceProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileServiceProtocol.swift; sourceTree = "<group>"; };
+		9A0664A938F23DB900C7284B /* TimelineStepRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelineStepRow.swift; sourceTree = "<group>"; };
+		9C48356ADF41B7CDA706FC71 /* FeedListViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedListViewModel.swift; sourceTree = "<group>"; };
+		A462532254D46B1889651F02 /* SavedJobsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedJobsView.swift; sourceTree = "<group>"; };
+		A5E986EC211B4658DA01A438 /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
+		A7179D0124A1626B7A1FE86C /* JobsListViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JobsListViewModel.swift; sourceTree = "<group>"; };
+		A89771D2640131244CCD0493 /* AppRootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppRootView.swift; sourceTree = "<group>"; };
+		AD70124E2E5D7952050F55E8 /* ManagedTask.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManagedTask.swift; sourceTree = "<group>"; };
+		B5CBC2CDEA9992C8E1DF69F7 /* ProfileService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileService.swift; sourceTree = "<group>"; };
+		B734008A981D8F4C900647F8 /* SenpaiJepang.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = SenpaiJepang.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		B8002F32ADF944393432D57F /* AppRoute.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppRoute.swift; sourceTree = "<group>"; };
+		B9D62225132F9A6280AEA97F /* FeedPostCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedPostCard.swift; sourceTree = "<group>"; };
+		BBD408DBE62077007A6F9A87 /* ProfileViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileViewModel.swift; sourceTree = "<group>"; };
+		C4333224033A5864F004FD3D /* NavigationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NavigationManager.swift; sourceTree = "<group>"; };
+		CD5B8B405DCCDEB915AAA125 /* ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileView.swift; sourceTree = "<group>"; };
+		CDC5FCBE16EF57E14EB1C47F /* JobCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JobCard.swift; sourceTree = "<group>"; };
+		E3B71E2D2641F7B62DE61CF0 /* JourneyService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JourneyService.swift; sourceTree = "<group>"; };
+		E78BBC0FC1B326D944C437E6 /* ApplicationJourneyViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApplicationJourneyViewModel.swift; sourceTree = "<group>"; };
+		EDF0535B16A117D6C05E3C46 /* SearchBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchBar.swift; sourceTree = "<group>"; };
+		FE106AA656EC0CFEE236A27D /* AuthServiceProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthServiceProtocol.swift; sourceTree = "<group>"; };
+		FF546357F1F129BBAB8FCD08 /* CategoryFilterRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategoryFilterRow.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		00A2FCA923014DD9CA5679C7 /* Organisms */ = {
+			isa = PBXGroup;
+			children = (
+				721E9AE06DA3025A5DA440A3 /* JobSummarySection.swift */,
+			);
+			path = Organisms;
+			sourceTree = "<group>";
+		};
+		089741B016B9377717673060 /* Service */ = {
+			isa = PBXGroup;
+			children = (
+				42EBFEC98B633FAE59F5E562 /* AuthService.swift */,
+			);
+			path = Service;
+			sourceTree = "<group>";
+		};
+		08FE3BEB47FC9437A478D13A /* Data */ = {
+			isa = PBXGroup;
+			children = (
+				E23EB0021107172DE4F42CFB /* Service */,
+			);
+			path = Data;
+			sourceTree = "<group>";
+		};
+		129C80082A0338E7131FD2C0 /* Service */ = {
+			isa = PBXGroup;
+			children = (
+				727C8F082EA466E7C1232D38 /* JobService.swift */,
+			);
+			path = Service;
+			sourceTree = "<group>";
+		};
+		14E01C53E539CE413ED89CE4 = {
+			isa = PBXGroup;
+			children = (
+				801123C769F80C42CF08B29B /* SenpaiJepangApp */,
+				5E3FAF55B04C052ACC278E51 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		1BC367A357F346A44C8162BC /* ViewModel */ = {
+			isa = PBXGroup;
+			children = (
+				0CD8378045CF61BF4E917163 /* LoginViewModel.swift */,
+			);
+			path = ViewModel;
+			sourceTree = "<group>";
+		};
+		202C8FED95038ADF088C111F /* Service */ = {
+			isa = PBXGroup;
+			children = (
+				95232A9DB62B0BB9658BF01E /* ProfileServiceProtocol.swift */,
+			);
+			path = Service;
+			sourceTree = "<group>";
+		};
+		259A7CB93FF0DA731BC412DC /* Service */ = {
+			isa = PBXGroup;
+			children = (
+				E3B71E2D2641F7B62DE61CF0 /* JourneyService.swift */,
+			);
+			path = Service;
+			sourceTree = "<group>";
+		};
+		2A3A76EAEE011D5DA1192FB0 /* Molecules */ = {
+			isa = PBXGroup;
+			children = (
+				154B167D1E77CBDCC4079313 /* DocumentRow.swift */,
+				B9D62225132F9A6280AEA97F /* FeedPostCard.swift */,
+				CDC5FCBE16EF57E14EB1C47F /* JobCard.swift */,
+				26D96FCEF0D1B634402760C9 /* MetaChipRow.swift */,
+				9A0664A938F23DB900C7284B /* TimelineStepRow.swift */,
+			);
+			path = Molecules;
+			sourceTree = "<group>";
+		};
+		305598960B3D8EFC503DF024 /* Feed */ = {
+			isa = PBXGroup;
+			children = (
+				7B8ECBCE32FB9C76B9D1A2C5 /* Data */,
+				5E63416515D0357175490396 /* Domain */,
+				F7E31FDE09D396C22F2CE6B3 /* Presentation */,
+			);
+			path = Feed;
+			sourceTree = "<group>";
+		};
+		3E486A54C802D76F3C7AA1F0 /* ViewModel */ = {
+			isa = PBXGroup;
+			children = (
+				E78BBC0FC1B326D944C437E6 /* ApplicationJourneyViewModel.swift */,
+			);
+			path = ViewModel;
+			sourceTree = "<group>";
+		};
+		3EB57FF96E3293D95A8D7BCD /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				E364F832CA84547B780EB738 /* Atoms */,
+				2A3A76EAEE011D5DA1192FB0 /* Molecules */,
+				00A2FCA923014DD9CA5679C7 /* Organisms */,
+			);
+			path = Components;
+			sourceTree = "<group>";
+		};
+		420B0D4E8BF0879C85329E4D /* Task */ = {
+			isa = PBXGroup;
+			children = (
+				AD70124E2E5D7952050F55E8 /* ManagedTask.swift */,
+			);
+			path = Task;
+			sourceTree = "<group>";
+		};
+		42726236D57F557F95F0D44B /* Domain */ = {
+			isa = PBXGroup;
+			children = (
+				F88B85D8CB40160325B6F57C /* Service */,
+			);
+			path = Domain;
+			sourceTree = "<group>";
+		};
+		482296387780A8F8F62E185D /* Theme */ = {
+			isa = PBXGroup;
+			children = (
+				5F0729F2F8B466D3E157EADF /* AppTheme.swift */,
+			);
+			path = Theme;
+			sourceTree = "<group>";
+		};
+		482E5CACF92582BCC39DB142 /* Data */ = {
+			isa = PBXGroup;
+			children = (
+				089741B016B9377717673060 /* Service */,
+			);
+			path = Data;
+			sourceTree = "<group>";
+		};
+		4D1141867CDD7FB2296FAEF4 /* Service */ = {
+			isa = PBXGroup;
+			children = (
+				26DBD83BC463F60881E1E2AA /* FeedService.swift */,
+			);
+			path = Service;
+			sourceTree = "<group>";
+		};
+		5B70C2CF3FEDA09D65408168 /* View */ = {
+			isa = PBXGroup;
+			children = (
+				6693B3D66659B51643A3E40D /* ApplicationJourneyView.swift */,
+			);
+			path = View;
+			sourceTree = "<group>";
+		};
+		5E3FAF55B04C052ACC278E51 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				B734008A981D8F4C900647F8 /* SenpaiJepang.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		5E63416515D0357175490396 /* Domain */ = {
+			isa = PBXGroup;
+			children = (
+				984CB97BA5EFEAE35E1F791B /* Service */,
+			);
+			path = Domain;
+			sourceTree = "<group>";
+		};
+		5FE3CE65C6E8946559C59570 /* Core */ = {
+			isa = PBXGroup;
+			children = (
+				CFA9DFEE4EBB20AC6C23CAB7 /* Navigation */,
+				420B0D4E8BF0879C85329E4D /* Task */,
+				482296387780A8F8F62E185D /* Theme */,
+			);
+			path = Core;
+			sourceTree = "<group>";
+		};
+		68976237DC8DDD7829636FD1 /* Presentation */ = {
+			isa = PBXGroup;
+			children = (
+				5B70C2CF3FEDA09D65408168 /* View */,
+				3E486A54C802D76F3C7AA1F0 /* ViewModel */,
+			);
+			path = Presentation;
+			sourceTree = "<group>";
+		};
+		6E4E67962C8344231814372C /* Data */ = {
+			isa = PBXGroup;
+			children = (
+				129C80082A0338E7131FD2C0 /* Service */,
+			);
+			path = Data;
+			sourceTree = "<group>";
+		};
+		72BE13973ABB697085654930 /* Service */ = {
+			isa = PBXGroup;
+			children = (
+				FE106AA656EC0CFEE236A27D /* AuthServiceProtocol.swift */,
+			);
+			path = Service;
+			sourceTree = "<group>";
+		};
+		74F2EDC7ECC29D552B4EBC75 /* Features */ = {
+			isa = PBXGroup;
+			children = (
+				C7C9E771AEA9CCD828C154FB /* Auth */,
+				305598960B3D8EFC503DF024 /* Feed */,
+				EFA9D59BD510C9CE28E78C37 /* Jobs */,
+				ED024DBBBB39628C0055B28F /* Journey */,
+				B19027862F86AF6A38199F82 /* Profile */,
+			);
+			path = Features;
+			sourceTree = "<group>";
+		};
+		7B8ECBCE32FB9C76B9D1A2C5 /* Data */ = {
+			isa = PBXGroup;
+			children = (
+				4D1141867CDD7FB2296FAEF4 /* Service */,
+			);
+			path = Data;
+			sourceTree = "<group>";
+		};
+		801123C769F80C42CF08B29B /* SenpaiJepangApp */ = {
+			isa = PBXGroup;
+			children = (
+				3A956ADAD7E2657081C687A3 /* SenpaiJepangApp.swift */,
+				874A73C5ECEEF264C925A6BB /* App */,
+				3EB57FF96E3293D95A8D7BCD /* Components */,
+				5FE3CE65C6E8946559C59570 /* Core */,
+				74F2EDC7ECC29D552B4EBC75 /* Features */,
+			);
+			name = SenpaiJepangApp;
+			path = Sources/SenpaiJepangApp;
+			sourceTree = "<group>";
+		};
+		874A73C5ECEEF264C925A6BB /* App */ = {
+			isa = PBXGroup;
+			children = (
+				A89771D2640131244CCD0493 /* AppRootView.swift */,
+				4C33EB1B505B758B6E4BCA99 /* MainTabView.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		89DAD295865FFE28977D6916 /* View */ = {
+			isa = PBXGroup;
+			children = (
+				49F496EA8B0D08EF1FD37237 /* JobDetailView.swift */,
+				3E27662E18DED29932199066 /* JobsListView.swift */,
+				A462532254D46B1889651F02 /* SavedJobsView.swift */,
+			);
+			path = View;
+			sourceTree = "<group>";
+		};
+		8ACBAB467539E4C1B9A4F4CB /* Domain */ = {
+			isa = PBXGroup;
+			children = (
+				72BE13973ABB697085654930 /* Service */,
+			);
+			path = Domain;
+			sourceTree = "<group>";
+		};
+		904D78E9FA7F54B9EAAD8722 /* ViewModel */ = {
+			isa = PBXGroup;
+			children = (
+				83322DC818F85F4243D03D4A /* JobDetailViewModel.swift */,
+				A7179D0124A1626B7A1FE86C /* JobsListViewModel.swift */,
+				4DF96486F786085EDD7562BE /* SavedJobsViewModel.swift */,
+			);
+			path = ViewModel;
+			sourceTree = "<group>";
+		};
+		90EFEF97D9570BEA54684F2D /* ViewModel */ = {
+			isa = PBXGroup;
+			children = (
+				BBD408DBE62077007A6F9A87 /* ProfileViewModel.swift */,
+			);
+			path = ViewModel;
+			sourceTree = "<group>";
+		};
+		984CB97BA5EFEAE35E1F791B /* Service */ = {
+			isa = PBXGroup;
+			children = (
+				13DE83CEBB2CBF4BB4D9673C /* FeedServiceProtocol.swift */,
+			);
+			path = Service;
+			sourceTree = "<group>";
+		};
+		9BAB4079DDF58E5DDC29A311 /* View */ = {
+			isa = PBXGroup;
+			children = (
+				8F13CABDCBF60EF786445502 /* FeedListView.swift */,
+			);
+			path = View;
+			sourceTree = "<group>";
+		};
+		9BDEEBB57B6126100F217F56 /* Service */ = {
+			isa = PBXGroup;
+			children = (
+				56E7BAB258285C0B5A0A3D1C /* JobServiceProtocol.swift */,
+			);
+			path = Service;
+			sourceTree = "<group>";
+		};
+		9C09A8EC4474DAF942CBA34E /* Presentation */ = {
+			isa = PBXGroup;
+			children = (
+				89DAD295865FFE28977D6916 /* View */,
+				904D78E9FA7F54B9EAAD8722 /* ViewModel */,
+			);
+			path = Presentation;
+			sourceTree = "<group>";
+		};
+		A5E70F0983CF9BB20EBCAB2B /* Domain */ = {
+			isa = PBXGroup;
+			children = (
+				202C8FED95038ADF088C111F /* Service */,
+			);
+			path = Domain;
+			sourceTree = "<group>";
+		};
+		AD5BA8EEC5CF047C142B089A /* View */ = {
+			isa = PBXGroup;
+			children = (
+				CD5B8B405DCCDEB915AAA125 /* ProfileView.swift */,
+			);
+			path = View;
+			sourceTree = "<group>";
+		};
+		B19027862F86AF6A38199F82 /* Profile */ = {
+			isa = PBXGroup;
+			children = (
+				08FE3BEB47FC9437A478D13A /* Data */,
+				A5E70F0983CF9BB20EBCAB2B /* Domain */,
+				E86A7E0326C20F3B01991D0E /* Presentation */,
+			);
+			path = Profile;
+			sourceTree = "<group>";
+		};
+		B7D6EE319A8CE59996483CC1 /* Presentation */ = {
+			isa = PBXGroup;
+			children = (
+				D6CF587930DFEB65354478BA /* View */,
+				1BC367A357F346A44C8162BC /* ViewModel */,
+			);
+			path = Presentation;
+			sourceTree = "<group>";
+		};
+		C3B233931BC9630D3ED8BF92 /* ViewModel */ = {
+			isa = PBXGroup;
+			children = (
+				9C48356ADF41B7CDA706FC71 /* FeedListViewModel.swift */,
+			);
+			path = ViewModel;
+			sourceTree = "<group>";
+		};
+		C7C9E771AEA9CCD828C154FB /* Auth */ = {
+			isa = PBXGroup;
+			children = (
+				482E5CACF92582BCC39DB142 /* Data */,
+				8ACBAB467539E4C1B9A4F4CB /* Domain */,
+				B7D6EE319A8CE59996483CC1 /* Presentation */,
+			);
+			path = Auth;
+			sourceTree = "<group>";
+		};
+		CFA9DFEE4EBB20AC6C23CAB7 /* Navigation */ = {
+			isa = PBXGroup;
+			children = (
+				B8002F32ADF944393432D57F /* AppRoute.swift */,
+				659DD4EC92A17779D5C214A3 /* NavigationHandling.swift */,
+				C4333224033A5864F004FD3D /* NavigationManager.swift */,
+			);
+			path = Navigation;
+			sourceTree = "<group>";
+		};
+		D6CF587930DFEB65354478BA /* View */ = {
+			isa = PBXGroup;
+			children = (
+				A5E986EC211B4658DA01A438 /* LoginView.swift */,
+			);
+			path = View;
+			sourceTree = "<group>";
+		};
+		D7C35B08FAA7C883BC78D948 /* Data */ = {
+			isa = PBXGroup;
+			children = (
+				259A7CB93FF0DA731BC412DC /* Service */,
+			);
+			path = Data;
+			sourceTree = "<group>";
+		};
+		E23EB0021107172DE4F42CFB /* Service */ = {
+			isa = PBXGroup;
+			children = (
+				B5CBC2CDEA9992C8E1DF69F7 /* ProfileService.swift */,
+			);
+			path = Service;
+			sourceTree = "<group>";
+		};
+		E364F832CA84547B780EB738 /* Atoms */ = {
+			isa = PBXGroup;
+			children = (
+				94EED8D7FC03804A56ADC5B4 /* BadgePill.swift */,
+				FF546357F1F129BBAB8FCD08 /* CategoryFilterRow.swift */,
+				1EEAAFFD85F67C47BA12E8F9 /* PrimaryButton.swift */,
+				EDF0535B16A117D6C05E3C46 /* SearchBar.swift */,
+			);
+			path = Atoms;
+			sourceTree = "<group>";
+		};
+		E86A7E0326C20F3B01991D0E /* Presentation */ = {
+			isa = PBXGroup;
+			children = (
+				AD5BA8EEC5CF047C142B089A /* View */,
+				90EFEF97D9570BEA54684F2D /* ViewModel */,
+			);
+			path = Presentation;
+			sourceTree = "<group>";
+		};
+		ED024DBBBB39628C0055B28F /* Journey */ = {
+			isa = PBXGroup;
+			children = (
+				D7C35B08FAA7C883BC78D948 /* Data */,
+				42726236D57F557F95F0D44B /* Domain */,
+				68976237DC8DDD7829636FD1 /* Presentation */,
+			);
+			path = Journey;
+			sourceTree = "<group>";
+		};
+		ED3679113519FE219BBCAFFC /* Domain */ = {
+			isa = PBXGroup;
+			children = (
+				9BDEEBB57B6126100F217F56 /* Service */,
+			);
+			path = Domain;
+			sourceTree = "<group>";
+		};
+		EFA9D59BD510C9CE28E78C37 /* Jobs */ = {
+			isa = PBXGroup;
+			children = (
+				6E4E67962C8344231814372C /* Data */,
+				ED3679113519FE219BBCAFFC /* Domain */,
+				9C09A8EC4474DAF942CBA34E /* Presentation */,
+			);
+			path = Jobs;
+			sourceTree = "<group>";
+		};
+		F7E31FDE09D396C22F2CE6B3 /* Presentation */ = {
+			isa = PBXGroup;
+			children = (
+				9BAB4079DDF58E5DDC29A311 /* View */,
+				C3B233931BC9630D3ED8BF92 /* ViewModel */,
+			);
+			path = Presentation;
+			sourceTree = "<group>";
+		};
+		F88B85D8CB40160325B6F57C /* Service */ = {
+			isa = PBXGroup;
+			children = (
+				4BEF57A827BDD7F9AB24DB44 /* JourneyServiceProtocol.swift */,
+			);
+			path = Service;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		8B9EABEB8BA1922F45B3FC46 /* SenpaiJepang */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 016112B7D4DDB241F723B740 /* Build configuration list for PBXNativeTarget "SenpaiJepang" */;
+			buildPhases = (
+				550A244E9E43DDD48FFE88CB /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = SenpaiJepang;
+			packageProductDependencies = (
+			);
+			productName = SenpaiJepang;
+			productReference = B734008A981D8F4C900647F8 /* SenpaiJepang.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		FEBC59BF6A99AF2FB95F8380 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					8B9EABEB8BA1922F45B3FC46 = {
+						DevelopmentTeam = "";
+					};
+				};
+			};
+			buildConfigurationList = 6281206748BF059BE2D051B0 /* Build configuration list for PBXProject "SenpaiJepang" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 14E01C53E539CE413ED89CE4;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				8B9EABEB8BA1922F45B3FC46 /* SenpaiJepang */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		550A244E9E43DDD48FFE88CB /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				CDB69D5703298E67C3F17673 /* AppRootView.swift in Sources */,
+				38CCE0371508A9B731D54C62 /* AppRoute.swift in Sources */,
+				FAEDEEF9E5F8E93857FF4ACD /* AppTheme.swift in Sources */,
+				E4E52953B2E3684345C4534A /* ApplicationJourneyView.swift in Sources */,
+				2235EABE86F6CB8AFC747605 /* ApplicationJourneyViewModel.swift in Sources */,
+				6660DE25EC871BC63D9B4338 /* AuthService.swift in Sources */,
+				FE3C692F747AC6493612D7EC /* AuthServiceProtocol.swift in Sources */,
+				4A5BBB26573C6E714AF16FF3 /* BadgePill.swift in Sources */,
+				4825C89F5FB746E4CB6DA598 /* CategoryFilterRow.swift in Sources */,
+				BCB663685E6CB86C3B0FD9C9 /* DocumentRow.swift in Sources */,
+				B9CEBD66A5D1134455513C82 /* FeedListView.swift in Sources */,
+				A987B9ED62D1F615E08EE00F /* FeedListViewModel.swift in Sources */,
+				2F42989629B45CD8AA942949 /* FeedPostCard.swift in Sources */,
+				CAB2B06D131AEABC9FE2C21B /* FeedService.swift in Sources */,
+				887D0C1C718576AB8DB3352E /* FeedServiceProtocol.swift in Sources */,
+				40D7A478D7EB2EBA90C7B336 /* JobCard.swift in Sources */,
+				64B690AF20FB1BA9DFDC00E7 /* JobDetailView.swift in Sources */,
+				BB4662DB2D38975D6831F0B8 /* JobDetailViewModel.swift in Sources */,
+				E586FAFFF5ECB3B875396F3D /* JobService.swift in Sources */,
+				09CC8BA311884FF0004354B1 /* JobServiceProtocol.swift in Sources */,
+				243BCD923362E34EC11061BD /* JobSummarySection.swift in Sources */,
+				553BCACD1579B16018EA6CE4 /* JobsListView.swift in Sources */,
+				EC2E322893E334D586BC87FA /* JobsListViewModel.swift in Sources */,
+				A7E24CFF92132A1D41A70D56 /* JourneyService.swift in Sources */,
+				B1669A4174B6D0CC23E3E6FA /* JourneyServiceProtocol.swift in Sources */,
+				029838FCF808E0AB23DE9D83 /* LoginView.swift in Sources */,
+				8CADED6FD67C60DFE4B16D5D /* LoginViewModel.swift in Sources */,
+				F27EED6C60AB439AEFF9F239 /* MainTabView.swift in Sources */,
+				3735010785017EA9FA60AB7D /* ManagedTask.swift in Sources */,
+				322BC92C5383B5DCFD9CF091 /* MetaChipRow.swift in Sources */,
+				8D4529F85B34B9FC65F5753B /* NavigationHandling.swift in Sources */,
+				6E0CEF1BBB90348946198EDB /* NavigationManager.swift in Sources */,
+				FF2F2C9A89E1833A4061F4AF /* PrimaryButton.swift in Sources */,
+				E8E370912D04EF52EECBF0F5 /* ProfileService.swift in Sources */,
+				237B8AC2223E6DD6D622754C /* ProfileServiceProtocol.swift in Sources */,
+				CE717BA8B8E3ABC6032A17EF /* ProfileView.swift in Sources */,
+				CAACFC21B3622DB8C664FFDE /* ProfileViewModel.swift in Sources */,
+				0D9F2EB68BD1ABBE9B9E7863 /* SavedJobsView.swift in Sources */,
+				F030FCB8DEAAC15DB9B3FDDD /* SavedJobsViewModel.swift in Sources */,
+				05D139032546BE2EE09526C0 /* SearchBar.swift in Sources */,
+				5721A643303E1F41E78EE5F1 /* SenpaiJepangApp.swift in Sources */,
+				13D7D66B9EE4A2546450B3DB /* TimelineStepRow.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		0D5424C721A04CF0838D4792 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.senpaijepang.SenpaiJepang;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		67E34F4C7F884581B3269AF0 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.senpaijepang.SenpaiJepang;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		7370E93B8F42649E7A40FEAA /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		CA82ACF5A087B436790C5536 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		016112B7D4DDB241F723B740 /* Build configuration list for PBXNativeTarget "SenpaiJepang" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				67E34F4C7F884581B3269AF0 /* Debug */,
+				0D5424C721A04CF0838D4792 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		6281206748BF059BE2D051B0 /* Build configuration list for PBXProject "SenpaiJepang" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				CA82ACF5A087B436790C5536 /* Debug */,
+				7370E93B8F42649E7A40FEAA /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = FEBC59BF6A99AF2FB95F8380 /* Project object */;
+}

@@ -1,6 +1,6 @@
 import SwiftUI
 
-public struct AppRootView: View {
+struct AppRootView: View {
     @StateObject private var navigation: NavigationManager
     private let authService: AuthServiceProtocol
     private let jobService: JobServiceProtocol
@@ -8,15 +8,14 @@ public struct AppRootView: View {
     private let profileService: ProfileServiceProtocol
     private let feedService: FeedServiceProtocol
 
-    public init(
-        navigation: NavigationManager = NavigationManager(),
+    init(
         authService: AuthServiceProtocol,
         jobService: JobServiceProtocol,
         journeyService: JourneyServiceProtocol,
         profileService: ProfileServiceProtocol,
         feedService: FeedServiceProtocol
     ) {
-        _navigation = StateObject(wrappedValue: navigation)
+        _navigation = StateObject(wrappedValue: NavigationManager())
         self.authService = authService
         self.jobService = jobService
         self.journeyService = journeyService
@@ -24,21 +23,14 @@ public struct AppRootView: View {
         self.feedService = feedService
     }
 
-    public var body: some View {
-        NavigationStack(
-            path: Binding(
-                get: { navigation.path },
-                set: { navigation.sync(path: $0) }
-            )
-        ) {
-            LoginView(
-                viewModel: LoginViewModel(
-                    authService: authService,
-                    navigation: navigation
-                )
-            )
-            .navigationDestination(for: AppRoute.self, destination: destinationView)
-        }
+    var body: some View {
+        MainTabView(
+            jobService: jobService,
+            journeyService: journeyService,
+            profileService: profileService,
+            feedService: feedService
+        )
+        .environmentObject(navigation)
     }
 
     @ViewBuilder

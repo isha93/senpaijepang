@@ -18,6 +18,11 @@ let package = Package(
             name: "SenpaiMobileCore",
             path: "Sources/SenpaiMobileCore"
         ),
+        .executableTarget(
+            name: "SenpaiJepangApp",
+            dependencies: ["SenpaiMobileCore"],
+            path: "Sources/SenpaiJepangApp"
+        ),
         .testTarget(
             name: "SenpaiMobileCoreTests",
             dependencies: ["SenpaiMobileCore"],
