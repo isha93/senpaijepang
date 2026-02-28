@@ -19,7 +19,8 @@ CREATE INDEX IF NOT EXISTS idx_user_roles_role_id ON user_roles(role_id);
 INSERT INTO roles (id, code, description)
 VALUES
   ('00000000-0000-0000-0000-000000000001', 'sdm', 'Default SDM candidate role'),
-  ('00000000-0000-0000-0000-000000000002', 'tsk_operator', 'TSK/LPK operator role'),
-  ('00000000-0000-0000-0000-000000000003', 'admin_ops', 'Internal operations admin role'),
-  ('00000000-0000-0000-0000-000000000004', 'compliance_officer', 'Compliance/audit role')
+  ('00000000-0000-0000-0000-000000000002', 'lpk', 'LPK dashboard role'),
+  ('00000000-0000-0000-0000-000000000003', 'tsk', 'TSK dashboard role'),
+  ('00000000-0000-0000-0000-000000000004', 'kaisha', 'Kaisha dashboard role'),
+  ('00000000-0000-0000-0000-000000000005', 'super_admin', 'Super admin dashboard role')
 ON CONFLICT (code) DO NOTHING;

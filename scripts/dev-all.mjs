@@ -20,19 +20,9 @@ const services = [
     url: 'http://localhost:4000/health'
   },
   {
-    name: 'web-sdm',
-    npmScript: 'dev:web-sdm',
-    url: 'http://localhost:3000'
-  },
-  {
     name: 'dashboard',
     npmScript: 'dev:dashboard',
     url: 'http://localhost:3001'
-  },
-  {
-    name: 'admin',
-    npmScript: 'dev:admin',
-    url: 'http://localhost:3002'
   }
 ];
 

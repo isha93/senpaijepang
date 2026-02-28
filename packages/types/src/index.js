@@ -1,6 +1,7 @@
 export const roleCodes = {
-  SDM: 'SDM',
-  TSK: 'TSK',
-  LPK: 'LPK',
-  ADMIN: 'ADMIN'
+  SDM: 'sdm',
+  LPK: 'lpk',
+  TSK: 'tsk',
+  KAISHA: 'kaisha',
+  SUPER_ADMIN: 'super_admin'
 };

@@ -1,7 +1,7 @@
 {
   "board": {
     "name": "SenpaiJepang MVP 1.0 Delivery",
-    "description": "Trust-first MVP execution board (Web + Dashboard first).\nPolicy: Quality > Quantity.",
+    "description": "Trust-first MVP execution board (iOS + Unified Dashboard first).\nPolicy: Quality > Quantity.",
     "defaultLists": false
   },
   "lists": [
@@ -20,9 +20,9 @@
     { "name": "Sprint S4", "color": "green" },
     { "name": "Sprint S5", "color": "yellow" },
     { "name": "Domain Backend", "color": "red" },
-    { "name": "Domain Web-SDM", "color": "orange" },
+    { "name": "Domain Mobile-iOS", "color": "orange" },
     { "name": "Domain Dashboard", "color": "lime" },
-    { "name": "Domain Ops/Admin", "color": "pink" },
+    { "name": "Domain Dashboard-Ops", "color": "pink" },
     { "name": "Domain Platform", "color": "black" },
     { "name": "Domain BizOps", "color": "purple" },
     { "name": "Priority P0", "color": "red" },
@@ -35,9 +35,9 @@
       "name": "[S0] Setup monorepo and baseline app scaffolds",
       "list": "Backlog - MVP",
       "labels": ["Sprint S0", "Domain Platform", "Priority P0"],
-      "desc": "Create repo structure for api/web-sdm/dashboard/admin and shared packages.\nAcceptance: workspace builds on CI and local dev bootstrap is documented.",
+      "desc": "Create repo structure for api/mobile-ios/dashboard and shared packages.\nAcceptance: workspace builds on CI and local dev bootstrap is documented.",
       "checklist": [
-        "Create apps/api, apps/web-sdm, apps/dashboard, apps/admin",
+        "Create apps/api, apps/mobile-ios, apps/dashboard",
         "Create shared packages (types, ui, config)",
         "Document local setup command"
       ]
@@ -90,7 +90,7 @@
     {
       "name": "[S1] User registration/login flow",
       "list": "Backlog - MVP",
-      "labels": ["Sprint S1", "Domain Backend", "Domain Web-SDM", "Priority P0"],
+      "labels": ["Sprint S1", "Domain Backend", "Domain Mobile-iOS", "Priority P0"],
       "desc": "Build register/login/refresh/logout endpoints and web forms.",
       "checklist": [
         "Register endpoint with validation",
@@ -123,7 +123,7 @@
     {
       "name": "[S1] Manual review queue v1 (Admin)",
       "list": "Backlog - MVP",
-      "labels": ["Sprint S1", "Domain Ops/Admin", "Priority P1"],
+      "labels": ["Sprint S1", "Domain Dashboard-Ops", "Priority P1"],
       "desc": "Admin can review pending KYC and set approve/reject outcome.",
       "checklist": [
         "Queue list with filters",
@@ -134,7 +134,7 @@
     {
       "name": "[S1] Critical consent UI + consent ledger",
       "list": "Backlog - MVP",
-      "labels": ["Sprint S1", "Domain Web-SDM", "Domain Backend", "Priority P0"],
+      "labels": ["Sprint S1", "Domain Mobile-iOS", "Domain Backend", "Priority P0"],
       "desc": "Interactive agreement flow with versioned consent records.",
       "checklist": [
         "Consent version storage",
@@ -213,7 +213,7 @@
     {
       "name": "[S3] SDM mobile-web job discovery",
       "list": "Backlog - MVP",
-      "labels": ["Sprint S3", "Domain Web-SDM", "Priority P0"],
+      "labels": ["Sprint S3", "Domain Mobile-iOS", "Priority P0"],
       "desc": "Responsive job list/detail with filter by sector and prefecture.",
       "checklist": [
         "Mobile-first job list UI",
@@ -224,7 +224,7 @@
     {
       "name": "[S3] Application flow + trust gates",
       "list": "Backlog - MVP",
-      "labels": ["Sprint S3", "Domain Backend", "Domain Web-SDM", "Priority P0", "Quality Gate"],
+      "labels": ["Sprint S3", "Domain Backend", "Domain Mobile-iOS", "Priority P0", "Quality Gate"],
       "desc": "Candidate can apply only if KYC verified and not blacklisted.",
       "checklist": [
         "Application submit endpoint",
@@ -258,7 +258,7 @@
     {
       "name": "[S4] Fraud report submission flow",
       "list": "Backlog - MVP",
-      "labels": ["Sprint S4", "Domain Web-SDM", "Domain Backend", "Priority P0"],
+      "labels": ["Sprint S4", "Domain Mobile-iOS", "Domain Backend", "Priority P0"],
       "desc": "Allow users to create fraud reports with evidence attachments.",
       "checklist": [
         "Fraud report API",
@@ -269,7 +269,7 @@
     {
       "name": "[S4] Case ticket engine + SLA",
       "list": "Backlog - MVP",
-      "labels": ["Sprint S4", "Domain Ops/Admin", "Domain Backend", "Priority P0", "Quality Gate"],
+      "labels": ["Sprint S4", "Domain Dashboard-Ops", "Domain Backend", "Priority P0", "Quality Gate"],
       "desc": "Auto-create case tickets and monitor SLA with escalation.",
       "checklist": [
         "Case state machine",
@@ -291,7 +291,7 @@
     {
       "name": "[S4] Trust profile API with reason codes",
       "list": "Backlog - MVP",
-      "labels": ["Sprint S4", "Domain Backend", "Domain Web-SDM", "Priority P1"],
+      "labels": ["Sprint S4", "Domain Backend", "Domain Mobile-iOS", "Priority P1"],
       "desc": "Expose explainable trust factors to avoid opaque trust score behavior.",
       "checklist": [
         "Trust factor schema",
@@ -302,7 +302,7 @@
     {
       "name": "[S4] Ops dashboard for case backlog",
       "list": "Backlog - MVP",
-      "labels": ["Sprint S4", "Domain Ops/Admin", "Priority P1"],
+      "labels": ["Sprint S4", "Domain Dashboard-Ops", "Priority P1"],
       "desc": "Admin panel for backlog, aging bucket, and SLA breach visibility.",
       "checklist": [
         "Backlog widgets",

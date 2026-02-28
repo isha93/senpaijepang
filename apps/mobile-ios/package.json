@@ -1,11 +1,11 @@
 {
-  "name": "@senpaijepang/web-sdm",
+  "name": "@senpaijepang/mobile-ios",
   "version": "0.1.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "node ../../scripts/serve-static.mjs --dir . --port 3000 --title SDM-Web",
-    "start": "node ../../scripts/serve-static.mjs --dir . --port 3000 --title SDM-Web",
+    "dev": "node -e \"console.log('iOS MVP scaffold: gunakan Xcode/React Native client di apps/mobile-ios')\"",
+    "start": "node -e \"console.log('iOS MVP scaffold: jalankan workflow mobile iOS dari apps/mobile-ios')\"",
     "lint": "node ../../scripts/task-check.mjs --task lint --scope .",
     "typecheck": "node ../../scripts/task-check.mjs --task typecheck --scope .",
     "test": "node ../../scripts/task-check.mjs --task test --scope ."

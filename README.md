@@ -9,7 +9,7 @@ Product thesis:
 
 ## Product Scope (Current Repository)
 This repository currently contains MVP foundation only:
-- Monorepo structure for API + 3 web surfaces.
+- Monorepo structure for API + 1 web dashboard + mobile iOS scaffold.
 - Local infrastructure stack for development (PostgreSQL, Redis, MinIO).
 - CI baseline (lint, typecheck, test).
 - Architecture, product, and sprint planning docs.
@@ -19,7 +19,7 @@ Not yet implemented in this codebase:
 - Full production-grade KYC provider integration and review workflow.
 - Production-grade database schema and migrations.
 - TG matching engine and anti-fraud case workflow.
-- Native mobile apps.
+- Full native mobile iOS implementation (currently scaffold only).
 
 Implemented now:
 - Auth skeleton in API (`register`, `login`, `refresh`, `logout`, `me`).
@@ -27,6 +27,8 @@ Implemented now:
 - RBAC skeleton (`roles`, `user_roles`, default role assignment on register).
 - KYC session skeleton in API (`create session`, `status`).
 - KYC document ingestion skeleton + admin review + status audit events.
+- Unified web dashboard for `LPK`, `TSK`, `Kaisha`, `Super Admin` roles.
+- Mobile iOS MVP workspace scaffold (`apps/mobile-ios`).
 - Observability baseline (`/metrics`, `x-request-id`, structured JSON logs).
 - Sprint 0 quality gates: SAST scan, secret scan, OpenAPI/versioning checks.
 
@@ -89,18 +91,16 @@ KYC upload sequence:
 ### 1) System Context
 ```mermaid
 flowchart LR
-    SDM[SDM Web<br/>apps/web-sdm] --> API[API<br/>apps/api]
-    TSK[TSK/LPK Dashboard<br/>apps/dashboard] --> API
-    OPS[Ops/Admin Console<br/>apps/admin] --> API
+    MOB[SDM Mobile iOS (MVP)<br/>apps/mobile-ios] --> API[API<br/>apps/api]
+    DASH[Unified Dashboard<br/>apps/dashboard] --> API
 
     API --> PG[(PostgreSQL)]
     API --> RD[(Redis)]
     API --> S3[(MinIO / S3 Compatible)]
 
     CU[ClickUp Tracking] -. planning and delivery .-> TEAM[Product and Engineering Team]
-    TEAM --> SDM
-    TEAM --> TSK
-    TEAM --> OPS
+    TEAM --> MOB
+    TEAM --> DASH
 ```
 
 ### 2) Repository Map
@@ -114,9 +114,8 @@ graph TD
     ROOT --> INFRA[docker-compose.yml]
 
     APPS --> API[api]
-    APPS --> WEBSDM[web-sdm]
     APPS --> DASH[dashboard]
-    APPS --> ADMIN[admin]
+    APPS --> MOBI[mobile-ios]
 
     PKGS --> TYPES[types]
     PKGS --> CONFIG[config]
@@ -143,12 +142,10 @@ gantt
 ## Monorepo Layout
 - `apps/api`:
   backend API starter (`/health` endpoint + test).
-- `apps/web-sdm`:
-  SDM web starter (mobile-web first placeholder).
 - `apps/dashboard`:
-  TSK/LPK dashboard starter.
-- `apps/admin`:
-  Ops/admin console starter.
+  unified web dashboard for `LPK`, `TSK`, `Kaisha`, `Super Admin`.
+- `apps/mobile-ios`:
+  iOS-first MVP mobile scaffold for SDM flow.
 - `packages/types`:
   shared domain constants/types placeholder.
 - `packages/config`:
@@ -166,9 +163,8 @@ gantt
 
 ## Runtime Surfaces and Ports
 - API: `http://localhost:4000`
-- SDM Web: `http://localhost:3000`
 - Dashboard: `http://localhost:3001`
-- Admin: `http://localhost:3002`
+- Mobile iOS MVP: `apps/mobile-ios` (native app scaffold, no local web port)
 - PostgreSQL: `localhost:5432`
 - Redis: `localhost:6379`
 - MinIO API: `http://localhost:9000`
@@ -247,18 +243,16 @@ AUTH_STORE=postgres
   default uses isolated Postgres host port `55432` to avoid clashing with local PostgreSQL.
   override with `SMOKE_POSTGRES_PORT` or full `SMOKE_DATABASE_URL` when needed.
 - `npm run dev:all`
-  start docker infra and all app surfaces in background (`api`, `web-sdm`, `dashboard`, `admin`).
+  start docker infra and app surfaces in background (`api`, `dashboard`).
   runtime state/logs are stored under `.dev-runtime/`.
 - `npm run stop:all`
   stop all services started by `dev:all` and stop docker compose services.
 - `npm run dev:api`
   start API in watch mode.
-- `npm run dev:web-sdm`
-  start SDM static app.
 - `npm run dev:dashboard`
-  start dashboard static app.
-- `npm run dev:admin`
-  start admin static app.
+  start unified dashboard static app (LPK/TSK/Kaisha/Super Admin lanes).
+- `npm run dev:mobile-ios`
+  run iOS MVP scaffold workspace command.
 - `npm run migrate:api`
   run PostgreSQL migrations for API (`apps/api/migrations`).
 - `npm run deploy:staging`
@@ -408,3 +402,6 @@ Fallback tracking is Trello:
   - explicit KYC submit endpoint (`/identity/kyc/sessions/{sessionId}/submit`)
   - provider metadata hook + provider webhook stub
   - KYC audit trail status transitions
+- Frontend baseline active:
+  - unified web dashboard role lanes (`LPK`, `TSK`, `Kaisha`, `Super Admin`)
+  - iOS-first mobile workspace scaffold for SDM flow

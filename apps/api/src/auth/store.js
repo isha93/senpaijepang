@@ -22,27 +22,35 @@ export class InMemoryAuthStore {
         }
       ],
       [
-        'tsk_operator',
+        'lpk',
         {
           id: '00000000-0000-0000-0000-000000000002',
-          code: 'tsk_operator',
-          description: 'TSK/LPK operator role'
+          code: 'lpk',
+          description: 'LPK dashboard role'
         }
       ],
       [
-        'admin_ops',
+        'tsk',
         {
           id: '00000000-0000-0000-0000-000000000003',
-          code: 'admin_ops',
-          description: 'Internal operations admin role'
+          code: 'tsk',
+          description: 'TSK dashboard role'
         }
       ],
       [
-        'compliance_officer',
+        'kaisha',
         {
           id: '00000000-0000-0000-0000-000000000004',
-          code: 'compliance_officer',
-          description: 'Compliance/audit role'
+          code: 'kaisha',
+          description: 'Kaisha dashboard role'
+        }
+      ],
+      [
+        'super_admin',
+        {
+          id: '00000000-0000-0000-0000-000000000005',
+          code: 'super_admin',
+          description: 'Super admin dashboard role'
         }
       ]
     ]);

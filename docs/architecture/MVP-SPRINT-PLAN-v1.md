@@ -1,9 +1,9 @@
-# SenpaiJepang MVP Sprint Plan v1 (Web + Dashboard First)
+# SenpaiJepang MVP Sprint Plan v1 (iOS + Unified Dashboard First)
 
 ## 0. Progress Snapshot (2026-02-27)
 Delivered baseline in repository:
 - Sprint 0 foundation:
-  - monorepo setup for `api`, `web-sdm`, `dashboard`, `admin`
+  - monorepo setup for `api`, `mobile-ios`, `dashboard`
   - CI pipeline gates (`lint`, `typecheck`, `test`, `scan:sast`, `scan:secrets`, `check:openapi`)
   - local infra setup (`PostgreSQL`, `Redis`, `MinIO`)
   - RBAC skeleton + default role assignment (`sdm`)
@@ -24,9 +24,9 @@ Current references:
 
 ## 1. MVP Goal (12 Weeks)
 Deliver MVP yang siap pilot terbatas dengan fokus:
-- SDM mobile-web onboarding + KYC + apply + report fraud.
-- TSK/LPK dashboard untuk verifikasi legal + job posting + applicant management.
-- Ops/Admin console untuk review KYC, case handling, blacklist, audit.
+- SDM onboarding iOS-first + KYC + apply + report fraud.
+- Unified web dashboard untuk LPK/TSK/Kaisha/Super Admin (role-based lane).
+- Trust governance lane untuk review KYC, case handling, blacklist, audit.
 
 Filosofi eksekusi:
 - `Quality > Quantity`
@@ -35,13 +35,12 @@ Filosofi eksekusi:
 
 ## 2. Scope Lock (MVP)
 In scope:
-- Website SDM (mobile-web first / responsive), bukan native app.
-- Dashboard TSK/LPK (web).
-- Admin/Ops console (web internal).
+- Native iOS app for SDM (MVP-first).
+- Unified dashboard web for LPK/TSK/Kaisha/Super Admin.
 - Core anti-fraud layer: KYC, verifikasi TSK, evidence/case, trust factors.
 
 Out of scope (post-MVP):
-- Native Android/iOS.
+- Native Android.
 - Escrow payment.
 - Multi-country policy engine.
 
@@ -85,7 +84,7 @@ Product outcomes:
 - Team siap delivery cepat tanpa menurunkan quality.
 
 Engineering deliverables:
-- Monorepo setup (`web-sdm`, `dashboard`, `admin`, `api`).
+- Monorepo setup (`mobile-ios`, `dashboard`, `api`).
 - CI pipeline: lint, typecheck, tests, SAST, secret scan.
 - Baseline auth service + RBAC skeleton.
 - Observability baseline: logs, metrics, traces.
@@ -109,7 +108,7 @@ Engineering deliverables:
 - Register/login/refresh/logout + MFA optional hooks.
 - KYC session flow (create, upload docs, submit).
 - KYC provider adapter v1 + webhook intake.
-- Manual review queue v1 untuk admin.
+- Manual review queue v1 untuk Super Admin lane (dashboard).
 - Consent ledger with versioned policy.
 
 Business/Ops deliverables:
@@ -163,7 +162,7 @@ Definition of done:
 
 ### Sprint 4 (Apr 27 - May 8): Evidence and Trust Layer
 Product outcomes:
-- User bisa report fraud, admin bisa proses case sampai resolusi.
+- User bisa report fraud, Super Admin bisa proses case sampai resolusi.
 
 Engineering deliverables:
 - Fraud report intake + evidence upload.
