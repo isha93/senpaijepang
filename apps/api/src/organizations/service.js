@@ -1,5 +1,3 @@
-import { randomUUID } from 'node:crypto';
-
 class OrganizationsApiError extends Error {
   constructor(status, code, message) {
     super(message);
@@ -9,11 +7,16 @@ class OrganizationsApiError extends Error {
 }
 
 const ALLOWED_ORG_TYPES = new Set(['TSK', 'LPK', 'EMPLOYER']);
+const ALLOWED_VERIFICATION_STATUSES = new Set(['PENDING', 'VERIFIED', 'MISMATCH', 'NOT_FOUND', 'REJECTED']);
 const MAX_ORG_NAME_LENGTH = 180;
 const MAX_REGISTRATION_NUMBER_LENGTH = 128;
 const MAX_LEGAL_NAME_LENGTH = 180;
 const MAX_SUPPORTING_OBJECT_KEYS = 20;
 const MAX_OBJECT_KEY_LENGTH = 1024;
+const MAX_REASON_CODES = 20;
+const MAX_REASON_CODE_LENGTH = 64;
+const DEFAULT_LIMIT = 20;
+const MAX_LIMIT = 100;
 
 function normalizeUserId(userId) {
   const normalized = String(userId || '').trim();
@@ -57,6 +60,13 @@ function normalizeOrganizationType(orgType) {
   return normalized;
 }
 
+function normalizeOptionalOrganizationType(orgType) {
+  if (orgType === undefined || orgType === null || String(orgType).trim() === '') {
+    return null;
+  }
+  return normalizeOrganizationType(orgType);
+}
+
 function normalizeCountryCode(countryCode) {
   const normalized = String(countryCode || '')
     .trim()
@@ -70,11 +80,7 @@ function normalizeCountryCode(countryCode) {
 function normalizeRegistrationNumber(registrationNumber) {
   const normalized = String(registrationNumber || '').trim();
   if (!normalized) {
-    throw new OrganizationsApiError(
-      400,
-      'invalid_registration_number',
-      'registrationNumber is required'
-    );
+    throw new OrganizationsApiError(400, 'invalid_registration_number', 'registrationNumber is required');
   }
   if (normalized.length > MAX_REGISTRATION_NUMBER_LENGTH) {
     throw new OrganizationsApiError(
@@ -144,6 +150,79 @@ function normalizeSupportingObjectKeys(supportingObjectKeys) {
   });
 }
 
+function normalizeVerificationStatus(status) {
+  const normalized = String(status || '')
+    .trim()
+    .toUpperCase();
+  if (!ALLOWED_VERIFICATION_STATUSES.has(normalized)) {
+    throw new OrganizationsApiError(
+      400,
+      'invalid_verification_status',
+      `status must be one of ${Array.from(ALLOWED_VERIFICATION_STATUSES).join(', ')}`
+    );
+  }
+  return normalized;
+}
+
+function normalizeOptionalVerificationStatus(status) {
+  if (status === undefined || status === null || String(status).trim() === '') {
+    return null;
+  }
+  return normalizeVerificationStatus(status);
+}
+
+function normalizeReasonCodes(reasonCodes) {
+  if (reasonCodes === undefined || reasonCodes === null) {
+    return [];
+  }
+  if (!Array.isArray(reasonCodes)) {
+    throw new OrganizationsApiError(400, 'invalid_reason_codes', 'reasonCodes must be an array');
+  }
+  if (reasonCodes.length > MAX_REASON_CODES) {
+    throw new OrganizationsApiError(
+      400,
+      'invalid_reason_codes',
+      `reasonCodes must contain <= ${MAX_REASON_CODES} items`
+    );
+  }
+  return reasonCodes.map((value) => {
+    const normalized = String(value || '').trim();
+    if (!normalized) {
+      throw new OrganizationsApiError(400, 'invalid_reason_code', 'reason code must be non-empty string');
+    }
+    if (normalized.length > MAX_REASON_CODE_LENGTH) {
+      throw new OrganizationsApiError(
+        400,
+        'invalid_reason_code',
+        `reason code must be <= ${MAX_REASON_CODE_LENGTH} characters`
+      );
+    }
+    return normalized;
+  });
+}
+
+function normalizeLimit(limit) {
+  if (limit === undefined || limit === null || String(limit).trim() === '') {
+    return DEFAULT_LIMIT;
+  }
+  const normalized = Number(limit);
+  if (!Number.isInteger(normalized) || normalized < 1 || normalized > MAX_LIMIT) {
+    throw new OrganizationsApiError(400, 'invalid_limit', `limit must be integer between 1 and ${MAX_LIMIT}`);
+  }
+  return normalized;
+}
+
+function normalizeCursor(cursor) {
+  if (cursor === undefined || cursor === null || String(cursor).trim() === '') {
+    return 0;
+  }
+  const normalized = Number(cursor);
+  if (!Number.isInteger(normalized) || normalized < 0) {
+    throw new OrganizationsApiError(400, 'invalid_cursor', 'cursor must be a non-negative integer');
+  }
+  return normalized;
+}
+
 function toPublicOrganization(organization) {
   return {
     id: organization.id,
@@ -158,91 +237,60 @@ function toPublicVerification(verification) {
     id: verification.id,
     orgId: verification.orgId,
     status: verification.status,
-    reasonCodes: verification.reasonCodes,
+    reasonCodes: Array.isArray(verification.reasonCodesJson) ? verification.reasonCodesJson : [],
     lastCheckedAt: verification.lastCheckedAt
   };
 }
 
 export class OrganizationsService {
-  constructor() {
-    this.organizationsById = new Map();
-    this.verificationByOrgId = new Map();
+  constructor({ store }) {
+    this.store = store;
   }
 
-  getOrganizationForOwnerOrThrow({ orgId, ownerUserId }) {
+  async assertOwnerOrganizationOrThrow({ userId, orgId }) {
+    const normalizedUserId = normalizeUserId(userId);
     const normalizedOrgId = normalizeOrganizationId(orgId);
-    const organization = this.organizationsById.get(normalizedOrgId);
-    if (!organization || organization.ownerUserId !== ownerUserId) {
+    const organization = await this.store.findOrganizationById(normalizedOrgId);
+    if (!organization || organization.ownerUserId !== normalizedUserId) {
       throw new OrganizationsApiError(404, 'org_not_found', 'organization not found');
     }
     return organization;
   }
 
-  createOrganization({ userId, name, orgType, countryCode }) {
-    const ownerUserId = normalizeUserId(userId);
-    const organization = {
-      id: randomUUID(),
-      ownerUserId,
+  async createOrganization({ userId, name, orgType, countryCode }) {
+    const normalizedUserId = normalizeUserId(userId);
+    const organization = await this.store.createOrganization({
+      ownerUserId: normalizedUserId,
       name: normalizeOrganizationName(name),
       orgType: normalizeOrganizationType(orgType),
-      countryCode: normalizeCountryCode(countryCode),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-
-    this.organizationsById.set(organization.id, organization);
+      countryCode: normalizeCountryCode(countryCode)
+    });
     return toPublicOrganization(organization);
   }
 
-  submitVerification({ userId, orgId, registrationNumber, legalName, supportingObjectKeys }) {
-    const ownerUserId = normalizeUserId(userId);
-    const organization = this.getOrganizationForOwnerOrThrow({
-      orgId,
-      ownerUserId
+  async submitVerification({ userId, orgId, registrationNumber, legalName, supportingObjectKeys }) {
+    const organization = await this.assertOwnerOrganizationOrThrow({
+      userId,
+      orgId
     });
-    const now = new Date().toISOString();
-    const payload = {
-      registrationNumber: normalizeRegistrationNumber(registrationNumber),
-      legalName: normalizeLegalName(legalName),
-      supportingObjectKeys: normalizeSupportingObjectKeys(supportingObjectKeys)
-    };
-
-    const existing = this.verificationByOrgId.get(organization.id);
-    if (existing) {
-      existing.registrationNumber = payload.registrationNumber;
-      existing.legalName = payload.legalName;
-      existing.supportingObjectKeys = payload.supportingObjectKeys;
-      existing.status = 'PENDING';
-      existing.reasonCodes = [];
-      existing.lastCheckedAt = now;
-      existing.updatedAt = now;
-      return toPublicVerification(existing);
-    }
-
-    const verification = {
-      id: randomUUID(),
+    const verification = await this.store.createOrUpdateOrganizationVerification({
       orgId: organization.id,
       status: 'PENDING',
-      reasonCodes: [],
-      lastCheckedAt: now,
-      registrationNumber: payload.registrationNumber,
-      legalName: payload.legalName,
-      supportingObjectKeys: payload.supportingObjectKeys,
-      createdAt: now,
-      updatedAt: now
-    };
-
-    this.verificationByOrgId.set(organization.id, verification);
+      reasonCodesJson: [],
+      registrationNumber: normalizeRegistrationNumber(registrationNumber),
+      legalName: normalizeLegalName(legalName),
+      supportingObjectKeysJson: normalizeSupportingObjectKeys(supportingObjectKeys),
+      lastCheckedAt: new Date().toISOString()
+    });
     return toPublicVerification(verification);
   }
 
-  getVerificationStatus({ userId, orgId }) {
-    const ownerUserId = normalizeUserId(userId);
-    const organization = this.getOrganizationForOwnerOrThrow({
-      orgId,
-      ownerUserId
+  async getVerificationStatus({ userId, orgId }) {
+    const organization = await this.assertOwnerOrganizationOrThrow({
+      userId,
+      orgId
     });
-    const verification = this.verificationByOrgId.get(organization.id);
+    const verification = await this.store.findOrganizationVerificationByOrgId(organization.id);
     if (!verification) {
       throw new OrganizationsApiError(
         404,
@@ -252,10 +300,100 @@ export class OrganizationsService {
     }
     return toPublicVerification(verification);
   }
+
+  async listOrganizationsForAdmin({ cursor, limit, orgType, verificationStatus }) {
+    const normalizedCursor = normalizeCursor(cursor);
+    const normalizedLimit = normalizeLimit(limit);
+    const normalizedOrgType = normalizeOptionalOrganizationType(orgType);
+    const normalizedVerificationStatus = normalizeOptionalVerificationStatus(verificationStatus);
+
+    const organizations = await this.store.listOrganizations();
+    const filtered = [];
+
+    for (const organization of organizations) {
+      if (normalizedOrgType && organization.orgType !== normalizedOrgType) {
+        continue;
+      }
+      const verification = await this.store.findOrganizationVerificationByOrgId(organization.id);
+      if (normalizedVerificationStatus && (!verification || verification.status !== normalizedVerificationStatus)) {
+        continue;
+      }
+
+      const owner = await this.store.findUserById(organization.ownerUserId);
+      filtered.push({
+        organization: toPublicOrganization(organization),
+        verification: verification ? toPublicVerification(verification) : null,
+        owner: owner
+          ? {
+              id: owner.id,
+              fullName: owner.fullName,
+              email: owner.email
+            }
+          : null
+      });
+    }
+
+    const paged = filtered.slice(normalizedCursor, normalizedCursor + normalizedLimit);
+    const nextOffset = normalizedCursor + paged.length;
+    const nextCursor = nextOffset < filtered.length ? String(nextOffset) : null;
+
+    return {
+      items: paged,
+      pageInfo: {
+        cursor: String(normalizedCursor),
+        nextCursor,
+        limit: normalizedLimit,
+        total: filtered.length
+      }
+    };
+  }
+
+  async adminUpdateVerification({ orgId, status, reasonCodes }) {
+    const normalizedOrgId = normalizeOrganizationId(orgId);
+    const normalizedStatus = normalizeVerificationStatus(status);
+    const normalizedReasonCodes = normalizeReasonCodes(reasonCodes);
+
+    const organization = await this.store.findOrganizationById(normalizedOrgId);
+    if (!organization) {
+      throw new OrganizationsApiError(404, 'org_not_found', 'organization not found');
+    }
+
+    const existingVerification = await this.store.findOrganizationVerificationByOrgId(normalizedOrgId);
+    if (!existingVerification) {
+      throw new OrganizationsApiError(
+        404,
+        'org_verification_not_found',
+        'organization verification not found'
+      );
+    }
+
+    const verification = await this.store.createOrUpdateOrganizationVerification({
+      orgId: normalizedOrgId,
+      status: normalizedStatus,
+      reasonCodesJson: normalizedReasonCodes,
+      registrationNumber: existingVerification.registrationNumber,
+      legalName: existingVerification.legalName,
+      supportingObjectKeysJson: existingVerification.supportingObjectKeysJson || [],
+      lastCheckedAt: new Date().toISOString()
+    });
+
+    return toPublicVerification(verification);
+  }
 }
 
-export function createOrganizationsService(options = {}) {
-  return new OrganizationsService(options);
+export function createOrganizationsService({ store } = {}) {
+  if (
+    !store ||
+    typeof store.findUserById !== 'function' ||
+    typeof store.createOrganization !== 'function' ||
+    typeof store.findOrganizationById !== 'function' ||
+    typeof store.listOrganizations !== 'function' ||
+    typeof store.createOrUpdateOrganizationVerification !== 'function' ||
+    typeof store.findOrganizationVerificationByOrgId !== 'function'
+  ) {
+    throw new Error('Organizations store is missing required methods');
+  }
+  return new OrganizationsService({ store });
 }
 
 export function isOrganizationsApiError(error) {

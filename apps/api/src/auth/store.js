@@ -12,6 +12,9 @@ export class InMemoryAuthStore {
     this.identityDocumentIdsBySessionId = new Map();
     this.kycStatusEventsById = new Map();
     this.kycStatusEventIdsBySessionId = new Map();
+    this.organizationsById = new Map();
+    this.organizationIdsByOwnerUserId = new Map();
+    this.organizationVerificationsByOrgId = new Map();
     this.rolesByCode = new Map([
       [
         'sdm',
@@ -308,5 +311,79 @@ export class InMemoryAuthStore {
       .map((id) => this.identityDocumentsById.get(id))
       .filter(Boolean)
       .sort((left, right) => Date.parse(left.createdAt) - Date.parse(right.createdAt));
+  }
+
+  createOrganization({ ownerUserId, name, orgType, countryCode }) {
+    const now = new Date().toISOString();
+    const organization = {
+      id: randomUUID(),
+      ownerUserId,
+      name,
+      orgType,
+      countryCode,
+      createdAt: now,
+      updatedAt: now
+    };
+
+    this.organizationsById.set(organization.id, organization);
+    const ids = this.organizationIdsByOwnerUserId.get(ownerUserId) || [];
+    ids.push(organization.id);
+    this.organizationIdsByOwnerUserId.set(ownerUserId, ids);
+    return organization;
+  }
+
+  findOrganizationById(orgId) {
+    return this.organizationsById.get(orgId) || null;
+  }
+
+  listOrganizations() {
+    return Array.from(this.organizationsById.values()).sort(
+      (left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt)
+    );
+  }
+
+  createOrUpdateOrganizationVerification({
+    orgId,
+    status,
+    reasonCodesJson,
+    registrationNumber,
+    legalName,
+    supportingObjectKeysJson,
+    lastCheckedAt
+  }) {
+    const now = new Date().toISOString();
+    const existing = this.organizationVerificationsByOrgId.get(orgId);
+    if (existing) {
+      existing.status = status;
+      existing.reasonCodesJson = Array.isArray(reasonCodesJson) ? reasonCodesJson : [];
+      existing.registrationNumber = registrationNumber;
+      existing.legalName = legalName;
+      existing.supportingObjectKeysJson = Array.isArray(supportingObjectKeysJson)
+        ? supportingObjectKeysJson
+        : [];
+      existing.lastCheckedAt = lastCheckedAt || now;
+      existing.updatedAt = now;
+      return existing;
+    }
+
+    const verification = {
+      id: randomUUID(),
+      orgId,
+      status,
+      reasonCodesJson: Array.isArray(reasonCodesJson) ? reasonCodesJson : [],
+      registrationNumber,
+      legalName,
+      supportingObjectKeysJson: Array.isArray(supportingObjectKeysJson) ? supportingObjectKeysJson : [],
+      lastCheckedAt: lastCheckedAt || now,
+      createdAt: now,
+      updatedAt: now
+    };
+
+    this.organizationVerificationsByOrgId.set(orgId, verification);
+    return verification;
+  }
+
+  findOrganizationVerificationByOrgId(orgId) {
+    return this.organizationVerificationsByOrgId.get(orgId) || null;
   }
 }

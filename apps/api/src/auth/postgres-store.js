@@ -72,6 +72,37 @@ function mapKycStatusEventRow(row) {
   };
 }
 
+function mapOrganizationRow(row) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    ownerUserId: row.owner_user_id,
+    name: row.name,
+    orgType: row.org_type,
+    countryCode: row.country_code,
+    createdAt: new Date(row.created_at).toISOString(),
+    updatedAt: new Date(row.updated_at).toISOString()
+  };
+}
+
+function mapOrganizationVerificationRow(row) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    orgId: row.org_id,
+    status: row.status,
+    reasonCodesJson: Array.isArray(row.reason_codes_json) ? row.reason_codes_json : [],
+    registrationNumber: row.registration_number,
+    legalName: row.legal_name,
+    supportingObjectKeysJson: Array.isArray(row.supporting_object_keys_json)
+      ? row.supporting_object_keys_json
+      : [],
+    lastCheckedAt: row.last_checked_at ? new Date(row.last_checked_at).toISOString() : null,
+    createdAt: new Date(row.created_at).toISOString(),
+    updatedAt: new Date(row.updated_at).toISOString()
+  };
+}
+
 export class PostgresAuthStore {
   constructor({ pool }) {
     this.pool = pool;
@@ -485,5 +516,121 @@ export class PostgresAuthStore {
       [kycSessionId]
     );
     return result.rows.map((row) => mapIdentityDocumentRow(row));
+  }
+
+  async createOrganization({ ownerUserId, name, orgType, countryCode }) {
+    const result = await this.pool.query(
+      `
+        INSERT INTO organizations (id, owner_user_id, name, org_type, country_code)
+        VALUES ($1, $2, $3, $4, $5)
+        RETURNING id, owner_user_id, name, org_type, country_code, created_at, updated_at
+      `,
+      [randomUUID(), ownerUserId, name, orgType, countryCode]
+    );
+    return mapOrganizationRow(result.rows[0]);
+  }
+
+  async findOrganizationById(orgId) {
+    const result = await this.pool.query(
+      `
+        SELECT id, owner_user_id, name, org_type, country_code, created_at, updated_at
+        FROM organizations
+        WHERE id = $1
+        LIMIT 1
+      `,
+      [orgId]
+    );
+    return mapOrganizationRow(result.rows[0]);
+  }
+
+  async listOrganizations() {
+    const result = await this.pool.query(
+      `
+        SELECT id, owner_user_id, name, org_type, country_code, created_at, updated_at
+        FROM organizations
+        ORDER BY created_at DESC
+      `
+    );
+    return result.rows.map((row) => mapOrganizationRow(row));
+  }
+
+  async createOrUpdateOrganizationVerification({
+    orgId,
+    status,
+    reasonCodesJson,
+    registrationNumber,
+    legalName,
+    supportingObjectKeysJson,
+    lastCheckedAt
+  }) {
+    const result = await this.pool.query(
+      `
+        INSERT INTO organization_verifications (
+          id,
+          org_id,
+          status,
+          reason_codes_json,
+          registration_number,
+          legal_name,
+          supporting_object_keys_json,
+          last_checked_at
+        )
+        VALUES ($1, $2, $3, $4::jsonb, $5, $6, $7::jsonb, $8::timestamptz)
+        ON CONFLICT (org_id)
+        DO UPDATE SET
+          status = EXCLUDED.status,
+          reason_codes_json = EXCLUDED.reason_codes_json,
+          registration_number = EXCLUDED.registration_number,
+          legal_name = EXCLUDED.legal_name,
+          supporting_object_keys_json = EXCLUDED.supporting_object_keys_json,
+          last_checked_at = EXCLUDED.last_checked_at,
+          updated_at = NOW()
+        RETURNING
+          id,
+          org_id,
+          status,
+          reason_codes_json,
+          registration_number,
+          legal_name,
+          supporting_object_keys_json,
+          last_checked_at,
+          created_at,
+          updated_at
+      `,
+      [
+        randomUUID(),
+        orgId,
+        status,
+        JSON.stringify(Array.isArray(reasonCodesJson) ? reasonCodesJson : []),
+        registrationNumber,
+        legalName,
+        JSON.stringify(Array.isArray(supportingObjectKeysJson) ? supportingObjectKeysJson : []),
+        lastCheckedAt || new Date().toISOString()
+      ]
+    );
+    return mapOrganizationVerificationRow(result.rows[0]);
+  }
+
+  async findOrganizationVerificationByOrgId(orgId) {
+    const result = await this.pool.query(
+      `
+        SELECT
+          id,
+          org_id,
+          status,
+          reason_codes_json,
+          registration_number,
+          legal_name,
+          supporting_object_keys_json,
+          last_checked_at,
+          created_at,
+          updated_at
+        FROM organization_verifications
+        WHERE org_id = $1
+        LIMIT 1
+      `,
+      [orgId]
+    );
+    return mapOrganizationVerificationRow(result.rows[0]);
   }
 }

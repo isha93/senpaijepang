@@ -34,6 +34,9 @@ fi
 echo "[smoke] run migrations"
 DATABASE_URL="${SMOKE_DATABASE_URL}" npm run migrate:api
 
+echo "[smoke] run postgres persistence integration test"
+DATABASE_URL="${SMOKE_DATABASE_URL}" node --test apps/api/test/postgres-persistence.test.mjs
+
 echo "[smoke] start api on ${API_PORT} (postgres + s3/minio)"
 API_PORT="${API_PORT}" \
 DATABASE_URL="${SMOKE_DATABASE_URL}" \

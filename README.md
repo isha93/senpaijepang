@@ -2,11 +2,11 @@
 
 Repo ini adalah "mesin belakang" (backend API) untuk proses verifikasi trust di platform migrasi kerja Indonesia -> Jepang.
 
-Frontend user/admin sengaja belum dikerjakan di repo ini. Fokus kita sekarang: API stabil dulu.
+Frontend web user/admin sengaja belum dikerjakan di repo ini. Fokus delivery repo ini: API stabil, kontrak sinkron, dan siap integrasi iOS bertahap.
 
 ## Ringkas Dalam 30 Detik
-- Apa yang sudah jalan: auth, KYC intake, review queue admin, audit event.
-- Apa yang belum: aplikasi web/mobile production, payment, integrasi vendor KYC penuh.
+- Apa yang sudah jalan: auth, KYC intake/review, jobs/feed/admin CRUD, organizations verification, persistence Postgres untuk alur utama.
+- Apa yang belum: aplikasi web/mobile production, payment, vendor-specific KYC orchestration penuh.
 - Siapa yang bisa pakai sekarang: tim backend, QA, PM/ops untuk validasi alur via API.
 
 ## Gambaran Besar (Non-Tech)
@@ -39,13 +39,30 @@ stateDiagram-v2
 - Register -> login -> refresh -> logout.
 - Buka sesi KYC, minta upload URL, submit dokumen, submit sesi.
 - Admin ambil review queue dan putuskan `MANUAL_REVIEW`, `VERIFIED`, atau `REJECTED`.
+- Admin CRUD data bisnis: jobs, feed posts, organizations verification.
+- Saved jobs/posts + apply/journey persistence di Postgres (mode `AUTH_STORE=postgres`).
 - Audit trail perubahan status KYC.
 - Endpoint health/metrics untuk observability dasar.
 
 ## Apa Yang Belum Dalam Scope Repo Ini
 - Aplikasi frontend user/admin production.
-- Integrasi vendor KYC end-to-end (signature verification vendor-specific).
+- Integrasi vendor KYC end-to-end (mapping event vendor-specific, retry/reconciliation policy).
 - Payment/escrow dan workflow bisnis lintas negara.
+
+## Status Integrasi iOS
+- API sudah masuk tahap siap integrasi iOS bertahap untuk flow:
+  - auth,
+  - jobs list/detail/saved/apply/journey,
+  - feed list/saved,
+  - profile,
+  - KYC status/intake/review result.
+- Kontrak runtime aktif: `docs/architecture/openapi-runtime-v0.yaml`.
+- Checklist readiness terbaru: `docs/architecture/EXECUTION-LOCK-API-FIRST-v1.md`.
+
+## Hosting MVP (Next Step)
+- Bisa lanjut deploy staging untuk konsumsi iOS integration test.
+- Rekomendasi opsi hosting + rollout plan ada di:
+  - `docs/architecture/HOSTING-OPTIONS-MVP-v1.md`
 
 ## Cara Menjalankan (Paling Simpel)
 ### Prasyarat
@@ -135,6 +152,16 @@ Expected output akhir: `DEV_ALL_CHECK_OK`
 - `POST /identity/kyc/provider-webhook`
 
 ### Admin Review
+- `GET /admin/jobs`
+- `POST /admin/jobs`
+- `PATCH /admin/jobs/{jobId}`
+- `DELETE /admin/jobs/{jobId}`
+- `GET /admin/feed/posts`
+- `POST /admin/feed/posts`
+- `PATCH /admin/feed/posts/{postId}`
+- `DELETE /admin/feed/posts/{postId}`
+- `GET /admin/organizations`
+- `PATCH /admin/organizations/{orgId}/verification`
 - `GET /admin/kyc/review-queue`
 - `POST /admin/kyc/review`
 
@@ -143,12 +170,15 @@ Expected output akhir: `DEV_ALL_CHECK_OK`
 - `AUTH_STORE=memory|postgres`
 - `DATABASE_URL=postgresql://...` (wajib kalau `AUTH_STORE=postgres`)
 - `ADMIN_API_KEY=...` (wajib untuk endpoint `/admin/*`)
+- `ADMIN_ROLE_CODES=super_admin` (opsional, default role admin yang diizinkan)
 - `OBJECT_STORAGE_PROVIDER=memory|s3`
+- `KYC_PROVIDER_WEBHOOK_REQUIRE_SIGNATURE=true|false`
+- `KYC_PROVIDER_WEBHOOK_MAX_SKEW_SEC=300`
 
 Detail lengkap: `.env.example`
 
 ## Mulai Baca Dokumen Dari Sini
-- [Execution Lock: API First -> iOS Later](docs/architecture/EXECUTION-LOCK-API-FIRST-v1.md)
+- [Execution Lock: API RC -> iOS Integration -> Staging](docs/architecture/EXECUTION-LOCK-API-FIRST-v1.md)
 - [Panduan Non-Tech MVP API](docs/architecture/MVP-API-NON-TECH-GUIDE-v1.md)
 - [iOS Architecture (MVVM + Clean tanpa UseCase)](docs/architecture/IOS-ARCHITECTURE-MVVM-CLEAN-v1.md)
 - [API Plan from Figma (Draft)](docs/architecture/API-PLAN-FIGMA-v1.md)
@@ -156,6 +186,7 @@ Detail lengkap: `.env.example`
 - [Breakdown Fitur MVP API](docs/architecture/MVP-API-BREAKDOWN-v1.md)
 - [Status Implementasi Runtime API](docs/architecture/API-IMPLEMENTATION-STATUS-v0.md)
 - [Kontrak Runtime OpenAPI](docs/architecture/openapi-runtime-v0.yaml)
+- [Hosting Options MVP](docs/architecture/HOSTING-OPTIONS-MVP-v1.md)
 - [Sprint Plan Lama (Archived)](docs/architecture/MVP-SPRINT-PLAN-v1.md)
 
 ## Istilah Singkat Biar Nyambung

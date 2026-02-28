@@ -1,4 +1,5 @@
 import { createInMemoryObjectStorage } from './object-storage.js';
+import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
 
 const NOOP_LOGGER = {
   info() {},
@@ -191,6 +192,61 @@ function normalizeWebhookIdempotencyKey(idempotencyKey) {
   return normalized;
 }
 
+function normalizeWebhookTimestamp(timestamp) {
+  const normalized = String(timestamp || '').trim();
+  if (!normalized) {
+    throw new KycApiError(
+      401,
+      'missing_webhook_timestamp',
+      'x-kyc-webhook-timestamp header is required'
+    );
+  }
+
+  const parsed = Number(normalized);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    throw new KycApiError(
+      400,
+      'invalid_webhook_timestamp',
+      'x-kyc-webhook-timestamp must be a unix timestamp'
+    );
+  }
+
+  if (parsed > 1e12) {
+    return Math.floor(parsed);
+  }
+  return Math.floor(parsed * 1000);
+}
+
+function normalizeWebhookSignature(signature) {
+  const normalized = String(signature || '').trim().toLowerCase();
+  if (!normalized) {
+    throw new KycApiError(
+      401,
+      'missing_webhook_signature',
+      'x-kyc-webhook-signature header is required'
+    );
+  }
+
+  if (/^[a-f0-9]{64}$/.test(normalized)) {
+    return normalized;
+  }
+
+  const withPrefix = normalized.startsWith('sha256=') ? normalized.slice('sha256='.length) : '';
+  if (/^[a-f0-9]{64}$/.test(withPrefix)) {
+    return withPrefix;
+  }
+
+  throw new KycApiError(
+    400,
+    'invalid_webhook_signature',
+    'x-kyc-webhook-signature must be sha256 hex digest'
+  );
+}
+
+function sha256Hex(value) {
+  return createHash('sha256').update(String(value)).digest('hex');
+}
+
 function normalizeDecision(decision) {
   const normalized = String(decision || '')
     .trim()
@@ -257,7 +313,9 @@ export class KycService {
     allowedContentTypes,
     logger,
     providerWebhookSecret,
-    providerWebhookIdempotencyTtlMs
+    providerWebhookIdempotencyTtlMs,
+    providerWebhookRequireSignature,
+    providerWebhookMaxSkewMs
   }) {
     this.store = store;
     this.objectStorage = objectStorage;
@@ -266,23 +324,58 @@ export class KycService {
     this.logger = logger || NOOP_LOGGER;
     this.providerWebhookSecret = String(providerWebhookSecret || '').trim();
     this.providerWebhookIdempotencyTtlMs = Number(providerWebhookIdempotencyTtlMs || 24 * 60 * 60 * 1000);
+    this.providerWebhookRequireSignature = Boolean(providerWebhookRequireSignature);
+    this.providerWebhookMaxSkewMs = Number(providerWebhookMaxSkewMs || 5 * 60 * 1000);
     this.providerWebhookSeenKeys = new Map();
   }
 
-  registerWebhookIdempotencyKey(idempotencyKey) {
+  registerWebhookIdempotencyKey(idempotencyKey, payloadDigest) {
     const now = Date.now();
-    for (const [key, seenAt] of this.providerWebhookSeenKeys.entries()) {
-      if (now - seenAt > this.providerWebhookIdempotencyTtlMs) {
+    for (const [key, record] of this.providerWebhookSeenKeys.entries()) {
+      if (now - record.seenAt > this.providerWebhookIdempotencyTtlMs) {
         this.providerWebhookSeenKeys.delete(key);
       }
     }
 
-    if (this.providerWebhookSeenKeys.has(idempotencyKey)) {
-      return true;
+    const existing = this.providerWebhookSeenKeys.get(idempotencyKey);
+    if (existing) {
+      if (existing.payloadDigest !== payloadDigest) {
+        return { duplicate: false, conflict: true };
+      }
+      return { duplicate: true, conflict: false };
     }
 
-    this.providerWebhookSeenKeys.set(idempotencyKey, now);
-    return false;
+    this.providerWebhookSeenKeys.set(idempotencyKey, {
+      seenAt: now,
+      payloadDigest
+    });
+    return { duplicate: false, conflict: false };
+  }
+
+  verifyWebhookSignature({ idempotencyKey, payloadRaw, webhookSignature, webhookTimestamp }) {
+    const timestampMs = normalizeWebhookTimestamp(webhookTimestamp);
+    const now = Date.now();
+    const delta = Math.abs(now - timestampMs);
+    if (delta > this.providerWebhookMaxSkewMs) {
+      throw new KycApiError(
+        401,
+        'stale_webhook_timestamp',
+        'x-kyc-webhook-timestamp is outside allowed skew window'
+      );
+    }
+
+    const providedSignatureHex = normalizeWebhookSignature(webhookSignature);
+    const payloadValue = String(payloadRaw || '');
+    const signPayload = `${timestampMs}.${idempotencyKey}.${payloadValue}`;
+    const expectedSignatureHex = createHmac('sha256', this.providerWebhookSecret)
+      .update(signPayload)
+      .digest('hex');
+
+    const providedBuffer = Buffer.from(providedSignatureHex, 'hex');
+    const expectedBuffer = Buffer.from(expectedSignatureHex, 'hex');
+    if (providedBuffer.length !== expectedBuffer.length || !timingSafeEqual(providedBuffer, expectedBuffer)) {
+      throw new KycApiError(403, 'invalid_webhook_signature', 'x-kyc-webhook-signature is invalid');
+    }
   }
 
   async startSession({ userId, provider }) {
@@ -356,7 +449,15 @@ export class KycService {
     };
   }
 
-  async ingestProviderWebhook({ webhookSecret, idempotencyKey, payload, sourceIp }) {
+  async ingestProviderWebhook({
+    webhookSecret,
+    webhookSignature,
+    webhookTimestamp,
+    idempotencyKey,
+    payloadRaw,
+    payload,
+    sourceIp
+  }) {
     if (!this.providerWebhookSecret) {
       throw new KycApiError(503, 'provider_webhook_disabled', 'provider webhook is disabled');
     }
@@ -374,7 +475,30 @@ export class KycService {
     }
 
     const normalizedIdempotencyKey = normalizeWebhookIdempotencyKey(idempotencyKey);
-    const duplicate = this.registerWebhookIdempotencyKey(normalizedIdempotencyKey);
+    const normalizedPayloadRaw = String(payloadRaw || '');
+    const signatureProvided = Boolean(String(webhookSignature || '').trim());
+    const timestampProvided = Boolean(String(webhookTimestamp || '').trim());
+    const shouldVerifySignature = this.providerWebhookRequireSignature || signatureProvided || timestampProvided;
+
+    if (shouldVerifySignature) {
+      this.verifyWebhookSignature({
+        idempotencyKey: normalizedIdempotencyKey,
+        payloadRaw: normalizedPayloadRaw,
+        webhookSignature,
+        webhookTimestamp
+      });
+    }
+
+    const payloadDigest = sha256Hex(normalizedPayloadRaw);
+    const replay = this.registerWebhookIdempotencyKey(normalizedIdempotencyKey, payloadDigest);
+    if (replay.conflict) {
+      throw new KycApiError(
+        409,
+        'idempotency_key_conflict',
+        'x-idempotency-key already used with different payload'
+      );
+    }
+    const duplicate = replay.duplicate;
     const normalizedPayload = normalizeMetadata(payload);
 
     let updatedSession = null;
@@ -403,7 +527,8 @@ export class KycService {
       idempotencyKey: normalizedIdempotencyKey,
       sourceIp: sourceIp || null,
       payloadKeys: Object.keys(normalizedPayload).slice(0, 20),
-      updated
+      updated,
+      signatureVerified: shouldVerifySignature
     });
 
     return {
@@ -839,6 +964,17 @@ export function createKycService({ store, objectStorage, env = process.env, logg
     Number.isFinite(providerWebhookIdempotencyTtlSecRaw) && providerWebhookIdempotencyTtlSecRaw > 0
       ? Math.floor(providerWebhookIdempotencyTtlSecRaw * 1000)
       : 86400 * 1000;
+  const providerWebhookRequireSignatureRaw = String(env.KYC_PROVIDER_WEBHOOK_REQUIRE_SIGNATURE || 'true')
+    .trim()
+    .toLowerCase();
+  const providerWebhookRequireSignature = !['false', '0', 'no', 'off'].includes(
+    providerWebhookRequireSignatureRaw
+  );
+  const providerWebhookMaxSkewSecRaw = Number(env.KYC_PROVIDER_WEBHOOK_MAX_SKEW_SEC || 300);
+  const providerWebhookMaxSkewMs =
+    Number.isFinite(providerWebhookMaxSkewSecRaw) && providerWebhookMaxSkewSecRaw > 0
+      ? Math.floor(providerWebhookMaxSkewSecRaw * 1000)
+      : 300 * 1000;
 
   return new KycService({
     store,
@@ -847,7 +983,9 @@ export function createKycService({ store, objectStorage, env = process.env, logg
     allowedContentTypes: normalizeAllowedContentTypes(env.OBJECT_STORAGE_ALLOWED_CONTENT_TYPES),
     logger,
     providerWebhookSecret: env.KYC_PROVIDER_WEBHOOK_SECRET,
-    providerWebhookIdempotencyTtlMs
+    providerWebhookIdempotencyTtlMs,
+    providerWebhookRequireSignature,
+    providerWebhookMaxSkewMs
   });
 }
 

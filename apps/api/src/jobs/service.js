@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
-class JobsApiError extends Error {
+export class JobsApiError extends Error {
   constructor(status, code, message) {
     super(message);
     this.status = status;
@@ -12,8 +12,15 @@ const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 50;
 const EMPLOYMENT_TYPES = new Set(['FULL_TIME', 'PART_TIME', 'CONTRACT']);
 const APPLICATION_STATUSES = new Set(['SUBMITTED', 'IN_REVIEW', 'INTERVIEW', 'OFFERED', 'HIRED', 'REJECTED']);
+const MAX_TITLE_LENGTH = 160;
+const MAX_DESCRIPTION_LENGTH = 5000;
+const MAX_REQUIREMENTS = 20;
+const MAX_REQUIREMENT_LENGTH = 300;
+const MAX_CITY_LENGTH = 120;
+const MAX_DISPLAY_LABEL_LENGTH = 180;
+const MAX_EMPLOYER_NAME_LENGTH = 180;
 
-const JOB_SEED_DATA = [
+export const JOB_SEED_DATA = [
   {
     id: 'job_tokyo_senior_welder_001',
     title: 'Senior Welder',
@@ -205,6 +212,198 @@ function normalizeApplicationNote(note) {
   return normalized;
 }
 
+function normalizeRequiredTitle(title) {
+  const normalized = String(title || '').trim();
+  if (normalized.length < 2 || normalized.length > MAX_TITLE_LENGTH) {
+    throw new JobsApiError(400, 'invalid_job_title', `title must be between 2 and ${MAX_TITLE_LENGTH} characters`);
+  }
+  return normalized;
+}
+
+function normalizeRequiredEmploymentType(employmentType) {
+  const normalized = normalizeEmploymentType(employmentType);
+  if (!normalized) {
+    throw new JobsApiError(400, 'invalid_employment_type', 'employmentType is required');
+  }
+  return normalized;
+}
+
+function normalizeOptionalEmploymentType(employmentType) {
+  if (employmentType === undefined) {
+    return undefined;
+  }
+  return normalizeRequiredEmploymentType(employmentType);
+}
+
+function normalizeRequiredVisaSponsorship(visaSponsorship) {
+  if (typeof visaSponsorship === 'boolean') {
+    return visaSponsorship;
+  }
+  throw new JobsApiError(400, 'invalid_visa_sponsorship', 'visaSponsorship must be boolean');
+}
+
+function normalizeOptionalVisaSponsorship(visaSponsorship) {
+  if (visaSponsorship === undefined) {
+    return undefined;
+  }
+  return normalizeRequiredVisaSponsorship(visaSponsorship);
+}
+
+function normalizeRequiredDescription(description) {
+  const normalized = String(description || '').trim();
+  if (normalized.length < 8 || normalized.length > MAX_DESCRIPTION_LENGTH) {
+    throw new JobsApiError(
+      400,
+      'invalid_job_description',
+      `description must be between 8 and ${MAX_DESCRIPTION_LENGTH} characters`
+    );
+  }
+  return normalized;
+}
+
+function normalizeOptionalDescription(description) {
+  if (description === undefined) {
+    return undefined;
+  }
+  return normalizeRequiredDescription(description);
+}
+
+function normalizeRequiredRequirements(requirements) {
+  if (!Array.isArray(requirements) || requirements.length < 1 || requirements.length > MAX_REQUIREMENTS) {
+    throw new JobsApiError(
+      400,
+      'invalid_job_requirements',
+      `requirements must contain between 1 and ${MAX_REQUIREMENTS} items`
+    );
+  }
+  return requirements.map((value) => {
+    const normalized = String(value || '').trim();
+    if (normalized.length < 2 || normalized.length > MAX_REQUIREMENT_LENGTH) {
+      throw new JobsApiError(
+        400,
+        'invalid_job_requirement',
+        `each requirement must be between 2 and ${MAX_REQUIREMENT_LENGTH} characters`
+      );
+    }
+    return normalized;
+  });
+}
+
+function normalizeOptionalRequirements(requirements) {
+  if (requirements === undefined) {
+    return undefined;
+  }
+  return normalizeRequiredRequirements(requirements);
+}
+
+function normalizeCountryCode(countryCode) {
+  const normalized = String(countryCode || '')
+    .trim()
+    .toUpperCase();
+  if (!/^[A-Z]{2}$/.test(normalized)) {
+    throw new JobsApiError(400, 'invalid_country_code', 'countryCode must be 2 uppercase letters');
+  }
+  return normalized;
+}
+
+function normalizeRequiredLocation(location) {
+  if (!location || typeof location !== 'object' || Array.isArray(location)) {
+    throw new JobsApiError(400, 'invalid_job_location', 'location is required');
+  }
+  const city = String(location.city || '').trim();
+  const displayLabel = String(location.displayLabel || '').trim();
+  const latitude = Number(location.latitude);
+  const longitude = Number(location.longitude);
+
+  if (city.length < 2 || city.length > MAX_CITY_LENGTH) {
+    throw new JobsApiError(400, 'invalid_job_location', `location.city must be between 2 and ${MAX_CITY_LENGTH}`);
+  }
+  if (displayLabel.length < 2 || displayLabel.length > MAX_DISPLAY_LABEL_LENGTH) {
+    throw new JobsApiError(
+      400,
+      'invalid_job_location',
+      `location.displayLabel must be between 2 and ${MAX_DISPLAY_LABEL_LENGTH}`
+    );
+  }
+  if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90) {
+    throw new JobsApiError(400, 'invalid_job_location', 'location.latitude must be between -90 and 90');
+  }
+  if (!Number.isFinite(longitude) || longitude < -180 || longitude > 180) {
+    throw new JobsApiError(400, 'invalid_job_location', 'location.longitude must be between -180 and 180');
+  }
+
+  return {
+    countryCode: normalizeCountryCode(location.countryCode),
+    city,
+    displayLabel,
+    latitude,
+    longitude
+  };
+}
+
+function normalizeOptionalLocation(location) {
+  if (location === undefined) {
+    return undefined;
+  }
+  return normalizeRequiredLocation(location);
+}
+
+function normalizeOptionalLogoUrl(logoUrl) {
+  if (logoUrl === undefined) {
+    return undefined;
+  }
+  if (logoUrl === null) {
+    return null;
+  }
+  const normalized = String(logoUrl || '').trim();
+  if (!normalized) {
+    return null;
+  }
+  try {
+    const parsed = new URL(normalized);
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+      throw new Error('invalid');
+    }
+  } catch {
+    throw new JobsApiError(400, 'invalid_employer_logo_url', 'employer.logoUrl must be valid http(s) URL');
+  }
+  return normalized;
+}
+
+function normalizeRequiredEmployer(employer) {
+  if (!employer || typeof employer !== 'object' || Array.isArray(employer)) {
+    throw new JobsApiError(400, 'invalid_job_employer', 'employer is required');
+  }
+  const id = String(employer.id || '').trim();
+  const name = String(employer.name || '').trim();
+  if (!id) {
+    throw new JobsApiError(400, 'invalid_job_employer', 'employer.id is required');
+  }
+  if (name.length < 2 || name.length > MAX_EMPLOYER_NAME_LENGTH) {
+    throw new JobsApiError(
+      400,
+      'invalid_job_employer',
+      `employer.name must be between 2 and ${MAX_EMPLOYER_NAME_LENGTH} characters`
+    );
+  }
+  if (typeof employer.isVerifiedEmployer !== 'boolean') {
+    throw new JobsApiError(400, 'invalid_job_employer', 'employer.isVerifiedEmployer must be boolean');
+  }
+  return {
+    id,
+    name,
+    logoUrl: normalizeOptionalLogoUrl(employer.logoUrl),
+    isVerifiedEmployer: employer.isVerifiedEmployer
+  };
+}
+
+function normalizeOptionalEmployer(employer) {
+  if (employer === undefined) {
+    return undefined;
+  }
+  return normalizeRequiredEmployer(employer);
+}
+
 function makeUserJobKey(userId, jobId) {
   return `${userId}:${jobId}`;
 }
@@ -290,6 +489,30 @@ function toApplicationSummary(application, job) {
         logoUrl: job.employer.logoUrl,
         isVerifiedEmployer: job.employer.isVerifiedEmployer
       }
+    }
+  };
+}
+
+function toAdminJob(job) {
+  return {
+    id: job.id,
+    title: job.title,
+    employmentType: job.employmentType,
+    visaSponsorship: job.visaSponsorship,
+    description: job.description,
+    requirements: Array.from(job.requirements),
+    location: {
+      countryCode: job.location.countryCode,
+      city: job.location.city,
+      displayLabel: job.location.displayLabel,
+      latitude: job.location.latitude,
+      longitude: job.location.longitude
+    },
+    employer: {
+      id: job.employer.id,
+      name: job.employer.name,
+      logoUrl: job.employer.logoUrl,
+      isVerifiedEmployer: job.employer.isVerifiedEmployer
     }
   };
 }
@@ -548,6 +771,132 @@ export class JobsService {
     return {
       application: toApplicationSummary(application, job),
       journey: Array.from(application.journey)
+    };
+  }
+
+  listAdminJobs({ q, cursor, limit }) {
+    const normalizedQuery = normalizeSearchQuery(q);
+    const normalizedCursor = normalizeCursor(cursor);
+    const normalizedLimit = normalizeLimit(limit);
+
+    const filtered = this.jobs.filter((job) => {
+      if (!normalizedQuery) {
+        return true;
+      }
+      const haystack = [
+        job.title,
+        job.description,
+        job.employer.name,
+        job.location.displayLabel
+      ]
+        .join(' ')
+        .toLowerCase();
+      return haystack.includes(normalizedQuery);
+    });
+
+    const paged = filtered.slice(normalizedCursor, normalizedCursor + normalizedLimit);
+    const nextOffset = normalizedCursor + paged.length;
+    const nextCursor = nextOffset < filtered.length ? String(nextOffset) : null;
+
+    return {
+      items: paged.map((job) => toAdminJob(job)),
+      pageInfo: {
+        cursor: String(normalizedCursor),
+        nextCursor,
+        limit: normalizedLimit,
+        total: filtered.length
+      }
+    };
+  }
+
+  createJob({ title, employmentType, visaSponsorship, description, requirements, location, employer }) {
+    const job = {
+      id: randomUUID(),
+      title: normalizeRequiredTitle(title),
+      employmentType: normalizeRequiredEmploymentType(employmentType),
+      visaSponsorship: normalizeRequiredVisaSponsorship(visaSponsorship),
+      description: normalizeRequiredDescription(description),
+      requirements: normalizeRequiredRequirements(requirements),
+      location: normalizeRequiredLocation(location),
+      employer: normalizeRequiredEmployer(employer)
+    };
+
+    this.jobs.push(job);
+    this.jobById.set(job.id, job);
+    return { job: toAdminJob(job) };
+  }
+
+  updateJob({ jobId, title, employmentType, visaSponsorship, description, requirements, location, employer }) {
+    const job = this.getJobByIdOrThrow(jobId);
+    const patch = {
+      title: title === undefined ? undefined : normalizeRequiredTitle(title),
+      employmentType: normalizeOptionalEmploymentType(employmentType),
+      visaSponsorship: normalizeOptionalVisaSponsorship(visaSponsorship),
+      description: normalizeOptionalDescription(description),
+      requirements: normalizeOptionalRequirements(requirements),
+      location: normalizeOptionalLocation(location),
+      employer: normalizeOptionalEmployer(employer)
+    };
+
+    if (title !== undefined) {
+      job.title = patch.title;
+    }
+    if (patch.employmentType !== undefined) {
+      job.employmentType = patch.employmentType;
+    }
+    if (patch.visaSponsorship !== undefined) {
+      job.visaSponsorship = patch.visaSponsorship;
+    }
+    if (patch.description !== undefined) {
+      job.description = patch.description;
+    }
+    if (patch.requirements !== undefined) {
+      job.requirements = patch.requirements;
+    }
+    if (patch.location !== undefined) {
+      job.location = patch.location;
+    }
+    if (patch.employer !== undefined) {
+      job.employer = patch.employer;
+    }
+
+    return { job: toAdminJob(job) };
+  }
+
+  deleteJob({ jobId }) {
+    const job = this.getJobByIdOrThrow(jobId);
+    this.jobById.delete(job.id);
+    this.jobs = this.jobs.filter((item) => item.id !== job.id);
+
+    for (const savedMap of this.savedByUserId.values()) {
+      savedMap.delete(job.id);
+    }
+
+    const toDeleteApplicationIds = [];
+    for (const application of this.applicationsById.values()) {
+      if (application.jobId === job.id) {
+        toDeleteApplicationIds.push(application.id);
+      }
+    }
+
+    for (const applicationId of toDeleteApplicationIds) {
+      const application = this.applicationsById.get(applicationId);
+      if (!application) {
+        continue;
+      }
+      const userJobKey = makeUserJobKey(application.userId, application.jobId);
+      this.applicationIdByUserJob.delete(userJobKey);
+      this.applicationsById.delete(applicationId);
+      const userApplications = this.applicationIdsByUserId.get(application.userId) || [];
+      this.applicationIdsByUserId.set(
+        application.userId,
+        userApplications.filter((id) => id !== applicationId)
+      );
+    }
+
+    return {
+      removed: true,
+      jobId: job.id
     };
   }
 }

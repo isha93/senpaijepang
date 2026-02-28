@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { createHmac } from 'node:crypto';
 import { createServer } from '../src/server.js';
 import { createAuthService } from '../src/auth/service.js';
 import { InMemoryAuthStore } from '../src/auth/store.js';
@@ -7,6 +8,20 @@ import { createKycService } from '../src/identity/kyc-service.js';
 
 const TEST_ADMIN_API_KEY = 'test-admin-key';
 const EXAMPLE_CHECKSUM = 'a3f9f6f30311d8e8860f5f5f5366f6544dc34e8e833b8f13294f129f0d4af167';
+
+function buildWebhookHeaders({ secret, idempotencyKey, payload, timestampMs = Date.now() }) {
+  const rawPayload = JSON.stringify(payload);
+  const signature = createHmac('sha256', secret)
+    .update(`${timestampMs}.${idempotencyKey}.${rawPayload}`)
+    .digest('hex');
+
+  return {
+    'x-kyc-webhook-secret': secret,
+    'x-idempotency-key': idempotencyKey,
+    'x-kyc-webhook-signature': `sha256=${signature}`,
+    'x-kyc-webhook-timestamp': String(timestampMs)
+  };
+}
 
 async function withServer(run, options = {}) {
   const server = createServer(options);
@@ -373,7 +388,7 @@ test('kyc provider webhook stub validates secret and idempotency key', async () 
       assert.equal(missingIdempotency.res.status, 400);
       assert.equal(missingIdempotency.body.error.code, 'missing_idempotency_key');
 
-      const first = await postJson(
+      const missingSignature = await postJson(
         baseUrl,
         '/identity/kyc/provider-webhook',
         {
@@ -384,8 +399,55 @@ test('kyc provider webhook stub validates secret and idempotency key', async () 
         {
           headers: {
             'x-kyc-webhook-secret': 'test-webhook-secret',
-            'x-idempotency-key': 'event-1'
+            'x-idempotency-key': 'event-missing-signature'
           }
+        }
+      );
+      assert.equal(missingSignature.res.status, 401);
+      assert.equal(missingSignature.body.error.code, 'missing_webhook_timestamp');
+
+      const staleTimestamp = await postJson(
+        baseUrl,
+        '/identity/kyc/provider-webhook',
+        {
+          sessionId,
+          providerRef: 'sumsub-ref-a',
+          metadata: { providerStatus: 'review_pending' }
+        },
+        {
+          headers: buildWebhookHeaders({
+            secret: 'test-webhook-secret',
+            idempotencyKey: 'event-stale',
+            payload: {
+              sessionId,
+              providerRef: 'sumsub-ref-a',
+              metadata: { providerStatus: 'review_pending' }
+            },
+            timestampMs: Date.now() - 10 * 60 * 1000
+          })
+        }
+      );
+      assert.equal(staleTimestamp.res.status, 401);
+      assert.equal(staleTimestamp.body.error.code, 'stale_webhook_timestamp');
+
+      const first = await postJson(
+        baseUrl,
+        '/identity/kyc/provider-webhook',
+        {
+          sessionId,
+          providerRef: 'sumsub-ref-a',
+          metadata: { providerStatus: 'review_pending' }
+        },
+        {
+          headers: buildWebhookHeaders({
+            secret: 'test-webhook-secret',
+            idempotencyKey: 'event-1',
+            payload: {
+              sessionId,
+              providerRef: 'sumsub-ref-a',
+              metadata: { providerStatus: 'review_pending' }
+            }
+          })
         }
       );
       assert.equal(first.res.status, 202);
@@ -403,16 +465,44 @@ test('kyc provider webhook stub validates secret and idempotency key', async () 
           metadata: { providerStatus: 'review_done' }
         },
         {
-          headers: {
-            'x-kyc-webhook-secret': 'test-webhook-secret',
-            'x-idempotency-key': 'event-1'
-          }
+          headers: buildWebhookHeaders({
+            secret: 'test-webhook-secret',
+            idempotencyKey: 'event-1',
+            payload: {
+              sessionId,
+              providerRef: 'sumsub-ref-b',
+              metadata: { providerStatus: 'review_done' }
+            }
+          })
         }
       );
-      assert.equal(duplicate.res.status, 202);
-      assert.equal(duplicate.body.accepted, true);
-      assert.equal(duplicate.body.duplicate, true);
-      assert.equal(duplicate.body.updated, false);
+      assert.equal(duplicate.res.status, 409);
+      assert.equal(duplicate.body.error.code, 'idempotency_key_conflict');
+
+      const duplicateSamePayload = await postJson(
+        baseUrl,
+        '/identity/kyc/provider-webhook',
+        {
+          sessionId,
+          providerRef: 'sumsub-ref-a',
+          metadata: { providerStatus: 'review_pending' }
+        },
+        {
+          headers: buildWebhookHeaders({
+            secret: 'test-webhook-secret',
+            idempotencyKey: 'event-1',
+            payload: {
+              sessionId,
+              providerRef: 'sumsub-ref-a',
+              metadata: { providerStatus: 'review_pending' }
+            }
+          })
+        }
+      );
+      assert.equal(duplicateSamePayload.res.status, 202);
+      assert.equal(duplicateSamePayload.body.accepted, true);
+      assert.equal(duplicateSamePayload.body.duplicate, true);
+      assert.equal(duplicateSamePayload.body.updated, false);
 
       const status = await getJson(baseUrl, '/identity/kyc/status', { accessToken });
       assert.equal(status.res.status, 200);

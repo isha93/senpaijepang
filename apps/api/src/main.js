@@ -6,6 +6,8 @@ import { createDbPool } from './db/pool.js';
 import { createKycService } from './identity/kyc-service.js';
 import { createObjectStorageFromEnv } from './identity/object-storage.js';
 import { createLogger } from './observability/logger.js';
+import { createPostgresJobsService } from './jobs/postgres-service.js';
+import { createPostgresFeedService } from './feed/postgres-service.js';
 
 async function createAuthStoreFromEnv(env = process.env) {
   const mode = String(env.AUTH_STORE || 'memory').trim().toLowerCase();
@@ -45,7 +47,15 @@ async function main() {
     env: process.env,
     logger
   });
-  const server = createServer({ authService, kycService });
+  let jobsService;
+  let feedService;
+
+  if (authStore.mode === 'postgres') {
+    jobsService = await createPostgresJobsService({ pool: authStore.store.pool });
+    feedService = await createPostgresFeedService({ pool: authStore.store.pool });
+  }
+
+  const server = createServer({ authService, kycService, jobsService, feedService });
 
   server.listen(port, () => {
     logger.info('api.started', {

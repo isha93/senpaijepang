@@ -843,12 +843,24 @@ paths:
   /identity/kyc/provider-webhook:
     post:
       tags: [Identity]
-      summary: Provider webhook stub (secret + idempotency key validation)
+      summary: Provider webhook ingestion (secret + signature + idempotency validation)
       security: []
       parameters:
         - in: header
           name: x-kyc-webhook-secret
           required: true
+          schema:
+            type: string
+        - in: header
+          name: x-kyc-webhook-signature
+          required: true
+          description: Required by default. Validation can be relaxed only when `KYC_PROVIDER_WEBHOOK_REQUIRE_SIGNATURE=false`.
+          schema:
+            type: string
+        - in: header
+          name: x-kyc-webhook-timestamp
+          required: true
+          description: Unix timestamp in seconds or milliseconds.
           schema:
             type: string
         - in: header
@@ -874,6 +886,368 @@ paths:
         '401':
           $ref: '#/components/responses/ApiError'
         '403':
+          $ref: '#/components/responses/ApiError'
+        '409':
+          $ref: '#/components/responses/ApiError'
+        '503':
+          $ref: '#/components/responses/ApiError'
+
+  /admin/jobs:
+    get:
+      tags: [Admin]
+      summary: List jobs for admin management
+      security:
+        - bearerAuth: []
+        - adminApiKeyAuth: []
+      parameters:
+        - in: query
+          name: q
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: cursor
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+        - in: query
+          name: limit
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminJobListResponse'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/ApiError'
+        '403':
+          $ref: '#/components/responses/ApiError'
+        '503':
+          $ref: '#/components/responses/ApiError'
+    post:
+      tags: [Admin]
+      summary: Create job for admin management
+      security:
+        - bearerAuth: []
+        - adminApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminJobCreateRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminJobEnvelope'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/ApiError'
+        '403':
+          $ref: '#/components/responses/ApiError'
+        '503':
+          $ref: '#/components/responses/ApiError'
+
+  /admin/jobs/{jobId}:
+    patch:
+      tags: [Admin]
+      summary: Update job for admin management
+      security:
+        - bearerAuth: []
+        - adminApiKeyAuth: []
+      parameters:
+        - in: path
+          name: jobId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminJobUpdateRequest'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminJobEnvelope'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/ApiError'
+        '403':
+          $ref: '#/components/responses/ApiError'
+        '404':
+          $ref: '#/components/responses/ApiError'
+        '503':
+          $ref: '#/components/responses/ApiError'
+    delete:
+      tags: [Admin]
+      summary: Delete job for admin management
+      security:
+        - bearerAuth: []
+        - adminApiKeyAuth: []
+      parameters:
+        - in: path
+          name: jobId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminJobDeleteResponse'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/ApiError'
+        '403':
+          $ref: '#/components/responses/ApiError'
+        '404':
+          $ref: '#/components/responses/ApiError'
+        '503':
+          $ref: '#/components/responses/ApiError'
+
+  /admin/feed/posts:
+    get:
+      tags: [Admin]
+      summary: List feed posts for admin management
+      security:
+        - bearerAuth: []
+        - adminApiKeyAuth: []
+      parameters:
+        - in: query
+          name: q
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: category
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: cursor
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+        - in: query
+          name: limit
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminFeedPostListResponse'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/ApiError'
+        '403':
+          $ref: '#/components/responses/ApiError'
+        '503':
+          $ref: '#/components/responses/ApiError'
+    post:
+      tags: [Admin]
+      summary: Create feed post for admin management
+      security:
+        - bearerAuth: []
+        - adminApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminFeedPostCreateRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminFeedPostEnvelope'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/ApiError'
+        '403':
+          $ref: '#/components/responses/ApiError'
+        '503':
+          $ref: '#/components/responses/ApiError'
+
+  /admin/feed/posts/{postId}:
+    patch:
+      tags: [Admin]
+      summary: Update feed post for admin management
+      security:
+        - bearerAuth: []
+        - adminApiKeyAuth: []
+      parameters:
+        - in: path
+          name: postId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminFeedPostUpdateRequest'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminFeedPostEnvelope'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/ApiError'
+        '403':
+          $ref: '#/components/responses/ApiError'
+        '404':
+          $ref: '#/components/responses/ApiError'
+        '503':
+          $ref: '#/components/responses/ApiError'
+    delete:
+      tags: [Admin]
+      summary: Delete feed post for admin management
+      security:
+        - bearerAuth: []
+        - adminApiKeyAuth: []
+      parameters:
+        - in: path
+          name: postId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminFeedPostDeleteResponse'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/ApiError'
+        '403':
+          $ref: '#/components/responses/ApiError'
+        '404':
+          $ref: '#/components/responses/ApiError'
+        '503':
+          $ref: '#/components/responses/ApiError'
+
+  /admin/organizations:
+    get:
+      tags: [Admin]
+      summary: List organizations for admin verification management
+      security:
+        - bearerAuth: []
+        - adminApiKeyAuth: []
+      parameters:
+        - in: query
+          name: cursor
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+        - in: query
+          name: limit
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+        - in: query
+          name: orgType
+          required: false
+          schema:
+            $ref: '#/components/schemas/OrganizationType'
+        - in: query
+          name: verificationStatus
+          required: false
+          schema:
+            $ref: '#/components/schemas/OrganizationVerificationStatus'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminOrganizationListResponse'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/ApiError'
+        '403':
+          $ref: '#/components/responses/ApiError'
+        '503':
+          $ref: '#/components/responses/ApiError'
+
+  /admin/organizations/{orgId}/verification:
+    patch:
+      tags: [Admin]
+      summary: Update organization verification status
+      security:
+        - bearerAuth: []
+        - adminApiKeyAuth: []
+      parameters:
+        - in: path
+          name: orgId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminOrganizationVerificationUpdateRequest'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrganizationVerification'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/ApiError'
+        '403':
+          $ref: '#/components/responses/ApiError'
+        '404':
           $ref: '#/components/responses/ApiError'
         '503':
           $ref: '#/components/responses/ApiError'
@@ -1161,6 +1535,56 @@ components:
           type: string
           format: date-time
 
+    AdminOrganizationOwner:
+      type: object
+      required: [id, fullName, email]
+      properties:
+        id:
+          type: string
+          format: uuid
+        fullName:
+          type: string
+        email:
+          type: string
+          format: email
+
+    AdminOrganizationListItem:
+      type: object
+      required: [organization, verification, owner]
+      properties:
+        organization:
+          $ref: '#/components/schemas/Organization'
+        verification:
+          allOf:
+            - $ref: '#/components/schemas/OrganizationVerification'
+          nullable: true
+        owner:
+          allOf:
+            - $ref: '#/components/schemas/AdminOrganizationOwner'
+          nullable: true
+
+    AdminOrganizationListResponse:
+      type: object
+      required: [items, pageInfo]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdminOrganizationListItem'
+        pageInfo:
+          $ref: '#/components/schemas/JobPageInfo'
+
+    AdminOrganizationVerificationUpdateRequest:
+      type: object
+      required: [status]
+      properties:
+        status:
+          $ref: '#/components/schemas/OrganizationVerificationStatus'
+        reasonCodes:
+          type: array
+          items:
+            type: string
+
     JobEmploymentType:
       type: string
       enum: [FULL_TIME, PART_TIME, CONTRACT]
@@ -1291,6 +1715,78 @@ components:
           $ref: '#/components/schemas/JobDetail'
         viewerState:
           $ref: '#/components/schemas/JobViewerState'
+
+    AdminJob:
+      allOf:
+        - $ref: '#/components/schemas/JobDetail'
+
+    AdminJobEnvelope:
+      type: object
+      required: [job]
+      properties:
+        job:
+          $ref: '#/components/schemas/AdminJob'
+
+    AdminJobListResponse:
+      type: object
+      required: [items, pageInfo]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdminJob'
+        pageInfo:
+          $ref: '#/components/schemas/JobPageInfo'
+
+    AdminJobCreateRequest:
+      type: object
+      required: [title, employmentType, visaSponsorship, description, requirements, location, employer]
+      properties:
+        title:
+          type: string
+        employmentType:
+          $ref: '#/components/schemas/JobEmploymentType'
+        visaSponsorship:
+          type: boolean
+        description:
+          type: string
+        requirements:
+          type: array
+          items:
+            type: string
+        location:
+          $ref: '#/components/schemas/JobLocationDetail'
+        employer:
+          $ref: '#/components/schemas/JobEmployer'
+
+    AdminJobUpdateRequest:
+      type: object
+      properties:
+        title:
+          type: string
+        employmentType:
+          $ref: '#/components/schemas/JobEmploymentType'
+        visaSponsorship:
+          type: boolean
+        description:
+          type: string
+        requirements:
+          type: array
+          items:
+            type: string
+        location:
+          $ref: '#/components/schemas/JobLocationDetail'
+        employer:
+          $ref: '#/components/schemas/JobEmployer'
+
+    AdminJobDeleteResponse:
+      type: object
+      required: [removed, jobId]
+      properties:
+        removed:
+          type: boolean
+        jobId:
+          type: string
 
     SaveJobRequest:
       type: object
@@ -1450,6 +1946,91 @@ components:
             $ref: '#/components/schemas/FeedPost'
         pageInfo:
           $ref: '#/components/schemas/JobPageInfo'
+
+    AdminFeedPost:
+      type: object
+      required: [id, title, excerpt, category, author, imageUrl, publishedAt]
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        excerpt:
+          type: string
+        category:
+          type: string
+        author:
+          type: string
+        imageUrl:
+          type: string
+          nullable: true
+        publishedAt:
+          type: string
+          format: date-time
+
+    AdminFeedPostEnvelope:
+      type: object
+      required: [post]
+      properties:
+        post:
+          $ref: '#/components/schemas/AdminFeedPost'
+
+    AdminFeedPostListResponse:
+      type: object
+      required: [items, pageInfo]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdminFeedPost'
+        pageInfo:
+          $ref: '#/components/schemas/JobPageInfo'
+
+    AdminFeedPostCreateRequest:
+      type: object
+      required: [title, excerpt, category, author]
+      properties:
+        title:
+          type: string
+        excerpt:
+          type: string
+        category:
+          type: string
+        author:
+          type: string
+        imageUrl:
+          type: string
+          nullable: true
+        publishedAt:
+          type: string
+          format: date-time
+
+    AdminFeedPostUpdateRequest:
+      type: object
+      properties:
+        title:
+          type: string
+        excerpt:
+          type: string
+        category:
+          type: string
+        author:
+          type: string
+        imageUrl:
+          type: string
+          nullable: true
+        publishedAt:
+          type: string
+          format: date-time
+
+    AdminFeedPostDeleteResponse:
+      type: object
+      required: [removed, postId]
+      properties:
+        removed:
+          type: boolean
+        postId:
+          type: string
 
     SavePostRequest:
       type: object

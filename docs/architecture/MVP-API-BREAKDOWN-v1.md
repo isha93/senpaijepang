@@ -1,21 +1,24 @@
 # MVP API Breakdown v1 (API-First)
 
-Date: 2026-02-28
+Date: 2026-03-01
 Owner: Backend Track
 
 ## 1. Executive Summary
-Kita sengaja mengunci fase ini ke API-only agar fondasi trust dan audit kuat dulu sebelum ekspansi frontend.
+Fase API core sudah berjalan dan runtime contract sudah cukup stabil untuk integrasi iOS bertahap.
 
 Outcome yang ditargetkan dari MVP API:
 - proses identity verification bisa dijalankan end-to-end,
 - keputusan review bisa ditelusuri,
+- alur jobs/feed/profile siap dikonsumsi mobile,
 - kualitas perubahan terjaga lewat CI gates.
 
 ## 2. Scope Lock
 In scope (MVP API):
 - Auth + session lifecycle.
 - KYC session, document ingestion, submit, review queue, review decision.
-- Provider metadata hook + webhook stub dengan idempotency.
+- Jobs/feed/profile + saved/apply/journey runtime endpoints.
+- Organization verification + admin operations endpoints.
+- Provider metadata hook + webhook intake hardened (signature, timestamp, idempotency).
 - Observability + audit events untuk alur trust-critical.
 - OpenAPI runtime contract + CI quality gates.
 
@@ -23,7 +26,8 @@ Out of scope (post-MVP API):
 - UI/Frontend implementation.
 - Payment/escrow.
 - Multi-country policy engine.
-- Full vendor-specific KYC webhook signature verification.
+- Vendor-specific orchestration mendalam (retry/reconciliation policy per provider).
+- Unified ops console lintas domain (bukan hanya endpoint API).
 
 ## 3. Capability Map
 
@@ -60,17 +64,17 @@ Feature:
 Definition of done:
 - Decision menghasilkan event audit konsisten.
 - Queue menampilkan dokumen + ringkasan user + flags.
-- Endpoint dilindungi `x-admin-api-key`.
+- Endpoint dilindungi Bearer token + role check (fallback `x-admin-api-key` untuk bootstrap).
 
-### 3.4 Provider Integration Stub
+### 3.4 Provider Integration Runtime
 Feature:
 - Update provider metadata per session.
-- Webhook intake stub (`x-kyc-webhook-secret`, `x-idempotency-key`).
+- Webhook intake hardened (`x-idempotency-key`, signature HMAC, timestamp skew guard).
 
 Definition of done:
 - Idempotency webhook bekerja.
 - Payload metadata tersimpan aman.
-- Webhook disabled behavior jelas saat secret tidak di-set.
+- Signature/timestamp verification behavior jelas dan terdokumentasi.
 
 ### 3.5 Operability & Quality
 Feature:
@@ -90,23 +94,26 @@ Definition of done:
 | M1 Auth Ready | Identity basic | auth endpoints + role assignment + tests |
 | M2 KYC Intake Ready | Document pipeline | session/upload/documents/submit/history |
 | M3 Review Ops Ready | Manual moderation | review queue + decision + audit events |
-| M4 Hardening | Reliability | smoke flow, observability improvements, contract freeze |
+| M4 Domain Expansion Ready | Product parity API | jobs/feed/profile + admin CRUD + org verification |
+| M5 Hardening | Reliability | smoke flow, observability improvements, contract freeze |
+| M6 Integration Ready | Mobile + staging prep | iOS integration checklist + hosting plan |
 
 ## 5. Prioritized Backlog
 ### P0 (Must Have)
 - Auth lifecycle stabil (memory + postgres).
-- KYC intake end-to-end (upload-url -> documents -> submit).
-- Admin review queue + decision + audit trail.
+- KYC intake end-to-end (upload-url -> documents -> submit -> review).
+- Jobs/feed/profile flow stabil untuk consumer iOS.
 - Runtime OpenAPI + CI gates konsisten.
 
 ### P1 (Should Have)
 - Provider metadata enrichment yang konsisten.
 - Webhook idempotency TTL tuning + replay handling policy.
 - Extended error catalog dan response normalization.
+- Hosting staging runbook dan rollback checklist.
 
 ### P2 (After Freeze)
-- Admin auth migration dari shared key ke RBAC token.
-- Vendor-specific webhook signature verification.
+- Remove `ADMIN_API_KEY` fallback (Bearer role-only).
+- Vendor-specific webhook orchestration (mapping + retry semantics).
 - Queue pagination cursor + advanced filtering.
 
 ## 6. Acceptance Gates (Release Candidate API)
@@ -115,6 +122,7 @@ Definition of done:
 - `npm run check:dev-all` pass.
 - Tidak ada endpoint runtime undocumented di `openapi-runtime-v0.yaml`.
 - Tidak ada perubahan trust-critical endpoint tanpa test update.
+- Checklist integrasi iOS endpoint core terverifikasi.
 
 ## 7. Change Control
 - Setiap perubahan endpoint runtime wajib update:
@@ -125,3 +133,5 @@ Definition of done:
 ## 8. Document Links
 - Non-tech summary: `docs/architecture/MVP-API-NON-TECH-GUIDE-v1.md`
 - Runtime status: `docs/architecture/API-IMPLEMENTATION-STATUS-v0.md`
+- Execution lock terbaru: `docs/architecture/EXECUTION-LOCK-API-FIRST-v1.md`
+- Hosting plan MVP: `docs/architecture/HOSTING-OPTIONS-MVP-v1.md`

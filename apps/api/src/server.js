@@ -17,7 +17,7 @@ const JSON_HEADERS = { 'Content-Type': 'application/json' };
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers':
-    'Content-Type, Authorization, x-admin-api-key, x-kyc-webhook-secret, x-idempotency-key',
+    'Content-Type, Authorization, x-admin-api-key, x-kyc-webhook-secret, x-kyc-webhook-signature, x-kyc-webhook-timestamp, x-idempotency-key',
   'Access-Control-Allow-Methods': 'GET, POST, PATCH, DELETE, OPTIONS',
   'Access-Control-Expose-Headers': 'x-request-id'
 };
@@ -54,6 +54,14 @@ function getAdminApiKeyHeader(req) {
 
 function getWebhookSecretHeader(req) {
   return String(req.headers['x-kyc-webhook-secret'] || '').trim();
+}
+
+function getWebhookSignatureHeader(req) {
+  return String(req.headers['x-kyc-webhook-signature'] || '').trim();
+}
+
+function getWebhookTimestampHeader(req) {
+  return String(req.headers['x-kyc-webhook-timestamp'] || '').trim();
 }
 
 function getIdempotencyKeyHeader(req) {
@@ -125,6 +133,21 @@ function matchOrganizationVerificationStatusRoute(pathname) {
   return match ? match[1] : null;
 }
 
+function matchAdminJobRoute(pathname) {
+  const match = String(pathname || '').match(/^\/admin\/jobs\/([^/]+)$/);
+  return match ? match[1] : null;
+}
+
+function matchAdminFeedPostRoute(pathname) {
+  const match = String(pathname || '').match(/^\/admin\/feed\/posts\/([^/]+)$/);
+  return match ? match[1] : null;
+}
+
+function matchAdminOrganizationVerificationRoute(pathname) {
+  const match = String(pathname || '').match(/^\/admin\/organizations\/([^/]+)\/verification$/);
+  return match ? match[1] : null;
+}
+
 async function readJsonBody(req) {
   return new Promise((resolve, reject) => {
     let raw = '';
@@ -144,6 +167,34 @@ async function readJsonBody(req) {
 
       try {
         resolve(JSON.parse(raw));
+      } catch {
+        reject(new Error('invalid json body'));
+      }
+    });
+
+    req.on('error', reject);
+  });
+}
+
+async function readJsonBodyWithRaw(req) {
+  return new Promise((resolve, reject) => {
+    let raw = '';
+
+    req.on('data', (chunk) => {
+      raw += chunk;
+      if (raw.length > 1024 * 1024) {
+        reject(new Error('request body too large'));
+      }
+    });
+
+    req.on('end', () => {
+      if (!raw) {
+        resolve({ raw: '', body: {} });
+        return;
+      }
+
+      try {
+        resolve({ raw, body: JSON.parse(raw) });
       } catch {
         reject(new Error('invalid json body'));
       }
@@ -319,11 +370,14 @@ async function handleRequest(
   }
 
   if (req.method === 'POST' && pathname === '/identity/kyc/provider-webhook') {
-    const body = await readJsonBody(req);
+    const payload = await readJsonBodyWithRaw(req);
     const result = await kycService.ingestProviderWebhook({
       webhookSecret: getWebhookSecretHeader(req),
+      webhookSignature: getWebhookSignatureHeader(req),
+      webhookTimestamp: getWebhookTimestampHeader(req),
       idempotencyKey: getIdempotencyKeyHeader(req),
-      payload: body,
+      payloadRaw: payload.raw,
+      payload: payload.body,
       sourceIp: req.socket?.remoteAddress || null
     });
     sendJson(res, 202, result);
@@ -710,6 +764,154 @@ async function handleRequest(
     return;
   }
 
+  if (req.method === 'GET' && pathname === '/admin/jobs') {
+    const adminAuth = await authenticateAdminRequest(req, res, authService, adminApiKey, adminRoleCodes);
+    if (!adminAuth) {
+      return;
+    }
+
+    const result = await jobsService.listAdminJobs({
+      q: url.searchParams.get('q') || undefined,
+      cursor: url.searchParams.get('cursor') || undefined,
+      limit: url.searchParams.get('limit') || undefined
+    });
+    sendJson(res, 200, result);
+    return;
+  }
+
+  if (req.method === 'POST' && pathname === '/admin/jobs') {
+    const adminAuth = await authenticateAdminRequest(req, res, authService, adminApiKey, adminRoleCodes);
+    if (!adminAuth) {
+      return;
+    }
+
+    const body = await readJsonBody(req);
+    const result = await jobsService.createJob(body);
+    sendJson(res, 201, result);
+    return;
+  }
+
+  const adminJobId = ['PATCH', 'DELETE'].includes(req.method || '') ? matchAdminJobRoute(pathname) : null;
+  if (req.method === 'PATCH' && adminJobId) {
+    const adminAuth = await authenticateAdminRequest(req, res, authService, adminApiKey, adminRoleCodes);
+    if (!adminAuth) {
+      return;
+    }
+
+    const body = await readJsonBody(req);
+    const result = await jobsService.updateJob({
+      jobId: adminJobId,
+      ...body
+    });
+    sendJson(res, 200, result);
+    return;
+  }
+
+  if (req.method === 'DELETE' && adminJobId) {
+    const adminAuth = await authenticateAdminRequest(req, res, authService, adminApiKey, adminRoleCodes);
+    if (!adminAuth) {
+      return;
+    }
+
+    const result = await jobsService.deleteJob({
+      jobId: adminJobId
+    });
+    sendJson(res, 200, result);
+    return;
+  }
+
+  if (req.method === 'GET' && pathname === '/admin/feed/posts') {
+    const adminAuth = await authenticateAdminRequest(req, res, authService, adminApiKey, adminRoleCodes);
+    if (!adminAuth) {
+      return;
+    }
+
+    const result = await feedService.listAdminPosts({
+      q: url.searchParams.get('q') || undefined,
+      category: url.searchParams.get('category') || undefined,
+      cursor: url.searchParams.get('cursor') || undefined,
+      limit: url.searchParams.get('limit') || undefined
+    });
+    sendJson(res, 200, result);
+    return;
+  }
+
+  if (req.method === 'POST' && pathname === '/admin/feed/posts') {
+    const adminAuth = await authenticateAdminRequest(req, res, authService, adminApiKey, adminRoleCodes);
+    if (!adminAuth) {
+      return;
+    }
+
+    const body = await readJsonBody(req);
+    const result = await feedService.createPost(body);
+    sendJson(res, 201, result);
+    return;
+  }
+
+  const adminFeedPostId =
+    ['PATCH', 'DELETE'].includes(req.method || '') ? matchAdminFeedPostRoute(pathname) : null;
+  if (req.method === 'PATCH' && adminFeedPostId) {
+    const adminAuth = await authenticateAdminRequest(req, res, authService, adminApiKey, adminRoleCodes);
+    if (!adminAuth) {
+      return;
+    }
+
+    const body = await readJsonBody(req);
+    const result = await feedService.updatePost({
+      postId: adminFeedPostId,
+      ...body
+    });
+    sendJson(res, 200, result);
+    return;
+  }
+
+  if (req.method === 'DELETE' && adminFeedPostId) {
+    const adminAuth = await authenticateAdminRequest(req, res, authService, adminApiKey, adminRoleCodes);
+    if (!adminAuth) {
+      return;
+    }
+
+    const result = await feedService.deletePost({
+      postId: adminFeedPostId
+    });
+    sendJson(res, 200, result);
+    return;
+  }
+
+  if (req.method === 'GET' && pathname === '/admin/organizations') {
+    const adminAuth = await authenticateAdminRequest(req, res, authService, adminApiKey, adminRoleCodes);
+    if (!adminAuth) {
+      return;
+    }
+
+    const result = await organizationsService.listOrganizationsForAdmin({
+      cursor: url.searchParams.get('cursor') || undefined,
+      limit: url.searchParams.get('limit') || undefined,
+      orgType: url.searchParams.get('orgType') || undefined,
+      verificationStatus: url.searchParams.get('verificationStatus') || undefined
+    });
+    sendJson(res, 200, result);
+    return;
+  }
+
+  const adminOrganizationVerificationOrgId =
+    req.method === 'PATCH' ? matchAdminOrganizationVerificationRoute(pathname) : null;
+  if (req.method === 'PATCH' && adminOrganizationVerificationOrgId) {
+    const adminAuth = await authenticateAdminRequest(req, res, authService, adminApiKey, adminRoleCodes);
+    if (!adminAuth) {
+      return;
+    }
+
+    const body = await readJsonBody(req);
+    const result = await organizationsService.adminUpdateVerification({
+      orgId: adminOrganizationVerificationOrgId,
+      status: body.status,
+      reasonCodes: body.reasonCodes
+    });
+    sendJson(res, 200, result);
+    return;
+  }
+
   if (req.method === 'GET' && pathname === '/admin/kyc/review-queue') {
     const adminAuth = await authenticateAdminRequest(req, res, authService, adminApiKey, adminRoleCodes);
     if (!adminAuth) {
@@ -767,7 +969,8 @@ export function createServer({
   const resolvedJobsService = jobsService || createJobsService();
   const resolvedFeedService = feedService || createFeedService();
   const resolvedProfileService = profileService || createProfileService({ store: resolvedAuthService.store });
-  const resolvedOrganizationsService = organizationsService || createOrganizationsService();
+  const resolvedOrganizationsService =
+    organizationsService || createOrganizationsService({ store: resolvedAuthService.store });
   const resolvedAdminApiKey =
     adminApiKey !== undefined ? String(adminApiKey).trim() : String(process.env.ADMIN_API_KEY || '').trim();
   const resolvedAdminRoleCodes =

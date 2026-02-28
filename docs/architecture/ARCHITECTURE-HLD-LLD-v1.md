@@ -1,24 +1,34 @@
 # SenpaiJepang - System Architecture Plan v1.0
 
-## 0. Current Implementation Snapshot (2026-02-27)
+## 0. Current Implementation Snapshot (2026-03-01)
 - API runtime already includes:
   - auth session flow (`register`, `login`, `refresh`, `logout`, `me`)
-  - KYC session create/status
-  - KYC document ingestion metadata
-  - Admin KYC review action
+  - KYC intake + submit + status/history + provider metadata + webhook intake
+  - jobs/feed/profile user flows (saved/apply/journey)
+  - admin operations (jobs/feed/org verification + KYC review queue/decision)
   - KYC status event audit history
 - Implemented migration baseline:
   - `001_auth_tables.sql`
   - `002_kyc_tables.sql`
   - `003_kyc_status_events.sql`
   - `004_rbac_tables.sql`
-- Sprint 0 quality gates in repository:
+  - `005_kyc_provider_metadata.sql`
+  - `006_user_profile_fields.sql`
+  - `007_organizations_tables.sql`
+  - `008_jobs_feed_tables.sql`
+  - `009_jobs_feed_user_interactions.sql`
+- Security baseline:
+  - admin endpoints support Bearer role auth (fallback `ADMIN_API_KEY` for bootstrap)
+  - KYC webhook supports signature/timestamp/idempotency guardrails
+- Quality gates in repository:
   - `scan:sast` (static checks)
   - `scan:secrets` (credential leak guard)
   - `check:openapi` (schema + versioning + freeze policy)
 - Observability baseline:
   - JSON request logs with request-id correlation
   - `GET /metrics` in-memory route metrics snapshot
+- Current delivery mode:
+  - API hardening + incremental iOS integration enablement
 - Runtime contract is documented in `openapi-runtime-v0.yaml`.
 - Sprint 1 contract freeze policy is documented in `sprint1-contract-freeze.json`.
 - Product target contract remains `openapi-v1.yaml`.

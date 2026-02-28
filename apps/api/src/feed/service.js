@@ -1,4 +1,6 @@
-class FeedApiError extends Error {
+import { randomUUID } from 'node:crypto';
+
+export class FeedApiError extends Error {
   constructor(status, code, message) {
     super(message);
     this.status = status;
@@ -8,8 +10,12 @@ class FeedApiError extends Error {
 
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 50;
+const MAX_TITLE_LENGTH = 180;
+const MAX_EXCERPT_LENGTH = 600;
+const MAX_CATEGORY_LENGTH = 64;
+const MAX_AUTHOR_LENGTH = 120;
 
-const POST_SEED_DATA = [
+export const POST_SEED_DATA = [
   {
     id: 'post_jp_work_culture_001',
     title: '5 Hal yang Perlu Kamu Tahu Tentang Budaya Kerja di Jepang',
@@ -77,10 +83,111 @@ function normalizeCategory(category) {
   return String(category).trim().toUpperCase();
 }
 
+function normalizeRequiredCategory(category) {
+  const normalized = normalizeCategory(category);
+  if (!normalized) {
+    throw new FeedApiError(400, 'invalid_category', 'category is required');
+  }
+  if (normalized.length > MAX_CATEGORY_LENGTH) {
+    throw new FeedApiError(400, 'invalid_category', `category must be <= ${MAX_CATEGORY_LENGTH} characters`);
+  }
+  return normalized;
+}
+
+function normalizeOptionalCategory(category) {
+  if (category === undefined) {
+    return undefined;
+  }
+  return normalizeRequiredCategory(category);
+}
+
 function normalizeQuery(q) {
   return String(q || '')
     .trim()
     .toLowerCase();
+}
+
+function normalizeRequiredTitle(title) {
+  const normalized = String(title || '').trim();
+  if (normalized.length < 2 || normalized.length > MAX_TITLE_LENGTH) {
+    throw new FeedApiError(400, 'invalid_title', `title must be between 2 and ${MAX_TITLE_LENGTH} characters`);
+  }
+  return normalized;
+}
+
+function normalizeOptionalTitle(title) {
+  if (title === undefined) {
+    return undefined;
+  }
+  return normalizeRequiredTitle(title);
+}
+
+function normalizeRequiredExcerpt(excerpt) {
+  const normalized = String(excerpt || '').trim();
+  if (normalized.length < 2 || normalized.length > MAX_EXCERPT_LENGTH) {
+    throw new FeedApiError(
+      400,
+      'invalid_excerpt',
+      `excerpt must be between 2 and ${MAX_EXCERPT_LENGTH} characters`
+    );
+  }
+  return normalized;
+}
+
+function normalizeOptionalExcerpt(excerpt) {
+  if (excerpt === undefined) {
+    return undefined;
+  }
+  return normalizeRequiredExcerpt(excerpt);
+}
+
+function normalizeRequiredAuthor(author) {
+  const normalized = String(author || '').trim();
+  if (normalized.length < 2 || normalized.length > MAX_AUTHOR_LENGTH) {
+    throw new FeedApiError(400, 'invalid_author', `author must be between 2 and ${MAX_AUTHOR_LENGTH} characters`);
+  }
+  return normalized;
+}
+
+function normalizeOptionalAuthor(author) {
+  if (author === undefined) {
+    return undefined;
+  }
+  return normalizeRequiredAuthor(author);
+}
+
+function normalizeOptionalImageUrl(imageUrl) {
+  if (imageUrl === undefined) {
+    return undefined;
+  }
+  if (imageUrl === null) {
+    return null;
+  }
+  const normalized = String(imageUrl || '').trim();
+  if (!normalized) {
+    return null;
+  }
+  try {
+    const parsed = new URL(normalized);
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+      throw new Error('invalid');
+    }
+  } catch {
+    throw new FeedApiError(400, 'invalid_image_url', 'imageUrl must be a valid http(s) URL');
+  }
+  return normalized;
+}
+
+function normalizePublishedAt(publishedAt) {
+  if (publishedAt === undefined || publishedAt === null || String(publishedAt).trim() === '') {
+    return new Date().toISOString();
+  }
+  const normalized = String(publishedAt).trim();
+  const parsed = Date.parse(normalized);
+  if (!Number.isFinite(parsed)) {
+    throw new FeedApiError(400, 'invalid_published_at', 'publishedAt must be valid ISO date-time');
+  }
+  return new Date(parsed).toISOString();
 }
 
 function toFeedPost(post, { authenticated, saved }) {
@@ -96,6 +203,18 @@ function toFeedPost(post, { authenticated, saved }) {
       authenticated,
       saved
     }
+  };
+}
+
+function toAdminPost(post) {
+  return {
+    id: post.id,
+    title: post.title,
+    excerpt: post.excerpt,
+    category: post.category,
+    author: post.author,
+    imageUrl: post.imageUrl,
+    publishedAt: post.publishedAt
   };
 }
 
@@ -221,6 +340,104 @@ export class FeedService {
     return {
       saved: false,
       removed,
+      postId: post.id
+    };
+  }
+
+  listAdminPosts({ q, category, cursor, limit }) {
+    const normalizedQuery = normalizeQuery(q);
+    const normalizedCategory = normalizeCategory(category);
+    const normalizedCursor = normalizeCursor(cursor);
+    const normalizedLimit = normalizeLimit(limit);
+
+    const filtered = this.posts.filter((post) => {
+      if (normalizedCategory && post.category !== normalizedCategory) {
+        return false;
+      }
+      if (!normalizedQuery) {
+        return true;
+      }
+      const haystack = [post.title, post.excerpt, post.author, post.category].join(' ').toLowerCase();
+      return haystack.includes(normalizedQuery);
+    });
+
+    const paged = filtered.slice(normalizedCursor, normalizedCursor + normalizedLimit);
+    const nextOffset = normalizedCursor + paged.length;
+    const nextCursor = nextOffset < filtered.length ? String(nextOffset) : null;
+
+    return {
+      items: paged.map((post) => toAdminPost(post)),
+      pageInfo: {
+        cursor: String(normalizedCursor),
+        nextCursor,
+        limit: normalizedLimit,
+        total: filtered.length
+      }
+    };
+  }
+
+  createPost({ title, excerpt, category, author, imageUrl, publishedAt }) {
+    const post = {
+      id: randomUUID(),
+      title: normalizeRequiredTitle(title),
+      excerpt: normalizeRequiredExcerpt(excerpt),
+      category: normalizeRequiredCategory(category),
+      author: normalizeRequiredAuthor(author),
+      imageUrl: normalizeOptionalImageUrl(imageUrl) ?? null,
+      publishedAt: normalizePublishedAt(publishedAt)
+    };
+
+    this.posts.push(post);
+    this.posts.sort((left, right) => Date.parse(right.publishedAt) - Date.parse(left.publishedAt));
+    this.postById.set(post.id, post);
+    return { post: toAdminPost(post) };
+  }
+
+  updatePost({ postId, title, excerpt, category, author, imageUrl, publishedAt }) {
+    const post = this.getPostByIdOrThrow(postId);
+    const patch = {
+      title: normalizeOptionalTitle(title),
+      excerpt: normalizeOptionalExcerpt(excerpt),
+      category: normalizeOptionalCategory(category),
+      author: normalizeOptionalAuthor(author),
+      imageUrl: normalizeOptionalImageUrl(imageUrl),
+      publishedAt: publishedAt === undefined ? undefined : normalizePublishedAt(publishedAt)
+    };
+
+    if (patch.title !== undefined) {
+      post.title = patch.title;
+    }
+    if (patch.excerpt !== undefined) {
+      post.excerpt = patch.excerpt;
+    }
+    if (patch.category !== undefined) {
+      post.category = patch.category;
+    }
+    if (patch.author !== undefined) {
+      post.author = patch.author;
+    }
+    if (patch.imageUrl !== undefined) {
+      post.imageUrl = patch.imageUrl;
+    }
+    if (patch.publishedAt !== undefined) {
+      post.publishedAt = patch.publishedAt;
+    }
+
+    this.posts.sort((left, right) => Date.parse(right.publishedAt) - Date.parse(left.publishedAt));
+    return { post: toAdminPost(post) };
+  }
+
+  deletePost({ postId }) {
+    const post = this.getPostByIdOrThrow(postId);
+    this.postById.delete(post.id);
+    this.posts = this.posts.filter((item) => item.id !== post.id);
+
+    for (const savedMap of this.savedPostMapByUserId.values()) {
+      savedMap.delete(post.id);
+    }
+
+    return {
+      removed: true,
       postId: post.id
     };
   }

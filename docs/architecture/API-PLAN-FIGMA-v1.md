@@ -165,12 +165,12 @@ Gunakan tabel ini untuk mapping final per frame Figma:
 ## 5. Security Plan
 Current:
 - user auth: Bearer access token
-- admin auth: `x-admin-api-key`
+- admin auth: Bearer token + role check (fallback `x-admin-api-key`)
 
 Recommended upgrade path:
-- keep shared admin key for MVP speed
-- post-MVP migrate to role-based admin tokens + scoped permissions
-- add stricter webhook verification per provider
+- pertahankan fallback `ADMIN_API_KEY` hanya untuk bootstrap/compatibility
+- lanjutkan hardening agar admin flow full Bearer role-only
+- tambah orkestrasi webhook per provider (event mapping + retry/reconciliation)
 
 ## 6. Data & Migration Plan
 - keep incremental SQL migration files (already in place)

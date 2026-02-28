@@ -21,3 +21,8 @@ coverage/
 *.log
 npm-debug.log*
 .dev-runtime/
+
+# Xcode user-local files
+*.xcworkspace/xcuserdata/
+*.xcodeproj/xcuserdata/
+*.xcuserstate
