@@ -17,6 +17,7 @@ const services = [
   {
     name: 'api',
     npmScript: 'dev:api',
+    npmScriptCi: 'start:api',
     url: 'http://localhost:4000/health'
   }
 ];
@@ -82,10 +83,11 @@ function runDockerCompose(args) {
 
 function startService(service) {
   ensureRuntimeDirs();
+  const selectedScript = process.env.CI ? service.npmScriptCi || service.npmScript : service.npmScript;
   const logPath = path.join(logsDir, `${service.name}.log`);
-  fs.appendFileSync(logPath, `\n[${new Date().toISOString()}] starting ${service.npmScript}\n`);
+  fs.appendFileSync(logPath, `\n[${new Date().toISOString()}] starting ${selectedScript}\n`);
   const logFd = fs.openSync(logPath, 'a');
-  const child = spawn('npm', ['run', service.npmScript], {
+  const child = spawn('npm', ['run', selectedScript], {
     cwd: rootDir,
     detached: true,
     env: process.env,
@@ -100,7 +102,7 @@ function startService(service) {
 
   return {
     name: service.name,
-    npmScript: service.npmScript,
+    npmScript: selectedScript,
     pid: child.pid,
     url: service.url,
     logPath

@@ -15,6 +15,7 @@
   },
   "scripts": {
     "dev:api": "npm run dev -w @senpaijepang/api",
+    "start:api": "npm run start -w @senpaijepang/api",
     "dev:all": "node scripts/dev-all.mjs start",
     "stop:all": "node scripts/dev-all.mjs stop",
     "deploy:staging": "node scripts/deploy-staging.mjs",
