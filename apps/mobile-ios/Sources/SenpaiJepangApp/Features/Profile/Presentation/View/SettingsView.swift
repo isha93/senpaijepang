@@ -38,6 +38,7 @@ struct SettingsView: View {
         .navigationTitle(langManager.localize(key: "Settings"))
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.hidden, for: .tabBar)
         #endif
     }
 }
