@@ -4,6 +4,7 @@ import { createAuthService, isApiError } from './auth/service.js';
 import { InMemoryAuthStore } from './auth/store.js';
 import { createKycService, isKycApiError } from './identity/kyc-service.js';
 import { createJobsService, isJobsApiError } from './jobs/service.js';
+import { createFeedService, isFeedApiError } from './feed/service.js';
 import { createLogger } from './observability/logger.js';
 import { InMemoryApiMetrics } from './observability/metrics.js';
 
@@ -81,6 +82,11 @@ function matchJobApplicationRoute(pathname) {
 
 function matchApplicationJourneyRoute(pathname) {
   const match = String(pathname || '').match(/^\/users\/me\/applications\/([^/]+)\/journey$/);
+  return match ? match[1] : null;
+}
+
+function matchSavedPostRoute(pathname) {
+  const match = String(pathname || '').match(/^\/users\/me\/saved-posts\/([^/]+)$/);
   return match ? match[1] : null;
 }
 
@@ -171,7 +177,7 @@ function authenticateAdminRequest(req, res, adminApiKey) {
   return true;
 }
 
-async function handleRequest(req, res, authService, kycService, jobsService, adminApiKey, metrics) {
+async function handleRequest(req, res, authService, kycService, jobsService, feedService, adminApiKey, metrics) {
   const url = new URL(req.url || '/', 'http://localhost');
 
   if (req.method === 'OPTIONS') {
@@ -196,6 +202,19 @@ async function handleRequest(req, res, authService, kycService, jobsService, adm
       employmentType: url.searchParams.get('employmentType') || undefined,
       visaSponsored: url.searchParams.get('visaSponsored') || undefined,
       location: url.searchParams.get('location') || undefined,
+      cursor: url.searchParams.get('cursor') || undefined,
+      limit: url.searchParams.get('limit') || undefined,
+      userId: user?.id || null
+    });
+    sendJson(res, 200, result);
+    return;
+  }
+
+  if (req.method === 'GET' && url.pathname === '/feed/posts') {
+    const user = await authenticateOptionalRequest(req, authService);
+    const result = await feedService.listPosts({
+      q: url.searchParams.get('q') || undefined,
+      category: url.searchParams.get('category') || undefined,
       cursor: url.searchParams.get('cursor') || undefined,
       limit: url.searchParams.get('limit') || undefined,
       userId: user?.id || null
@@ -427,6 +446,51 @@ async function handleRequest(req, res, authService, kycService, jobsService, adm
     return;
   }
 
+  if (req.method === 'GET' && url.pathname === '/users/me/saved-posts') {
+    const user = await authenticateRequest(req, res, authService);
+    if (!user) {
+      return;
+    }
+
+    const result = await feedService.listSavedPosts({
+      userId: user.id,
+      cursor: url.searchParams.get('cursor') || undefined,
+      limit: url.searchParams.get('limit') || undefined
+    });
+    sendJson(res, 200, result);
+    return;
+  }
+
+  if (req.method === 'POST' && url.pathname === '/users/me/saved-posts') {
+    const user = await authenticateRequest(req, res, authService);
+    if (!user) {
+      return;
+    }
+
+    const body = await readJsonBody(req);
+    const result = await feedService.savePost({
+      userId: user.id,
+      postId: body.postId
+    });
+    sendJson(res, 200, result);
+    return;
+  }
+
+  const savedPostId = req.method === 'DELETE' ? matchSavedPostRoute(url.pathname) : null;
+  if (req.method === 'DELETE' && savedPostId) {
+    const user = await authenticateRequest(req, res, authService);
+    if (!user) {
+      return;
+    }
+
+    const result = await feedService.unsavePost({
+      userId: user.id,
+      postId: savedPostId
+    });
+    sendJson(res, 200, result);
+    return;
+  }
+
   const applicationJourneyId = req.method === 'GET' ? matchApplicationJourneyRoute(url.pathname) : null;
   if (req.method === 'GET' && applicationJourneyId) {
     const user = await authenticateRequest(req, res, authService);
@@ -513,10 +577,11 @@ async function handleRequest(req, res, authService, kycService, jobsService, adm
   });
 }
 
-export function createServer({ authService, kycService, jobsService, adminApiKey } = {}) {
+export function createServer({ authService, kycService, jobsService, feedService, adminApiKey } = {}) {
   const resolvedAuthService = authService || createAuthService({ store: new InMemoryAuthStore() });
   const resolvedKycService = kycService || createKycService({ store: resolvedAuthService.store });
   const resolvedJobsService = jobsService || createJobsService();
+  const resolvedFeedService = feedService || createFeedService();
   const resolvedAdminApiKey =
     adminApiKey !== undefined ? String(adminApiKey).trim() : String(process.env.ADMIN_API_KEY || '').trim();
   const logger = createLogger({ env: process.env, service: 'api' });
@@ -565,10 +630,11 @@ export function createServer({ authService, kycService, jobsService, adminApiKey
       resolvedAuthService,
       resolvedKycService,
       resolvedJobsService,
+      resolvedFeedService,
       resolvedAdminApiKey,
       metrics
     ).catch((error) => {
-      if (isApiError(error) || isKycApiError(error) || isJobsApiError(error)) {
+      if (isApiError(error) || isKycApiError(error) || isJobsApiError(error) || isFeedApiError(error)) {
         sendJson(res, error.status, {
           error: {
             code: error.code,

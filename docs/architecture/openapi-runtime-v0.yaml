@@ -12,6 +12,7 @@ tags:
   - name: Health
   - name: Auth
   - name: Jobs
+  - name: Feed
   - name: Identity
   - name: Admin
 paths:
@@ -380,6 +381,123 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApplicationJourneyResponse'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/ApiError'
+        '404':
+          $ref: '#/components/responses/ApiError'
+
+  /feed/posts:
+    get:
+      tags: [Feed]
+      summary: List feed posts for guest/auth user
+      security: []
+      parameters:
+        - in: query
+          name: q
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: category
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: cursor
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+        - in: query
+          name: limit
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FeedListResponse'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/ApiError'
+
+  /users/me/saved-posts:
+    get:
+      tags: [Feed]
+      summary: List saved posts for authenticated user
+      parameters:
+        - in: query
+          name: cursor
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+        - in: query
+          name: limit
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FeedListResponse'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/ApiError'
+    post:
+      tags: [Feed]
+      summary: Save a feed post for authenticated user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SavePostRequest'
+      responses:
+        '200':
+          description: Saved state updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SavePostResponse'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/ApiError'
+        '404':
+          $ref: '#/components/responses/ApiError'
+
+  /users/me/saved-posts/{postId}:
+    delete:
+      tags: [Feed]
+      summary: Remove saved feed post for authenticated user
+      parameters:
+        - in: path
+          name: postId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Saved state updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SavePostResponse'
         '400':
           $ref: '#/components/responses/ApiError'
         '401':
@@ -1054,6 +1172,69 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ApplicationJourneyEvent'
+
+    FeedViewerState:
+      type: object
+      required: [authenticated, saved]
+      properties:
+        authenticated:
+          type: boolean
+        saved:
+          type: boolean
+
+    FeedPost:
+      type: object
+      required: [id, title, excerpt, category, author, imageUrl, publishedAt, viewerState]
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        excerpt:
+          type: string
+        category:
+          type: string
+        author:
+          type: string
+        imageUrl:
+          type: string
+          nullable: true
+        publishedAt:
+          type: string
+          format: date-time
+        viewerState:
+          $ref: '#/components/schemas/FeedViewerState'
+
+    FeedListResponse:
+      type: object
+      required: [items, pageInfo]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/FeedPost'
+        pageInfo:
+          $ref: '#/components/schemas/JobPageInfo'
+
+    SavePostRequest:
+      type: object
+      required: [postId]
+      properties:
+        postId:
+          type: string
+
+    SavePostResponse:
+      type: object
+      required: [saved, postId]
+      properties:
+        saved:
+          type: boolean
+        created:
+          type: boolean
+        removed:
+          type: boolean
+        postId:
+          type: string
 
     KycTrustStatus:
       type: string

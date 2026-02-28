@@ -112,6 +112,12 @@ Expected output akhir: `DEV_ALL_CHECK_OK`
 - `GET /users/me/applications`
 - `GET /users/me/applications/{applicationId}/journey`
 
+### Feed
+- `GET /feed/posts`
+- `GET /users/me/saved-posts`
+- `POST /users/me/saved-posts`
+- `DELETE /users/me/saved-posts/{postId}`
+
 ### Identity/KYC
 - `POST /identity/kyc/sessions`
 - `POST /identity/kyc/sessions/{sessionId}/submit`
