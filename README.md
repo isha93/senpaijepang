@@ -118,6 +118,11 @@ Expected output akhir: `DEV_ALL_CHECK_OK`
 - `POST /users/me/saved-posts`
 - `DELETE /users/me/saved-posts/{postId}`
 
+### Profile
+- `GET /users/me/profile`
+- `GET /users/me/verification-documents`
+- `POST /users/me/verification/final-request`
+
 ### Identity/KYC
 - `POST /identity/kyc/sessions`
 - `POST /identity/kyc/sessions/{sessionId}/submit`

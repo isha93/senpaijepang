@@ -5,6 +5,7 @@ import { InMemoryAuthStore } from './auth/store.js';
 import { createKycService, isKycApiError } from './identity/kyc-service.js';
 import { createJobsService, isJobsApiError } from './jobs/service.js';
 import { createFeedService, isFeedApiError } from './feed/service.js';
+import { createProfileService, isProfileApiError } from './profile/service.js';
 import { createLogger } from './observability/logger.js';
 import { InMemoryApiMetrics } from './observability/metrics.js';
 
@@ -177,7 +178,17 @@ function authenticateAdminRequest(req, res, adminApiKey) {
   return true;
 }
 
-async function handleRequest(req, res, authService, kycService, jobsService, feedService, adminApiKey, metrics) {
+async function handleRequest(
+  req,
+  res,
+  authService,
+  kycService,
+  jobsService,
+  feedService,
+  profileService,
+  adminApiKey,
+  metrics
+) {
   const url = new URL(req.url || '/', 'http://localhost');
 
   if (req.method === 'OPTIONS') {
@@ -461,6 +472,44 @@ async function handleRequest(req, res, authService, kycService, jobsService, fee
     return;
   }
 
+  if (req.method === 'GET' && url.pathname === '/users/me/profile') {
+    const user = await authenticateRequest(req, res, authService);
+    if (!user) {
+      return;
+    }
+
+    const result = await profileService.getProfile({ userId: user.id });
+    sendJson(res, 200, result);
+    return;
+  }
+
+  if (req.method === 'GET' && url.pathname === '/users/me/verification-documents') {
+    const user = await authenticateRequest(req, res, authService);
+    if (!user) {
+      return;
+    }
+
+    const result = await profileService.listVerificationDocuments({ userId: user.id });
+    sendJson(res, 200, result);
+    return;
+  }
+
+  if (req.method === 'POST' && url.pathname === '/users/me/verification/final-request') {
+    const user = await authenticateRequest(req, res, authService);
+    if (!user) {
+      return;
+    }
+
+    const body = await readJsonBody(req);
+    const result = await profileService.requestFinalVerification({
+      userId: user.id,
+      source: body.source,
+      note: body.note
+    });
+    sendJson(res, result.created ? 201 : 200, result);
+    return;
+  }
+
   if (req.method === 'POST' && url.pathname === '/users/me/saved-posts') {
     const user = await authenticateRequest(req, res, authService);
     if (!user) {
@@ -577,11 +626,12 @@ async function handleRequest(req, res, authService, kycService, jobsService, fee
   });
 }
 
-export function createServer({ authService, kycService, jobsService, feedService, adminApiKey } = {}) {
+export function createServer({ authService, kycService, jobsService, feedService, profileService, adminApiKey } = {}) {
   const resolvedAuthService = authService || createAuthService({ store: new InMemoryAuthStore() });
   const resolvedKycService = kycService || createKycService({ store: resolvedAuthService.store });
   const resolvedJobsService = jobsService || createJobsService();
   const resolvedFeedService = feedService || createFeedService();
+  const resolvedProfileService = profileService || createProfileService({ store: resolvedAuthService.store });
   const resolvedAdminApiKey =
     adminApiKey !== undefined ? String(adminApiKey).trim() : String(process.env.ADMIN_API_KEY || '').trim();
   const logger = createLogger({ env: process.env, service: 'api' });
@@ -631,10 +681,17 @@ export function createServer({ authService, kycService, jobsService, feedService
       resolvedKycService,
       resolvedJobsService,
       resolvedFeedService,
+      resolvedProfileService,
       resolvedAdminApiKey,
       metrics
     ).catch((error) => {
-      if (isApiError(error) || isKycApiError(error) || isJobsApiError(error) || isFeedApiError(error)) {
+      if (
+        isApiError(error) ||
+        isKycApiError(error) ||
+        isJobsApiError(error) ||
+        isFeedApiError(error) ||
+        isProfileApiError(error)
+      ) {
         sendJson(res, error.status, {
           error: {
             code: error.code,

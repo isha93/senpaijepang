@@ -42,6 +42,11 @@ Feed:
 - `POST /users/me/saved-posts`
 - `DELETE /users/me/saved-posts/{postId}`
 
+Profile:
+- `GET /users/me/profile`
+- `GET /users/me/verification-documents`
+- `POST /users/me/verification/final-request`
+
 Identity/KYC:
 - `POST /identity/kyc/sessions`
 - `POST /identity/kyc/sessions/{sessionId}/submit`
@@ -121,6 +126,7 @@ API guardrails yang aktif:
 - Admin model masih shared key, belum role-based auth.
 - Webhook processing masih stub (belum vendor-specific signature verification).
 - Jobs, applications, and feed data source masih seed/in-memory (belum persistence DB + admin CRUD).
+- Profile update endpoint (`PATCH /users/me/profile`) belum ada; saat ini profile masih read-only aggregation.
 
 ## 11. Change Control
 - Setiap perubahan endpoint runtime wajib update `openapi-runtime-v0.yaml` dan file ini di commit yang sama.

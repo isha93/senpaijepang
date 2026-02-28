@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: SenpaiJepang API (Runtime v0)
-  version: 0.8.0
+  version: 0.9.0
   description: Runtime API contract implemented in repository as of 2026-02-28.
 servers:
   - url: http://localhost:4000
@@ -13,6 +13,7 @@ tags:
   - name: Auth
   - name: Jobs
   - name: Feed
+  - name: Profile
   - name: Identity
   - name: Admin
 paths:
@@ -503,6 +504,70 @@ paths:
         '401':
           $ref: '#/components/responses/ApiError'
         '404':
+          $ref: '#/components/responses/ApiError'
+
+  /users/me/profile:
+    get:
+      tags: [Profile]
+      summary: Get profile aggregate and verification summary for authenticated user
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfileResponse'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/ApiError'
+        '404':
+          $ref: '#/components/responses/ApiError'
+
+  /users/me/verification-documents:
+    get:
+      tags: [Profile]
+      summary: Get verification document checklist for authenticated user
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VerificationDocumentsResponse'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/ApiError'
+
+  /users/me/verification/final-request:
+    post:
+      tags: [Profile]
+      summary: Submit final verification request (idempotent per latest session)
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FinalVerificationRequestBody'
+      responses:
+        '201':
+          description: Final request created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FinalVerificationRequestResponse'
+        '200':
+          description: Existing final request returned (idempotent)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FinalVerificationRequestResponse'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/ApiError'
+        '409':
           $ref: '#/components/responses/ApiError'
 
   /identity/kyc/sessions:
@@ -1235,6 +1300,221 @@ components:
           type: boolean
         postId:
           type: string
+
+    ProfileVerificationStatus:
+      type: string
+      enum: [NOT_STARTED, IN_PROGRESS, MANUAL_REVIEW, VERIFIED, REJECTED]
+
+    ProfileTrustScoreLabel:
+      type: string
+      enum: [UNVERIFIED, BUILDING_TRUST, UNDER_REVIEW, TRUSTED, ACTION_REQUIRED]
+
+    VerificationDocumentStatus:
+      type: string
+      enum: [MISSING, PENDING, VERIFIED, REJECTED]
+
+    FinalVerificationRequest:
+      type: object
+      required: [id, sessionId, status, source, requestedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        sessionId:
+          type: string
+          format: uuid
+          nullable: true
+        status:
+          type: string
+          enum: [REQUESTED]
+        source:
+          type: string
+        note:
+          type: string
+          nullable: true
+        requestedAt:
+          type: string
+          format: date-time
+        documentsCount:
+          type: integer
+          nullable: true
+
+    VerificationSessionSummary:
+      type: object
+      required: [id, status, trustStatus, submittedAt, reviewedAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          $ref: '#/components/schemas/KycRawStatus'
+        trustStatus:
+          $ref: '#/components/schemas/ProfileVerificationStatus'
+        submittedAt:
+          type: string
+          format: date-time
+          nullable: true
+        reviewedAt:
+          type: string
+          format: date-time
+          nullable: true
+        updatedAt:
+          type: string
+          format: date-time
+
+    VerificationDocumentItem:
+      type: object
+      required: [documentType, status, required, uploadedAt, reviewedAt]
+      properties:
+        documentType:
+          type: string
+        status:
+          $ref: '#/components/schemas/VerificationDocumentStatus'
+        required:
+          type: boolean
+        documentId:
+          type: string
+          format: uuid
+          nullable: true
+        objectKey:
+          type: string
+          nullable: true
+        uploadedAt:
+          type: string
+          format: date-time
+          nullable: true
+        reviewedAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    VerificationDocumentsSummary:
+      type: object
+      required: [requiredTotal, uploadedRequired, verifiedRequired, missingRequired, allRequiredUploaded]
+      properties:
+        requiredTotal:
+          type: integer
+        uploadedRequired:
+          type: integer
+        verifiedRequired:
+          type: integer
+        missingRequired:
+          type: integer
+        allRequiredUploaded:
+          type: boolean
+
+    UserVerificationOverview:
+      type: object
+      required:
+        [
+          sessionId,
+          sessionStatus,
+          trustStatus,
+          documentsUploaded,
+          requiredDocuments,
+          requiredDocumentsUploaded,
+          finalRequest
+        ]
+      properties:
+        sessionId:
+          type: string
+          format: uuid
+          nullable: true
+        sessionStatus:
+          allOf:
+            - $ref: '#/components/schemas/KycRawStatus'
+          nullable: true
+        trustStatus:
+          $ref: '#/components/schemas/ProfileVerificationStatus'
+        documentsUploaded:
+          type: integer
+        requiredDocuments:
+          type: integer
+        requiredDocumentsUploaded:
+          type: integer
+        finalRequest:
+          allOf:
+            - $ref: '#/components/schemas/FinalVerificationRequest'
+          nullable: true
+
+    UserProfile:
+      type: object
+      required:
+        [
+          id,
+          fullName,
+          email,
+          avatarUrl,
+          profileCompletionPercent,
+          trustScoreLabel,
+          verificationStatus,
+          verification
+        ]
+      properties:
+        id:
+          type: string
+          format: uuid
+        fullName:
+          type: string
+        email:
+          type: string
+          format: email
+        avatarUrl:
+          type: string
+          nullable: true
+        profileCompletionPercent:
+          type: integer
+          minimum: 0
+          maximum: 100
+        trustScoreLabel:
+          $ref: '#/components/schemas/ProfileTrustScoreLabel'
+        verificationStatus:
+          $ref: '#/components/schemas/ProfileVerificationStatus'
+        verification:
+          $ref: '#/components/schemas/UserVerificationOverview'
+
+    ProfileResponse:
+      type: object
+      required: [profile]
+      properties:
+        profile:
+          $ref: '#/components/schemas/UserProfile'
+
+    VerificationDocumentsResponse:
+      type: object
+      required: [session, documents, summary]
+      properties:
+        session:
+          allOf:
+            - $ref: '#/components/schemas/VerificationSessionSummary'
+          nullable: true
+        documents:
+          type: array
+          items:
+            $ref: '#/components/schemas/VerificationDocumentItem'
+        summary:
+          $ref: '#/components/schemas/VerificationDocumentsSummary'
+
+    FinalVerificationRequestBody:
+      type: object
+      properties:
+        source:
+          type: string
+          maxLength: 64
+        note:
+          type: string
+          maxLength: 500
+
+    FinalVerificationRequestResponse:
+      type: object
+      required: [created, request, session]
+      properties:
+        created:
+          type: boolean
+        request:
+          $ref: '#/components/schemas/FinalVerificationRequest'
+        session:
+          $ref: '#/components/schemas/VerificationSessionSummary'
 
     KycTrustStatus:
       type: string
