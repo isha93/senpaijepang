@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+
 class JobsApiError extends Error {
   constructor(status, code, message) {
     super(message);
@@ -9,6 +11,7 @@ class JobsApiError extends Error {
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 50;
 const EMPLOYMENT_TYPES = new Set(['FULL_TIME', 'PART_TIME', 'CONTRACT']);
+const APPLICATION_STATUSES = new Set(['SUBMITTED', 'IN_REVIEW', 'INTERVIEW', 'OFFERED', 'HIRED', 'REJECTED']);
 
 const JOB_SEED_DATA = [
   {
@@ -173,6 +176,39 @@ function normalizeLocation(value) {
     .toLowerCase();
 }
 
+function normalizeApplicationStatus(status) {
+  if (status === undefined || status === null || String(status).trim() === '') {
+    return null;
+  }
+  const normalized = String(status).trim().toUpperCase();
+  if (!APPLICATION_STATUSES.has(normalized)) {
+    throw new JobsApiError(
+      400,
+      'invalid_application_status',
+      `status must be one of ${Array.from(APPLICATION_STATUSES).join(', ')}`
+    );
+  }
+  return normalized;
+}
+
+function normalizeApplicationNote(note) {
+  if (note === undefined || note === null) {
+    return null;
+  }
+  const normalized = String(note).trim();
+  if (!normalized) {
+    return null;
+  }
+  if (normalized.length > 1000) {
+    throw new JobsApiError(400, 'invalid_note', 'note must be <= 1000 characters');
+  }
+  return normalized;
+}
+
+function makeUserJobKey(userId, jobId) {
+  return `${userId}:${jobId}`;
+}
+
 function buildViewerState({ authenticated, saved }) {
   return {
     authenticated,
@@ -230,11 +266,42 @@ function toJobDetail(job, viewerState) {
   };
 }
 
+function toApplicationSummary(application, job) {
+  return {
+    id: application.id,
+    jobId: application.jobId,
+    status: application.status,
+    note: application.note,
+    createdAt: application.createdAt,
+    updatedAt: application.updatedAt,
+    job: {
+      id: job.id,
+      title: job.title,
+      employmentType: job.employmentType,
+      visaSponsorship: job.visaSponsorship,
+      location: {
+        countryCode: job.location.countryCode,
+        city: job.location.city,
+        displayLabel: job.location.displayLabel
+      },
+      employer: {
+        id: job.employer.id,
+        name: job.employer.name,
+        logoUrl: job.employer.logoUrl,
+        isVerifiedEmployer: job.employer.isVerifiedEmployer
+      }
+    }
+  };
+}
+
 export class JobsService {
   constructor({ jobs = JOB_SEED_DATA } = {}) {
     this.jobs = Array.from(jobs);
     this.jobById = new Map(this.jobs.map((job) => [job.id, job]));
     this.savedByUserId = new Map();
+    this.applicationsById = new Map();
+    this.applicationIdsByUserId = new Map();
+    this.applicationIdByUserJob = new Map();
   }
 
   getSavedMapForUser(userId) {
@@ -248,6 +315,26 @@ export class JobsService {
     if (!userId) return false;
     const savedMap = this.savedByUserId.get(userId);
     return Boolean(savedMap && savedMap.has(jobId));
+  }
+
+  getApplicationIdsForUser(userId) {
+    if (!this.applicationIdsByUserId.has(userId)) {
+      this.applicationIdsByUserId.set(userId, []);
+    }
+    return this.applicationIdsByUserId.get(userId);
+  }
+
+  getJobByIdOrThrow(jobId) {
+    const normalizedJobId = String(jobId || '').trim();
+    if (!normalizedJobId) {
+      throw new JobsApiError(400, 'invalid_job_id', 'jobId is required');
+    }
+
+    const job = this.jobById.get(normalizedJobId);
+    if (!job) {
+      throw new JobsApiError(404, 'job_not_found', 'job not found');
+    }
+    return job;
   }
 
   listJobs({ q, employmentType, visaSponsored, location, cursor, limit, userId }) {
@@ -301,15 +388,7 @@ export class JobsService {
   }
 
   getJobDetail({ jobId, userId }) {
-    const normalizedJobId = String(jobId || '').trim();
-    if (!normalizedJobId) {
-      throw new JobsApiError(400, 'invalid_job_id', 'jobId is required');
-    }
-
-    const job = this.jobById.get(normalizedJobId);
-    if (!job) {
-      throw new JobsApiError(404, 'job_not_found', 'job not found');
-    }
+    const job = this.getJobByIdOrThrow(jobId);
 
     return toJobDetail(
       job,
@@ -353,42 +432,122 @@ export class JobsService {
   }
 
   saveJob({ userId, jobId }) {
-    const normalizedJobId = String(jobId || '').trim();
-    if (!normalizedJobId) {
-      throw new JobsApiError(400, 'invalid_job_id', 'jobId is required');
-    }
-    if (!this.jobById.has(normalizedJobId)) {
-      throw new JobsApiError(404, 'job_not_found', 'job not found');
-    }
+    const job = this.getJobByIdOrThrow(jobId);
 
     const savedMap = this.getSavedMapForUser(userId);
-    const isNew = !savedMap.has(normalizedJobId);
+    const isNew = !savedMap.has(job.id);
     if (isNew) {
-      savedMap.set(normalizedJobId, Date.now());
+      savedMap.set(job.id, Date.now());
     }
 
     return {
       saved: true,
       created: isNew,
-      jobId: normalizedJobId
+      jobId: job.id
     };
   }
 
   unsaveJob({ userId, jobId }) {
-    const normalizedJobId = String(jobId || '').trim();
-    if (!normalizedJobId) {
-      throw new JobsApiError(400, 'invalid_job_id', 'jobId is required');
-    }
-    if (!this.jobById.has(normalizedJobId)) {
-      throw new JobsApiError(404, 'job_not_found', 'job not found');
-    }
+    const job = this.getJobByIdOrThrow(jobId);
 
     const savedMap = this.getSavedMapForUser(userId);
-    const removed = savedMap.delete(normalizedJobId);
+    const removed = savedMap.delete(job.id);
     return {
       saved: false,
       removed,
-      jobId: normalizedJobId
+      jobId: job.id
+    };
+  }
+
+  applyToJob({ userId, jobId, note }) {
+    const job = this.getJobByIdOrThrow(jobId);
+    const normalizedNote = normalizeApplicationNote(note);
+    const userJobKey = makeUserJobKey(userId, job.id);
+
+    const existingId = this.applicationIdByUserJob.get(userJobKey);
+    if (existingId) {
+      const existing = this.applicationsById.get(existingId);
+      return {
+        created: false,
+        application: toApplicationSummary(existing, job)
+      };
+    }
+
+    const now = new Date().toISOString();
+    const application = {
+      id: randomUUID(),
+      userId,
+      jobId: job.id,
+      status: 'SUBMITTED',
+      note: normalizedNote,
+      createdAt: now,
+      updatedAt: now,
+      journey: [
+        {
+          id: randomUUID(),
+          status: 'SUBMITTED',
+          title: 'Application submitted',
+          description: normalizedNote || 'Application was submitted by candidate',
+          createdAt: now
+        }
+      ]
+    };
+
+    this.applicationsById.set(application.id, application);
+    this.applicationIdByUserJob.set(userJobKey, application.id);
+    const userApplicationIds = this.getApplicationIdsForUser(userId);
+    userApplicationIds.push(application.id);
+
+    return {
+      created: true,
+      application: toApplicationSummary(application, job)
+    };
+  }
+
+  listUserApplications({ userId, cursor, limit, status }) {
+    const normalizedCursor = normalizeCursor(cursor);
+    const normalizedLimit = normalizeLimit(limit);
+    const normalizedStatus = normalizeApplicationStatus(status);
+    const ids = this.getApplicationIdsForUser(userId)
+      .map((applicationId) => this.applicationsById.get(applicationId))
+      .filter(Boolean)
+      .filter((application) => (normalizedStatus ? application.status === normalizedStatus : true))
+      .sort((left, right) => Date.parse(right.updatedAt) - Date.parse(left.updatedAt))
+      .map((application) => application.id);
+
+    const pagedIds = ids.slice(normalizedCursor, normalizedCursor + normalizedLimit);
+    const nextOffset = normalizedCursor + pagedIds.length;
+    const nextCursor = nextOffset < ids.length ? String(nextOffset) : null;
+
+    return {
+      items: pagedIds.map((applicationId) => {
+        const application = this.applicationsById.get(applicationId);
+        return toApplicationSummary(application, this.getJobByIdOrThrow(application.jobId));
+      }),
+      pageInfo: {
+        cursor: String(normalizedCursor),
+        nextCursor,
+        limit: normalizedLimit,
+        total: ids.length
+      }
+    };
+  }
+
+  getApplicationJourney({ userId, applicationId }) {
+    const normalizedApplicationId = String(applicationId || '').trim();
+    if (!normalizedApplicationId) {
+      throw new JobsApiError(400, 'invalid_application_id', 'applicationId is required');
+    }
+
+    const application = this.applicationsById.get(normalizedApplicationId);
+    if (!application || application.userId !== userId) {
+      throw new JobsApiError(404, 'application_not_found', 'application not found');
+    }
+
+    const job = this.getJobByIdOrThrow(application.jobId);
+    return {
+      application: toApplicationSummary(application, job),
+      journey: Array.from(application.journey)
     };
   }
 }

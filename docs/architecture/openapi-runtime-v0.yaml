@@ -215,6 +215,42 @@ paths:
         '404':
           $ref: '#/components/responses/ApiError'
 
+  /jobs/{jobId}/applications:
+    post:
+      tags: [Jobs]
+      summary: Apply to a job for authenticated user
+      parameters:
+        - in: path
+          name: jobId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JobApplyRequest'
+      responses:
+        '201':
+          description: Application created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobApplyResponse'
+        '200':
+          description: Existing application returned (idempotent)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobApplyResponse'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/ApiError'
+        '404':
+          $ref: '#/components/responses/ApiError'
+
   /users/me/saved-jobs:
     get:
       tags: [Jobs]
@@ -284,6 +320,66 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SaveJobResponse'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/ApiError'
+        '404':
+          $ref: '#/components/responses/ApiError'
+
+  /users/me/applications:
+    get:
+      tags: [Jobs]
+      summary: List applications for authenticated user
+      parameters:
+        - in: query
+          name: cursor
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+        - in: query
+          name: limit
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+        - in: query
+          name: status
+          required: false
+          schema:
+            $ref: '#/components/schemas/ApplicationStatus'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApplicationListResponse'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/ApiError'
+
+  /users/me/applications/{applicationId}/journey:
+    get:
+      tags: [Jobs]
+      summary: Get application journey timeline
+      parameters:
+        - in: path
+          name: applicationId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApplicationJourneyResponse'
         '400':
           $ref: '#/components/responses/ApiError'
         '401':
@@ -862,6 +958,102 @@ components:
           type: boolean
         jobId:
           type: string
+
+    ApplicationStatus:
+      type: string
+      enum: [SUBMITTED, IN_REVIEW, INTERVIEW, OFFERED, HIRED, REJECTED]
+
+    JobApplyRequest:
+      type: object
+      properties:
+        note:
+          type: string
+          maxLength: 1000
+
+    JobApplicationSummary:
+      type: object
+      required: [id, jobId, status, note, createdAt, updatedAt, job]
+      properties:
+        id:
+          type: string
+          format: uuid
+        jobId:
+          type: string
+        status:
+          $ref: '#/components/schemas/ApplicationStatus'
+        note:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        job:
+          type: object
+          required: [id, title, employmentType, visaSponsorship, location, employer]
+          properties:
+            id:
+              type: string
+            title:
+              type: string
+            employmentType:
+              $ref: '#/components/schemas/JobEmploymentType'
+            visaSponsorship:
+              type: boolean
+            location:
+              $ref: '#/components/schemas/JobLocationSummary'
+            employer:
+              $ref: '#/components/schemas/JobEmployer'
+
+    JobApplyResponse:
+      type: object
+      required: [created, application]
+      properties:
+        created:
+          type: boolean
+        application:
+          $ref: '#/components/schemas/JobApplicationSummary'
+
+    ApplicationJourneyEvent:
+      type: object
+      required: [id, status, title, description, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          $ref: '#/components/schemas/ApplicationStatus'
+        title:
+          type: string
+        description:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    ApplicationListResponse:
+      type: object
+      required: [items, pageInfo]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/JobApplicationSummary'
+        pageInfo:
+          $ref: '#/components/schemas/JobPageInfo'
+
+    ApplicationJourneyResponse:
+      type: object
+      required: [application, journey]
+      properties:
+        application:
+          $ref: '#/components/schemas/JobApplicationSummary'
+        journey:
+          type: array
+          items:
+            $ref: '#/components/schemas/ApplicationJourneyEvent'
 
     KycTrustStatus:
       type: string

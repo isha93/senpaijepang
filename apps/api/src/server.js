@@ -74,6 +74,16 @@ function matchSavedJobRoute(pathname) {
   return match ? match[1] : null;
 }
 
+function matchJobApplicationRoute(pathname) {
+  const match = String(pathname || '').match(/^\/jobs\/([^/]+)\/applications$/);
+  return match ? match[1] : null;
+}
+
+function matchApplicationJourneyRoute(pathname) {
+  const match = String(pathname || '').match(/^\/users\/me\/applications\/([^/]+)\/journey$/);
+  return match ? match[1] : null;
+}
+
 async function readJsonBody(req) {
   return new Promise((resolve, reject) => {
     let raw = '';
@@ -202,6 +212,23 @@ async function handleRequest(req, res, authService, kycService, jobsService, adm
       userId: user?.id || null
     });
     sendJson(res, 200, result);
+    return;
+  }
+
+  const applyJobId = req.method === 'POST' ? matchJobApplicationRoute(url.pathname) : null;
+  if (req.method === 'POST' && applyJobId) {
+    const user = await authenticateRequest(req, res, authService);
+    if (!user) {
+      return;
+    }
+
+    const body = await readJsonBody(req);
+    const result = await jobsService.applyToJob({
+      userId: user.id,
+      jobId: applyJobId,
+      note: body.note
+    });
+    sendJson(res, result.created ? 201 : 200, result);
     return;
   }
 
@@ -379,6 +406,37 @@ async function handleRequest(req, res, authService, kycService, jobsService, adm
       userId: user.id,
       cursor: url.searchParams.get('cursor') || undefined,
       limit: url.searchParams.get('limit') || undefined
+    });
+    sendJson(res, 200, result);
+    return;
+  }
+
+  if (req.method === 'GET' && url.pathname === '/users/me/applications') {
+    const user = await authenticateRequest(req, res, authService);
+    if (!user) {
+      return;
+    }
+
+    const result = await jobsService.listUserApplications({
+      userId: user.id,
+      cursor: url.searchParams.get('cursor') || undefined,
+      limit: url.searchParams.get('limit') || undefined,
+      status: url.searchParams.get('status') || undefined
+    });
+    sendJson(res, 200, result);
+    return;
+  }
+
+  const applicationJourneyId = req.method === 'GET' ? matchApplicationJourneyRoute(url.pathname) : null;
+  if (req.method === 'GET' && applicationJourneyId) {
+    const user = await authenticateRequest(req, res, authService);
+    if (!user) {
+      return;
+    }
+
+    const result = await jobsService.getApplicationJourney({
+      userId: user.id,
+      applicationId: applicationJourneyId
     });
     sendJson(res, 200, result);
     return;

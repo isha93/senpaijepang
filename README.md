@@ -105,9 +105,12 @@ Expected output akhir: `DEV_ALL_CHECK_OK`
 ### Jobs
 - `GET /jobs`
 - `GET /jobs/{jobId}`
+- `POST /jobs/{jobId}/applications`
 - `GET /users/me/saved-jobs`
 - `POST /users/me/saved-jobs`
 - `DELETE /users/me/saved-jobs/{jobId}`
+- `GET /users/me/applications`
+- `GET /users/me/applications/{applicationId}/journey`
 
 ### Identity/KYC
 - `POST /identity/kyc/sessions`
