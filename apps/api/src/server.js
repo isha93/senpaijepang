@@ -56,6 +56,26 @@ function getIdempotencyKeyHeader(req) {
   return String(req.headers['x-idempotency-key'] || '').trim();
 }
 
+function normalizeRoleCodes(roleCodes, fallback = ['super_admin']) {
+  const rawValues = Array.isArray(roleCodes) ? roleCodes : String(roleCodes || '').split(',');
+  const values = rawValues
+    .map((value) => String(value || '').trim().toLowerCase())
+    .filter(Boolean);
+  const normalized = values.length > 0 ? values : fallback;
+  return new Set(normalized);
+}
+
+function normalizeRuntimePath(pathname) {
+  const normalized = String(pathname || '/');
+  if (normalized === '/v1' || normalized === '/v1/') {
+    return '/';
+  }
+  if (normalized.startsWith('/v1/')) {
+    return normalized.slice('/v1'.length);
+  }
+  return normalized;
+}
+
 function matchKycSubmitRoute(pathname) {
   const match = String(pathname || '').match(/^\/identity\/kyc\/sessions\/([^/]+)\/submit$/);
   return match ? match[1] : null;
@@ -145,7 +165,25 @@ async function authenticateOptionalRequest(req, authService) {
   return authService.authenticateAccessToken(token);
 }
 
-function authenticateAdminRequest(req, res, adminApiKey) {
+async function authenticateAdminRequest(req, res, authService, adminApiKey, adminRoleCodes) {
+  const accessToken = getBearerToken(req);
+  if (accessToken) {
+    const user = await authService.authenticateAccessToken(accessToken);
+    const hasRole = (user.roles || []).some((roleCode) =>
+      adminRoleCodes.has(String(roleCode || '').trim().toLowerCase())
+    );
+    if (!hasRole) {
+      sendJson(res, 403, {
+        error: {
+          code: 'insufficient_admin_role',
+          message: `one of admin roles is required: ${Array.from(adminRoleCodes).join(', ')}`
+        }
+      });
+      return null;
+    }
+    return { mode: 'bearer', user };
+  }
+
   if (!adminApiKey) {
     sendJson(res, 503, {
       error: {
@@ -153,7 +191,7 @@ function authenticateAdminRequest(req, res, adminApiKey) {
         message: 'admin API is disabled'
       }
     });
-    return false;
+    return null;
   }
 
   const providedApiKey = getAdminApiKeyHeader(req);
@@ -164,7 +202,7 @@ function authenticateAdminRequest(req, res, adminApiKey) {
         message: 'x-admin-api-key header is required'
       }
     });
-    return false;
+    return null;
   }
   if (providedApiKey !== adminApiKey) {
     sendJson(res, 403, {
@@ -173,9 +211,10 @@ function authenticateAdminRequest(req, res, adminApiKey) {
         message: 'x-admin-api-key is invalid'
       }
     });
-    return false;
+    return null;
   }
-  return true;
+
+  return { mode: 'api_key', user: null };
 }
 
 async function handleRequest(
@@ -187,26 +226,28 @@ async function handleRequest(
   feedService,
   profileService,
   adminApiKey,
+  adminRoleCodes,
   metrics
 ) {
   const url = new URL(req.url || '/', 'http://localhost');
+  const pathname = normalizeRuntimePath(url.pathname);
 
   if (req.method === 'OPTIONS') {
     sendOptionsResponse(res);
     return;
   }
 
-  if (req.method === 'GET' && url.pathname === '/health') {
+  if (req.method === 'GET' && pathname === '/health') {
     sendJson(res, 200, { status: 'ok', service: 'api', version: '0.1.0' });
     return;
   }
 
-  if (req.method === 'GET' && url.pathname === '/metrics') {
+  if (req.method === 'GET' && pathname === '/metrics') {
     sendJson(res, 200, metrics.snapshot());
     return;
   }
 
-  if (req.method === 'GET' && url.pathname === '/jobs') {
+  if (req.method === 'GET' && pathname === '/jobs') {
     const user = await authenticateOptionalRequest(req, authService);
     const result = await jobsService.listJobs({
       q: url.searchParams.get('q') || undefined,
@@ -221,7 +262,7 @@ async function handleRequest(
     return;
   }
 
-  if (req.method === 'GET' && url.pathname === '/feed/posts') {
+  if (req.method === 'GET' && pathname === '/feed/posts') {
     const user = await authenticateOptionalRequest(req, authService);
     const result = await feedService.listPosts({
       q: url.searchParams.get('q') || undefined,
@@ -234,7 +275,7 @@ async function handleRequest(
     return;
   }
 
-  const jobDetailId = req.method === 'GET' ? matchJobDetailRoute(url.pathname) : null;
+  const jobDetailId = req.method === 'GET' ? matchJobDetailRoute(pathname) : null;
   if (req.method === 'GET' && jobDetailId) {
     const user = await authenticateOptionalRequest(req, authService);
     const result = await jobsService.getJobDetail({
@@ -245,7 +286,7 @@ async function handleRequest(
     return;
   }
 
-  const applyJobId = req.method === 'POST' ? matchJobApplicationRoute(url.pathname) : null;
+  const applyJobId = req.method === 'POST' ? matchJobApplicationRoute(pathname) : null;
   if (req.method === 'POST' && applyJobId) {
     const user = await authenticateRequest(req, res, authService);
     if (!user) {
@@ -262,7 +303,7 @@ async function handleRequest(
     return;
   }
 
-  if (req.method === 'POST' && url.pathname === '/identity/kyc/provider-webhook') {
+  if (req.method === 'POST' && pathname === '/identity/kyc/provider-webhook') {
     const body = await readJsonBody(req);
     const result = await kycService.ingestProviderWebhook({
       webhookSecret: getWebhookSecretHeader(req),
@@ -274,35 +315,35 @@ async function handleRequest(
     return;
   }
 
-  if (req.method === 'POST' && url.pathname === '/auth/register') {
+  if (req.method === 'POST' && pathname === '/auth/register') {
     const body = await readJsonBody(req);
     const result = await authService.register(body);
     sendJson(res, 201, result);
     return;
   }
 
-  if (req.method === 'POST' && url.pathname === '/auth/login') {
+  if (req.method === 'POST' && pathname === '/auth/login') {
     const body = await readJsonBody(req);
     const result = await authService.login(body);
     sendJson(res, 200, result);
     return;
   }
 
-  if (req.method === 'POST' && url.pathname === '/auth/refresh') {
+  if (req.method === 'POST' && pathname === '/auth/refresh') {
     const body = await readJsonBody(req);
     const result = await authService.refresh(body);
     sendJson(res, 200, result);
     return;
   }
 
-  if (req.method === 'POST' && url.pathname === '/auth/logout') {
+  if (req.method === 'POST' && pathname === '/auth/logout') {
     const body = await readJsonBody(req);
     await authService.logout(body);
     sendNoContent(res);
     return;
   }
 
-  if (req.method === 'GET' && url.pathname === '/auth/me') {
+  if (req.method === 'GET' && pathname === '/auth/me') {
     const user = await authenticateRequest(req, res, authService);
     if (!user) {
       return;
@@ -312,7 +353,7 @@ async function handleRequest(
     return;
   }
 
-  if (req.method === 'POST' && url.pathname === '/identity/kyc/sessions') {
+  if (req.method === 'POST' && pathname === '/identity/kyc/sessions') {
     const user = await authenticateRequest(req, res, authService);
     if (!user) {
       return;
@@ -327,7 +368,7 @@ async function handleRequest(
     return;
   }
 
-  if (req.method === 'GET' && url.pathname === '/identity/kyc/status') {
+  if (req.method === 'GET' && pathname === '/identity/kyc/status') {
     const user = await authenticateRequest(req, res, authService);
     if (!user) {
       return;
@@ -338,7 +379,7 @@ async function handleRequest(
     return;
   }
 
-  if (req.method === 'POST' && url.pathname === '/identity/kyc/upload-url') {
+  if (req.method === 'POST' && pathname === '/identity/kyc/upload-url') {
     const user = await authenticateRequest(req, res, authService);
     if (!user) {
       return;
@@ -358,7 +399,7 @@ async function handleRequest(
     return;
   }
 
-  if (req.method === 'POST' && url.pathname === '/identity/kyc/documents') {
+  if (req.method === 'POST' && pathname === '/identity/kyc/documents') {
     const user = await authenticateRequest(req, res, authService);
     if (!user) {
       return;
@@ -377,7 +418,7 @@ async function handleRequest(
     return;
   }
 
-  const submitSessionId = req.method === 'POST' ? matchKycSubmitRoute(url.pathname) : null;
+  const submitSessionId = req.method === 'POST' ? matchKycSubmitRoute(pathname) : null;
   if (req.method === 'POST' && submitSessionId) {
     const user = await authenticateRequest(req, res, authService);
     if (!user) {
@@ -393,7 +434,7 @@ async function handleRequest(
   }
 
   const providerMetadataSessionId =
-    req.method === 'POST' ? matchKycProviderMetadataRoute(url.pathname) : null;
+    req.method === 'POST' ? matchKycProviderMetadataRoute(pathname) : null;
   if (req.method === 'POST' && providerMetadataSessionId) {
     const user = await authenticateRequest(req, res, authService);
     if (!user) {
@@ -411,7 +452,7 @@ async function handleRequest(
     return;
   }
 
-  if (req.method === 'GET' && url.pathname === '/identity/kyc/history') {
+  if (req.method === 'GET' && pathname === '/identity/kyc/history') {
     const user = await authenticateRequest(req, res, authService);
     if (!user) {
       return;
@@ -426,7 +467,7 @@ async function handleRequest(
     return;
   }
 
-  if (req.method === 'GET' && url.pathname === '/users/me/saved-jobs') {
+  if (req.method === 'GET' && pathname === '/users/me/saved-jobs') {
     const user = await authenticateRequest(req, res, authService);
     if (!user) {
       return;
@@ -441,7 +482,7 @@ async function handleRequest(
     return;
   }
 
-  if (req.method === 'GET' && url.pathname === '/users/me/applications') {
+  if (req.method === 'GET' && pathname === '/users/me/applications') {
     const user = await authenticateRequest(req, res, authService);
     if (!user) {
       return;
@@ -457,7 +498,7 @@ async function handleRequest(
     return;
   }
 
-  if (req.method === 'GET' && url.pathname === '/users/me/saved-posts') {
+  if (req.method === 'GET' && pathname === '/users/me/saved-posts') {
     const user = await authenticateRequest(req, res, authService);
     if (!user) {
       return;
@@ -472,7 +513,7 @@ async function handleRequest(
     return;
   }
 
-  if (req.method === 'GET' && url.pathname === '/users/me/profile') {
+  if (req.method === 'GET' && pathname === '/users/me/profile') {
     const user = await authenticateRequest(req, res, authService);
     if (!user) {
       return;
@@ -483,7 +524,7 @@ async function handleRequest(
     return;
   }
 
-  if (req.method === 'PATCH' && url.pathname === '/users/me/profile') {
+  if (req.method === 'PATCH' && pathname === '/users/me/profile') {
     const user = await authenticateRequest(req, res, authService);
     if (!user) {
       return;
@@ -499,7 +540,7 @@ async function handleRequest(
     return;
   }
 
-  if (req.method === 'GET' && url.pathname === '/users/me/verification-documents') {
+  if (req.method === 'GET' && pathname === '/users/me/verification-documents') {
     const user = await authenticateRequest(req, res, authService);
     if (!user) {
       return;
@@ -510,7 +551,7 @@ async function handleRequest(
     return;
   }
 
-  if (req.method === 'POST' && url.pathname === '/users/me/verification/final-request') {
+  if (req.method === 'POST' && pathname === '/users/me/verification/final-request') {
     const user = await authenticateRequest(req, res, authService);
     if (!user) {
       return;
@@ -526,7 +567,7 @@ async function handleRequest(
     return;
   }
 
-  if (req.method === 'POST' && url.pathname === '/users/me/saved-posts') {
+  if (req.method === 'POST' && pathname === '/users/me/saved-posts') {
     const user = await authenticateRequest(req, res, authService);
     if (!user) {
       return;
@@ -541,7 +582,7 @@ async function handleRequest(
     return;
   }
 
-  const savedPostId = req.method === 'DELETE' ? matchSavedPostRoute(url.pathname) : null;
+  const savedPostId = req.method === 'DELETE' ? matchSavedPostRoute(pathname) : null;
   if (req.method === 'DELETE' && savedPostId) {
     const user = await authenticateRequest(req, res, authService);
     if (!user) {
@@ -556,7 +597,7 @@ async function handleRequest(
     return;
   }
 
-  const applicationJourneyId = req.method === 'GET' ? matchApplicationJourneyRoute(url.pathname) : null;
+  const applicationJourneyId = req.method === 'GET' ? matchApplicationJourneyRoute(pathname) : null;
   if (req.method === 'GET' && applicationJourneyId) {
     const user = await authenticateRequest(req, res, authService);
     if (!user) {
@@ -571,7 +612,7 @@ async function handleRequest(
     return;
   }
 
-  if (req.method === 'POST' && url.pathname === '/users/me/saved-jobs') {
+  if (req.method === 'POST' && pathname === '/users/me/saved-jobs') {
     const user = await authenticateRequest(req, res, authService);
     if (!user) {
       return;
@@ -586,7 +627,7 @@ async function handleRequest(
     return;
   }
 
-  const savedJobId = req.method === 'DELETE' ? matchSavedJobRoute(url.pathname) : null;
+  const savedJobId = req.method === 'DELETE' ? matchSavedJobRoute(pathname) : null;
   if (req.method === 'DELETE' && savedJobId) {
     const user = await authenticateRequest(req, res, authService);
     if (!user) {
@@ -601,9 +642,9 @@ async function handleRequest(
     return;
   }
 
-  if (req.method === 'GET' && url.pathname === '/admin/kyc/review-queue') {
-    const authorized = authenticateAdminRequest(req, res, adminApiKey);
-    if (!authorized) {
+  if (req.method === 'GET' && pathname === '/admin/kyc/review-queue') {
+    const adminAuth = await authenticateAdminRequest(req, res, authService, adminApiKey, adminRoleCodes);
+    if (!adminAuth) {
       return;
     }
 
@@ -617,17 +658,18 @@ async function handleRequest(
     return;
   }
 
-  if (req.method === 'POST' && url.pathname === '/admin/kyc/review') {
-    const authorized = authenticateAdminRequest(req, res, adminApiKey);
-    if (!authorized) {
+  if (req.method === 'POST' && pathname === '/admin/kyc/review') {
+    const adminAuth = await authenticateAdminRequest(req, res, authService, adminApiKey, adminRoleCodes);
+    if (!adminAuth) {
       return;
     }
 
     const body = await readJsonBody(req);
+    const reviewedBy = body.reviewedBy || adminAuth.user?.email;
     const result = await kycService.reviewSession({
       sessionId: body.sessionId,
       decision: body.decision,
-      reviewedBy: body.reviewedBy,
+      reviewedBy,
       reason: body.reason
     });
     sendJson(res, 200, result);
@@ -642,7 +684,15 @@ async function handleRequest(
   });
 }
 
-export function createServer({ authService, kycService, jobsService, feedService, profileService, adminApiKey } = {}) {
+export function createServer({
+  authService,
+  kycService,
+  jobsService,
+  feedService,
+  profileService,
+  adminApiKey,
+  adminRoleCodes
+} = {}) {
   const resolvedAuthService = authService || createAuthService({ store: new InMemoryAuthStore() });
   const resolvedKycService = kycService || createKycService({ store: resolvedAuthService.store });
   const resolvedJobsService = jobsService || createJobsService();
@@ -650,11 +700,14 @@ export function createServer({ authService, kycService, jobsService, feedService
   const resolvedProfileService = profileService || createProfileService({ store: resolvedAuthService.store });
   const resolvedAdminApiKey =
     adminApiKey !== undefined ? String(adminApiKey).trim() : String(process.env.ADMIN_API_KEY || '').trim();
+  const resolvedAdminRoleCodes =
+    adminRoleCodes !== undefined ? normalizeRoleCodes(adminRoleCodes) : normalizeRoleCodes(process.env.ADMIN_ROLE_CODES);
   const logger = createLogger({ env: process.env, service: 'api' });
   const metrics = new InMemoryApiMetrics();
 
   return http.createServer((req, res) => {
-    const pathname = new URL(req.url || '/', 'http://localhost').pathname;
+    const rawPathname = new URL(req.url || '/', 'http://localhost').pathname;
+    const pathname = normalizeRuntimePath(rawPathname);
     const requestId = randomUUID();
     const startedAtMs = Date.now();
     let finalized = false;
@@ -663,7 +716,8 @@ export function createServer({ authService, kycService, jobsService, feedService
     logger.info('http.request.started', {
       requestId,
       method: req.method,
-      path: pathname
+      path: rawPathname,
+      routePath: pathname
     });
 
     function finalize() {
@@ -681,7 +735,8 @@ export function createServer({ authService, kycService, jobsService, feedService
       logger.info('http.request.finished', {
         requestId,
         method: req.method,
-        path: pathname,
+        path: rawPathname,
+        routePath: pathname,
         statusCode: res.statusCode,
         durationMs
       });
@@ -699,6 +754,7 @@ export function createServer({ authService, kycService, jobsService, feedService
       resolvedFeedService,
       resolvedProfileService,
       resolvedAdminApiKey,
+      resolvedAdminRoleCodes,
       metrics
     ).catch((error) => {
       if (
@@ -730,7 +786,8 @@ export function createServer({ authService, kycService, jobsService, feedService
       logger.error('http.request.failed', {
         requestId,
         method: req.method,
-        path: pathname,
+        path: rawPathname,
+        routePath: pathname,
         errorName: error?.name || 'Error',
         errorMessage: error?.message || 'unknown error'
       });

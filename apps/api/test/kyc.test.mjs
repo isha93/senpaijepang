@@ -682,6 +682,168 @@ test('admin review queue returns submitted sessions with documents', async () =>
   );
 });
 
+test('admin review endpoint supports bearer token for super_admin role', async () => {
+  const authStore = new InMemoryAuthStore();
+  const authService = createAuthService({ store: authStore });
+
+  await withServer(
+    async (baseUrl) => {
+      const user = await postJson(baseUrl, '/auth/register', {
+        fullName: 'Bearer Review User',
+        email: 'bearer-review-user@example.com',
+        password: 'pass1234'
+      });
+      assert.equal(user.res.status, 201);
+      const userAccessToken = user.body.accessToken;
+
+      const createSession = await postJson(
+        baseUrl,
+        '/identity/kyc/sessions',
+        { provider: 'manual' },
+        { accessToken: userAccessToken }
+      );
+      assert.equal(createSession.res.status, 201);
+      const sessionId = createSession.body.session.id;
+
+      const uploadUrl = await postJson(
+        baseUrl,
+        '/identity/kyc/upload-url',
+        {
+          sessionId,
+          documentType: 'passport',
+          fileName: 'passport.pdf',
+          contentType: 'application/pdf',
+          contentLength: 420000,
+          checksumSha256: EXAMPLE_CHECKSUM
+        },
+        { accessToken: userAccessToken }
+      );
+      assert.equal(uploadUrl.res.status, 201);
+
+      const uploadDocument = await postJson(
+        baseUrl,
+        '/identity/kyc/documents',
+        {
+          sessionId,
+          documentType: 'passport',
+          objectKey: uploadUrl.body.upload.objectKey,
+          checksumSha256: EXAMPLE_CHECKSUM
+        },
+        { accessToken: userAccessToken }
+      );
+      assert.equal(uploadDocument.res.status, 201);
+
+      const submit = await postJson(
+        baseUrl,
+        `/identity/kyc/sessions/${sessionId}/submit`,
+        {},
+        { accessToken: userAccessToken }
+      );
+      assert.equal(submit.res.status, 200);
+
+      const admin = await postJson(baseUrl, '/auth/register', {
+        fullName: 'Bearer Super Admin',
+        email: 'bearer-super-admin@example.com',
+        password: 'pass1234'
+      });
+      assert.equal(admin.res.status, 201);
+      const promoted = await authStore.ensureUserRole({
+        userId: admin.body.user.id,
+        roleCode: 'super_admin'
+      });
+      assert.equal(promoted, true);
+
+      const reviewed = await postJson(
+        baseUrl,
+        '/admin/kyc/review',
+        {
+          sessionId,
+          decision: 'VERIFIED',
+          reason: 'bearer_admin_review'
+        },
+        { accessToken: admin.body.accessToken }
+      );
+
+      assert.equal(reviewed.res.status, 200);
+      assert.equal(reviewed.body.status, 'VERIFIED');
+      assert.equal(reviewed.body.session.status, 'VERIFIED');
+      assert.equal(reviewed.body.session.reviewedBy, 'bearer-super-admin@example.com');
+    },
+    { authService }
+  );
+});
+
+test('admin review bearer auth rejects users without admin role', async () => {
+  const authStore = new InMemoryAuthStore();
+  const authService = createAuthService({ store: authStore });
+
+  await withServer(
+    async (baseUrl) => {
+      const user = await postJson(baseUrl, '/auth/register', {
+        fullName: 'Bearer Non Admin',
+        email: 'bearer-non-admin@example.com',
+        password: 'pass1234'
+      });
+      assert.equal(user.res.status, 201);
+      const accessToken = user.body.accessToken;
+
+      const createSession = await postJson(
+        baseUrl,
+        '/identity/kyc/sessions',
+        { provider: 'manual' },
+        { accessToken }
+      );
+      assert.equal(createSession.res.status, 201);
+      const sessionId = createSession.body.session.id;
+
+      const uploadUrl = await postJson(
+        baseUrl,
+        '/identity/kyc/upload-url',
+        {
+          sessionId,
+          documentType: 'passport',
+          fileName: 'passport.pdf',
+          contentType: 'application/pdf',
+          contentLength: 420000,
+          checksumSha256: EXAMPLE_CHECKSUM
+        },
+        { accessToken }
+      );
+      assert.equal(uploadUrl.res.status, 201);
+
+      const uploadDocument = await postJson(
+        baseUrl,
+        '/identity/kyc/documents',
+        {
+          sessionId,
+          documentType: 'passport',
+          objectKey: uploadUrl.body.upload.objectKey,
+          checksumSha256: EXAMPLE_CHECKSUM
+        },
+        { accessToken }
+      );
+      assert.equal(uploadDocument.res.status, 201);
+
+      const submit = await postJson(baseUrl, `/identity/kyc/sessions/${sessionId}/submit`, {}, { accessToken });
+      assert.equal(submit.res.status, 200);
+
+      const denied = await postJson(
+        baseUrl,
+        '/admin/kyc/review',
+        {
+          sessionId,
+          decision: 'VERIFIED',
+          reason: 'should_be_denied'
+        },
+        { accessToken }
+      );
+      assert.equal(denied.res.status, 403);
+      assert.equal(denied.body.error.code, 'insufficient_admin_role');
+    },
+    { authService }
+  );
+});
+
 test('admin review endpoint disabled when ADMIN_API_KEY is not configured', async () => {
   await withServer(async (baseUrl) => {
     const reviewed = await postJson(baseUrl, '/admin/kyc/review', {
