@@ -102,6 +102,13 @@ Expected output akhir: `DEV_ALL_CHECK_OK`
 - `POST /auth/logout`
 - `GET /auth/me`
 
+### Jobs
+- `GET /jobs`
+- `GET /jobs/{jobId}`
+- `GET /users/me/saved-jobs`
+- `POST /users/me/saved-jobs`
+- `DELETE /users/me/saved-jobs/{jobId}`
+
 ### Identity/KYC
 - `POST /identity/kyc/sessions`
 - `POST /identity/kyc/sessions/{sessionId}/submit`

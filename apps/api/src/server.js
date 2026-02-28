@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { createAuthService, isApiError } from './auth/service.js';
 import { InMemoryAuthStore } from './auth/store.js';
 import { createKycService, isKycApiError } from './identity/kyc-service.js';
+import { createJobsService, isJobsApiError } from './jobs/service.js';
 import { createLogger } from './observability/logger.js';
 import { InMemoryApiMetrics } from './observability/metrics.js';
 
@@ -11,7 +12,7 @@ const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers':
     'Content-Type, Authorization, x-admin-api-key, x-kyc-webhook-secret, x-idempotency-key',
-  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
   'Access-Control-Expose-Headers': 'x-request-id'
 };
 
@@ -63,6 +64,16 @@ function matchKycProviderMetadataRoute(pathname) {
   return match ? match[1] : null;
 }
 
+function matchJobDetailRoute(pathname) {
+  const match = String(pathname || '').match(/^\/jobs\/([^/]+)$/);
+  return match ? match[1] : null;
+}
+
+function matchSavedJobRoute(pathname) {
+  const match = String(pathname || '').match(/^\/users\/me\/saved-jobs\/([^/]+)$/);
+  return match ? match[1] : null;
+}
+
 async function readJsonBody(req) {
   return new Promise((resolve, reject) => {
     let raw = '';
@@ -109,6 +120,14 @@ async function authenticateRequest(req, res, authService) {
   return authService.authenticateAccessToken(token);
 }
 
+async function authenticateOptionalRequest(req, authService) {
+  const token = getBearerToken(req);
+  if (!token) {
+    return null;
+  }
+  return authService.authenticateAccessToken(token);
+}
+
 function authenticateAdminRequest(req, res, adminApiKey) {
   if (!adminApiKey) {
     sendJson(res, 503, {
@@ -142,7 +161,7 @@ function authenticateAdminRequest(req, res, adminApiKey) {
   return true;
 }
 
-async function handleRequest(req, res, authService, kycService, adminApiKey, metrics) {
+async function handleRequest(req, res, authService, kycService, jobsService, adminApiKey, metrics) {
   const url = new URL(req.url || '/', 'http://localhost');
 
   if (req.method === 'OPTIONS') {
@@ -157,6 +176,32 @@ async function handleRequest(req, res, authService, kycService, adminApiKey, met
 
   if (req.method === 'GET' && url.pathname === '/metrics') {
     sendJson(res, 200, metrics.snapshot());
+    return;
+  }
+
+  if (req.method === 'GET' && url.pathname === '/jobs') {
+    const user = await authenticateOptionalRequest(req, authService);
+    const result = await jobsService.listJobs({
+      q: url.searchParams.get('q') || undefined,
+      employmentType: url.searchParams.get('employmentType') || undefined,
+      visaSponsored: url.searchParams.get('visaSponsored') || undefined,
+      location: url.searchParams.get('location') || undefined,
+      cursor: url.searchParams.get('cursor') || undefined,
+      limit: url.searchParams.get('limit') || undefined,
+      userId: user?.id || null
+    });
+    sendJson(res, 200, result);
+    return;
+  }
+
+  const jobDetailId = req.method === 'GET' ? matchJobDetailRoute(url.pathname) : null;
+  if (req.method === 'GET' && jobDetailId) {
+    const user = await authenticateOptionalRequest(req, authService);
+    const result = await jobsService.getJobDetail({
+      jobId: jobDetailId,
+      userId: user?.id || null
+    });
+    sendJson(res, 200, result);
     return;
   }
 
@@ -324,6 +369,51 @@ async function handleRequest(req, res, authService, kycService, adminApiKey, met
     return;
   }
 
+  if (req.method === 'GET' && url.pathname === '/users/me/saved-jobs') {
+    const user = await authenticateRequest(req, res, authService);
+    if (!user) {
+      return;
+    }
+
+    const result = await jobsService.listSavedJobs({
+      userId: user.id,
+      cursor: url.searchParams.get('cursor') || undefined,
+      limit: url.searchParams.get('limit') || undefined
+    });
+    sendJson(res, 200, result);
+    return;
+  }
+
+  if (req.method === 'POST' && url.pathname === '/users/me/saved-jobs') {
+    const user = await authenticateRequest(req, res, authService);
+    if (!user) {
+      return;
+    }
+
+    const body = await readJsonBody(req);
+    const result = await jobsService.saveJob({
+      userId: user.id,
+      jobId: body.jobId
+    });
+    sendJson(res, 200, result);
+    return;
+  }
+
+  const savedJobId = req.method === 'DELETE' ? matchSavedJobRoute(url.pathname) : null;
+  if (req.method === 'DELETE' && savedJobId) {
+    const user = await authenticateRequest(req, res, authService);
+    if (!user) {
+      return;
+    }
+
+    const result = await jobsService.unsaveJob({
+      userId: user.id,
+      jobId: savedJobId
+    });
+    sendJson(res, 200, result);
+    return;
+  }
+
   if (req.method === 'GET' && url.pathname === '/admin/kyc/review-queue') {
     const authorized = authenticateAdminRequest(req, res, adminApiKey);
     if (!authorized) {
@@ -365,9 +455,10 @@ async function handleRequest(req, res, authService, kycService, adminApiKey, met
   });
 }
 
-export function createServer({ authService, kycService, adminApiKey } = {}) {
+export function createServer({ authService, kycService, jobsService, adminApiKey } = {}) {
   const resolvedAuthService = authService || createAuthService({ store: new InMemoryAuthStore() });
   const resolvedKycService = kycService || createKycService({ store: resolvedAuthService.store });
+  const resolvedJobsService = jobsService || createJobsService();
   const resolvedAdminApiKey =
     adminApiKey !== undefined ? String(adminApiKey).trim() : String(process.env.ADMIN_API_KEY || '').trim();
   const logger = createLogger({ env: process.env, service: 'api' });
@@ -410,8 +501,16 @@ export function createServer({ authService, kycService, adminApiKey } = {}) {
     res.on('finish', finalize);
     res.on('close', finalize);
 
-    handleRequest(req, res, resolvedAuthService, resolvedKycService, resolvedAdminApiKey, metrics).catch((error) => {
-      if (isApiError(error) || isKycApiError(error)) {
+    handleRequest(
+      req,
+      res,
+      resolvedAuthService,
+      resolvedKycService,
+      resolvedJobsService,
+      resolvedAdminApiKey,
+      metrics
+    ).catch((error) => {
+      if (isApiError(error) || isKycApiError(error) || isJobsApiError(error)) {
         sendJson(res, error.status, {
           error: {
             code: error.code,

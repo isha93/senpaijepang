@@ -26,6 +26,13 @@ Auth:
 - `POST /auth/logout`
 - `GET /auth/me`
 
+Jobs:
+- `GET /jobs`
+- `GET /jobs/{jobId}`
+- `GET /users/me/saved-jobs`
+- `POST /users/me/saved-jobs`
+- `DELETE /users/me/saved-jobs/{jobId}`
+
 Identity/KYC:
 - `POST /identity/kyc/sessions`
 - `POST /identity/kyc/sessions/{sessionId}/submit`
@@ -104,6 +111,7 @@ API guardrails yang aktif:
 - Runtime belum pakai prefix `/v1`.
 - Admin model masih shared key, belum role-based auth.
 - Webhook processing masih stub (belum vendor-specific signature verification).
+- Jobs data source masih seed in-memory (belum persistence DB + admin CRUD).
 
 ## 11. Change Control
 - Setiap perubahan endpoint runtime wajib update `openapi-runtime-v0.yaml` dan file ini di commit yang sama.

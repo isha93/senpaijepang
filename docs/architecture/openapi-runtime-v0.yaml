@@ -1,8 +1,8 @@
 openapi: 3.0.3
 info:
   title: SenpaiJepang API (Runtime v0)
-  version: 0.7.0
-  description: Runtime API contract implemented in repository as of 2026-02-27.
+  version: 0.8.0
+  description: Runtime API contract implemented in repository as of 2026-02-28.
 servers:
   - url: http://localhost:4000
     description: Local development
@@ -11,6 +11,7 @@ security:
 tags:
   - name: Health
   - name: Auth
+  - name: Jobs
   - name: Identity
   - name: Admin
 paths:
@@ -136,6 +137,158 @@ paths:
                   user:
                     $ref: '#/components/schemas/User'
         '401':
+          $ref: '#/components/responses/ApiError'
+
+  /jobs:
+    get:
+      tags: [Jobs]
+      summary: List available jobs for browse screen
+      security: []
+      parameters:
+        - in: query
+          name: q
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: employmentType
+          required: false
+          schema:
+            $ref: '#/components/schemas/JobEmploymentType'
+        - in: query
+          name: visaSponsored
+          required: false
+          schema:
+            type: boolean
+        - in: query
+          name: location
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: cursor
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+        - in: query
+          name: limit
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobListResponse'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/ApiError'
+
+  /jobs/{jobId}:
+    get:
+      tags: [Jobs]
+      summary: Get job detail with viewer state
+      security: []
+      parameters:
+        - in: path
+          name: jobId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobDetailResponse'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/ApiError'
+        '404':
+          $ref: '#/components/responses/ApiError'
+
+  /users/me/saved-jobs:
+    get:
+      tags: [Jobs]
+      summary: List saved jobs for authenticated user
+      parameters:
+        - in: query
+          name: cursor
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+        - in: query
+          name: limit
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobListResponse'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/ApiError'
+    post:
+      tags: [Jobs]
+      summary: Save a job for authenticated user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SaveJobRequest'
+      responses:
+        '200':
+          description: Saved state updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SaveJobResponse'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/ApiError'
+        '404':
+          $ref: '#/components/responses/ApiError'
+
+  /users/me/saved-jobs/{jobId}:
+    delete:
+      tags: [Jobs]
+      summary: Remove saved job for authenticated user
+      parameters:
+        - in: path
+          name: jobId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Saved state updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SaveJobResponse'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/ApiError'
+        '404':
           $ref: '#/components/responses/ApiError'
 
   /identity/kyc/sessions:
@@ -557,6 +710,157 @@ components:
         accessToken:
           type: string
         refreshToken:
+          type: string
+
+    JobEmploymentType:
+      type: string
+      enum: [FULL_TIME, PART_TIME, CONTRACT]
+
+    JobViewerState:
+      type: object
+      required: [authenticated, saved, canApply, applyCta]
+      properties:
+        authenticated:
+          type: boolean
+        saved:
+          type: boolean
+        canApply:
+          type: boolean
+        applyCta:
+          type: string
+          enum: [LOGIN_TO_APPLY, APPLY]
+
+    JobEmployer:
+      type: object
+      required: [id, name, logoUrl, isVerifiedEmployer]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        logoUrl:
+          type: string
+          nullable: true
+        isVerifiedEmployer:
+          type: boolean
+
+    JobLocationSummary:
+      type: object
+      required: [countryCode, city, displayLabel]
+      properties:
+        countryCode:
+          type: string
+        city:
+          type: string
+        displayLabel:
+          type: string
+
+    JobLocationDetail:
+      allOf:
+        - $ref: '#/components/schemas/JobLocationSummary'
+        - type: object
+          required: [latitude, longitude]
+          properties:
+            latitude:
+              type: number
+            longitude:
+              type: number
+
+    JobSummary:
+      type: object
+      required: [id, title, employmentType, visaSponsorship, location, employer, viewerState]
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        employmentType:
+          $ref: '#/components/schemas/JobEmploymentType'
+        visaSponsorship:
+          type: boolean
+        location:
+          $ref: '#/components/schemas/JobLocationSummary'
+        employer:
+          $ref: '#/components/schemas/JobEmployer'
+        viewerState:
+          $ref: '#/components/schemas/JobViewerState'
+
+    JobDetail:
+      type: object
+      required:
+        [id, title, employmentType, visaSponsorship, description, requirements, location, employer]
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        employmentType:
+          $ref: '#/components/schemas/JobEmploymentType'
+        visaSponsorship:
+          type: boolean
+        description:
+          type: string
+        requirements:
+          type: array
+          items:
+            type: string
+        location:
+          $ref: '#/components/schemas/JobLocationDetail'
+        employer:
+          $ref: '#/components/schemas/JobEmployer'
+
+    JobPageInfo:
+      type: object
+      required: [cursor, nextCursor, limit, total]
+      properties:
+        cursor:
+          type: string
+        nextCursor:
+          type: string
+          nullable: true
+        limit:
+          type: integer
+        total:
+          type: integer
+
+    JobListResponse:
+      type: object
+      required: [items, pageInfo]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/JobSummary'
+        pageInfo:
+          $ref: '#/components/schemas/JobPageInfo'
+
+    JobDetailResponse:
+      type: object
+      required: [job, viewerState]
+      properties:
+        job:
+          $ref: '#/components/schemas/JobDetail'
+        viewerState:
+          $ref: '#/components/schemas/JobViewerState'
+
+    SaveJobRequest:
+      type: object
+      required: [jobId]
+      properties:
+        jobId:
+          type: string
+
+    SaveJobResponse:
+      type: object
+      required: [saved, jobId]
+      properties:
+        saved:
+          type: boolean
+        created:
+          type: boolean
+        removed:
+          type: boolean
+        jobId:
           type: string
 
     KycTrustStatus:
