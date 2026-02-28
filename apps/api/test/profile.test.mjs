@@ -33,6 +33,20 @@ async function postJson(baseUrl, path, payload, { accessToken } = {}) {
   return { res, body: text ? JSON.parse(text) : null };
 }
 
+async function patchJson(baseUrl, path, payload, { accessToken } = {}) {
+  const headers = { 'Content-Type': 'application/json' };
+  if (accessToken) {
+    headers.Authorization = `Bearer ${accessToken}`;
+  }
+  const res = await fetch(`${baseUrl}${path}`, {
+    method: 'PATCH',
+    headers,
+    body: JSON.stringify(payload)
+  });
+  const text = await res.text();
+  return { res, body: text ? JSON.parse(text) : null };
+}
+
 async function getJson(baseUrl, path, { accessToken } = {}) {
   const headers = {};
   if (accessToken) {
@@ -72,6 +86,70 @@ test('profile endpoint returns base profile and missing checklist for new user',
     assert.equal(documents.body.documents[1].status, 'MISSING');
     assert.equal(documents.body.summary.requiredTotal, 2);
     assert.equal(documents.body.summary.missingRequired, 2);
+  });
+});
+
+test('profile patch updates fullName/avatarUrl and validates payload', async () => {
+  await withServer(async (baseUrl) => {
+    const missingToken = await patchJson(baseUrl, '/users/me/profile', {
+      fullName: 'Anonymous Update'
+    });
+    assert.equal(missingToken.res.status, 401);
+    assert.equal(missingToken.body.error.code, 'missing_access_token');
+
+    const register = await postJson(baseUrl, '/auth/register', {
+      fullName: 'Patch Profile User',
+      email: 'patch-profile-user@example.com',
+      password: 'pass1234'
+    });
+    assert.equal(register.res.status, 201);
+    const accessToken = register.body.accessToken;
+
+    const update = await patchJson(
+      baseUrl,
+      '/users/me/profile',
+      {
+        fullName: 'Patch Profile User Updated',
+        avatarUrl: 'https://cdn.example.com/avatar.png'
+      },
+      { accessToken }
+    );
+    assert.equal(update.res.status, 200);
+    assert.equal(update.body.profile.fullName, 'Patch Profile User Updated');
+    assert.equal(update.body.profile.avatarUrl, 'https://cdn.example.com/avatar.png');
+
+    const clearAvatar = await patchJson(
+      baseUrl,
+      '/users/me/profile',
+      {
+        avatarUrl: null
+      },
+      { accessToken }
+    );
+    assert.equal(clearAvatar.res.status, 200);
+    assert.equal(clearAvatar.body.profile.avatarUrl, null);
+
+    const invalidEmpty = await patchJson(baseUrl, '/users/me/profile', {}, { accessToken });
+    assert.equal(invalidEmpty.res.status, 400);
+    assert.equal(invalidEmpty.body.error.code, 'invalid_profile_update');
+
+    const invalidFullName = await patchJson(
+      baseUrl,
+      '/users/me/profile',
+      { fullName: 'a' },
+      { accessToken }
+    );
+    assert.equal(invalidFullName.res.status, 400);
+    assert.equal(invalidFullName.body.error.code, 'invalid_full_name');
+
+    const invalidAvatar = await patchJson(
+      baseUrl,
+      '/users/me/profile',
+      { avatarUrl: 'ftp://example.com/avatar.png' },
+      { accessToken }
+    );
+    assert.equal(invalidAvatar.res.status, 400);
+    assert.equal(invalidAvatar.body.error.code, 'invalid_avatar_url');
   });
 });
 

@@ -11,6 +11,8 @@ class ProfileApiError extends Error {
 const REQUIRED_DOCUMENT_TYPES = ['PASSPORT', 'SELFIE'];
 const FINAL_REQUEST_STATUS = 'REQUESTED';
 const FINAL_REQUEST_SOURCE_FALLBACK = 'UNKNOWN';
+const MAX_FULL_NAME_LENGTH = 120;
+const MAX_AVATAR_URL_LENGTH = 500;
 
 function normalizeUserId(userId) {
   const normalized = String(userId || '').trim();
@@ -81,6 +83,58 @@ function normalizeFinalRequestNote(note) {
   if (normalized.length > 500) {
     throw new ProfileApiError(400, 'invalid_note', 'note must be <= 500 characters');
   }
+  return normalized;
+}
+
+function normalizeProfileFullName(fullName) {
+  if (fullName === undefined) {
+    return undefined;
+  }
+  const normalized = String(fullName || '').trim();
+  if (normalized.length < 2) {
+    throw new ProfileApiError(400, 'invalid_full_name', 'fullName must be at least 2 characters');
+  }
+  if (normalized.length > MAX_FULL_NAME_LENGTH) {
+    throw new ProfileApiError(
+      400,
+      'invalid_full_name',
+      `fullName must be <= ${MAX_FULL_NAME_LENGTH} characters`
+    );
+  }
+  return normalized;
+}
+
+function normalizeAvatarUrl(avatarUrl) {
+  if (avatarUrl === undefined) {
+    return undefined;
+  }
+
+  if (avatarUrl === null) {
+    return null;
+  }
+
+  const normalized = String(avatarUrl || '').trim();
+  if (!normalized) {
+    return null;
+  }
+  if (normalized.length > MAX_AVATAR_URL_LENGTH) {
+    throw new ProfileApiError(
+      400,
+      'invalid_avatar_url',
+      `avatarUrl must be <= ${MAX_AVATAR_URL_LENGTH} characters`
+    );
+  }
+
+  let parsed;
+  try {
+    parsed = new URL(normalized);
+  } catch {
+    throw new ProfileApiError(400, 'invalid_avatar_url', 'avatarUrl must be a valid http(s) URL');
+  }
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+    throw new ProfileApiError(400, 'invalid_avatar_url', 'avatarUrl must use http or https');
+  }
+
   return normalized;
 }
 
@@ -211,7 +265,7 @@ export class ProfileService {
         id: user.id,
         fullName: user.fullName,
         email: user.email,
-        avatarUrl: null,
+        avatarUrl: user.avatarUrl || null,
         profileCompletionPercent: calculateCompletion({
           user,
           session,
@@ -231,6 +285,34 @@ export class ProfileService {
         }
       }
     };
+  }
+
+  async updateProfile({ userId, fullName, avatarUrl }) {
+    const normalizedUserId = normalizeUserId(userId);
+    const normalizedFullName = normalizeProfileFullName(fullName);
+    const normalizedAvatarUrl = normalizeAvatarUrl(avatarUrl);
+    const shouldUpdateName = normalizedFullName !== undefined;
+    const shouldUpdateAvatar = normalizedAvatarUrl !== undefined;
+
+    if (!shouldUpdateName && !shouldUpdateAvatar) {
+      throw new ProfileApiError(
+        400,
+        'invalid_profile_update',
+        'at least one profile field is required (fullName, avatarUrl)'
+      );
+    }
+
+    const updatedUser = await this.store.updateUserProfile({
+      userId: normalizedUserId,
+      fullName: shouldUpdateName ? normalizedFullName : undefined,
+      avatarUrl: shouldUpdateAvatar ? normalizedAvatarUrl : undefined
+    });
+
+    if (!updatedUser) {
+      throw new ProfileApiError(404, 'user_not_found', 'user not found');
+    }
+
+    return this.getProfile({ userId: normalizedUserId });
   }
 
   async listVerificationDocuments({ userId }) {
@@ -358,6 +440,7 @@ export function createProfileService({ store } = {}) {
   if (
     !store ||
     typeof store.findUserById !== 'function' ||
+    typeof store.updateUserProfile !== 'function' ||
     typeof store.findLatestKycSessionByUserId !== 'function' ||
     typeof store.listIdentityDocumentsBySessionId !== 'function' ||
     typeof store.updateKycSessionProviderData !== 'function'

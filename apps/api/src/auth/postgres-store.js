@@ -2,12 +2,16 @@ import { randomUUID } from 'node:crypto';
 
 function mapUserRow(row) {
   if (!row) return null;
+  const createdAt = row.created_at ? new Date(row.created_at).toISOString() : null;
+  const updatedAt = row.updated_at ? new Date(row.updated_at).toISOString() : createdAt;
   return {
     id: row.id,
     fullName: row.full_name,
     email: row.email,
     passwordHash: row.password_hash,
-    createdAt: new Date(row.created_at).toISOString()
+    avatarUrl: row.avatar_url || null,
+    createdAt,
+    updatedAt
   };
 }
 
@@ -80,7 +84,7 @@ export class PostgresAuthStore {
         INSERT INTO users (id, full_name, email, password_hash)
         VALUES ($1, $2, $3, $4)
         ON CONFLICT (email) DO NOTHING
-        RETURNING id, full_name, email, password_hash, created_at
+        RETURNING id, full_name, email, password_hash, avatar_url, created_at, updated_at
       `,
       [randomUUID(), fullName.trim(), normalizedEmail, passwordHash]
     );
@@ -91,7 +95,7 @@ export class PostgresAuthStore {
   async findUserByEmail(email) {
     const normalizedEmail = email.trim().toLowerCase();
     const result = await this.pool.query(
-      'SELECT id, full_name, email, password_hash, created_at FROM users WHERE email = $1 LIMIT 1',
+      'SELECT id, full_name, email, password_hash, avatar_url, created_at, updated_at FROM users WHERE email = $1 LIMIT 1',
       [normalizedEmail]
     );
 
@@ -100,8 +104,26 @@ export class PostgresAuthStore {
 
   async findUserById(id) {
     const result = await this.pool.query(
-      'SELECT id, full_name, email, password_hash, created_at FROM users WHERE id = $1 LIMIT 1',
+      'SELECT id, full_name, email, password_hash, avatar_url, created_at, updated_at FROM users WHERE id = $1 LIMIT 1',
       [id]
+    );
+
+    return mapUserRow(result.rows[0]);
+  }
+
+  async updateUserProfile({ userId, fullName, avatarUrl }) {
+    const shouldUpdateAvatar = avatarUrl !== undefined;
+    const result = await this.pool.query(
+      `
+        UPDATE users
+        SET
+          full_name = COALESCE($2::text, full_name),
+          avatar_url = CASE WHEN $3::boolean THEN $4::text ELSE avatar_url END,
+          updated_at = NOW()
+        WHERE id = $1
+        RETURNING id, full_name, email, password_hash, avatar_url, created_at, updated_at
+      `,
+      [userId, fullName === undefined ? null : fullName, shouldUpdateAvatar, shouldUpdateAvatar ? avatarUrl : null]
     );
 
     return mapUserRow(result.rows[0]);

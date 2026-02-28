@@ -63,12 +63,15 @@ export class InMemoryAuthStore {
       return null;
     }
 
+    const now = new Date().toISOString();
     const user = {
       id: randomUUID(),
       fullName: fullName.trim(),
       email: normalizedEmail,
       passwordHash,
-      createdAt: new Date().toISOString()
+      avatarUrl: null,
+      createdAt: now,
+      updatedAt: now
     };
 
     this.usersById.set(user.id, user);
@@ -84,6 +87,22 @@ export class InMemoryAuthStore {
 
   findUserById(id) {
     return this.usersById.get(id) || null;
+  }
+
+  updateUserProfile({ userId, fullName, avatarUrl }) {
+    const user = this.usersById.get(userId);
+    if (!user) {
+      return null;
+    }
+
+    if (fullName !== undefined) {
+      user.fullName = fullName;
+    }
+    if (avatarUrl !== undefined) {
+      user.avatarUrl = avatarUrl;
+    }
+    user.updatedAt = new Date().toISOString();
+    return user;
   }
 
   ensureUserRole({ userId, roleCode }) {

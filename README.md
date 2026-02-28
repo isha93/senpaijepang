@@ -120,6 +120,7 @@ Expected output akhir: `DEV_ALL_CHECK_OK`
 
 ### Profile
 - `GET /users/me/profile`
+- `PATCH /users/me/profile`
 - `GET /users/me/verification-documents`
 - `POST /users/me/verification/final-request`
 

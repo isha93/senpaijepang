@@ -14,7 +14,7 @@ const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers':
     'Content-Type, Authorization, x-admin-api-key, x-kyc-webhook-secret, x-idempotency-key',
-  'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
+  'Access-Control-Allow-Methods': 'GET, POST, PATCH, DELETE, OPTIONS',
   'Access-Control-Expose-Headers': 'x-request-id'
 };
 
@@ -479,6 +479,22 @@ async function handleRequest(
     }
 
     const result = await profileService.getProfile({ userId: user.id });
+    sendJson(res, 200, result);
+    return;
+  }
+
+  if (req.method === 'PATCH' && url.pathname === '/users/me/profile') {
+    const user = await authenticateRequest(req, res, authService);
+    if (!user) {
+      return;
+    }
+
+    const body = await readJsonBody(req);
+    const result = await profileService.updateProfile({
+      userId: user.id,
+      fullName: body.fullName,
+      avatarUrl: body.avatarUrl
+    });
     sendJson(res, 200, result);
     return;
   }
