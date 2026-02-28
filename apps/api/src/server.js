@@ -6,6 +6,10 @@ import { createKycService, isKycApiError } from './identity/kyc-service.js';
 import { createJobsService, isJobsApiError } from './jobs/service.js';
 import { createFeedService, isFeedApiError } from './feed/service.js';
 import { createProfileService, isProfileApiError } from './profile/service.js';
+import {
+  createOrganizationsService,
+  isOrganizationsApiError
+} from './organizations/service.js';
 import { createLogger } from './observability/logger.js';
 import { InMemoryApiMetrics } from './observability/metrics.js';
 
@@ -108,6 +112,16 @@ function matchApplicationJourneyRoute(pathname) {
 
 function matchSavedPostRoute(pathname) {
   const match = String(pathname || '').match(/^\/users\/me\/saved-posts\/([^/]+)$/);
+  return match ? match[1] : null;
+}
+
+function matchOrganizationVerificationRoute(pathname) {
+  const match = String(pathname || '').match(/^\/organizations\/([^/]+)\/verification$/);
+  return match ? match[1] : null;
+}
+
+function matchOrganizationVerificationStatusRoute(pathname) {
+  const match = String(pathname || '').match(/^\/organizations\/([^/]+)\/verification\/status$/);
   return match ? match[1] : null;
 }
 
@@ -225,6 +239,7 @@ async function handleRequest(
   jobsService,
   feedService,
   profileService,
+  organizationsService,
   adminApiKey,
   adminRoleCodes,
   metrics
@@ -350,6 +365,59 @@ async function handleRequest(
     }
 
     sendJson(res, 200, { user });
+    return;
+  }
+
+  if (req.method === 'POST' && pathname === '/organizations') {
+    const user = await authenticateRequest(req, res, authService);
+    if (!user) {
+      return;
+    }
+
+    const body = await readJsonBody(req);
+    const result = await organizationsService.createOrganization({
+      userId: user.id,
+      name: body.name,
+      orgType: body.orgType,
+      countryCode: body.countryCode
+    });
+    sendJson(res, 201, result);
+    return;
+  }
+
+  const organizationVerificationOrgId =
+    req.method === 'POST' ? matchOrganizationVerificationRoute(pathname) : null;
+  if (req.method === 'POST' && organizationVerificationOrgId) {
+    const user = await authenticateRequest(req, res, authService);
+    if (!user) {
+      return;
+    }
+
+    const body = await readJsonBody(req);
+    const result = await organizationsService.submitVerification({
+      userId: user.id,
+      orgId: organizationVerificationOrgId,
+      registrationNumber: body.registrationNumber,
+      legalName: body.legalName,
+      supportingObjectKeys: body.supportingObjectKeys
+    });
+    sendJson(res, 202, result);
+    return;
+  }
+
+  const organizationVerificationStatusOrgId =
+    req.method === 'GET' ? matchOrganizationVerificationStatusRoute(pathname) : null;
+  if (req.method === 'GET' && organizationVerificationStatusOrgId) {
+    const user = await authenticateRequest(req, res, authService);
+    if (!user) {
+      return;
+    }
+
+    const result = await organizationsService.getVerificationStatus({
+      userId: user.id,
+      orgId: organizationVerificationStatusOrgId
+    });
+    sendJson(res, 200, result);
     return;
   }
 
@@ -690,6 +758,7 @@ export function createServer({
   jobsService,
   feedService,
   profileService,
+  organizationsService,
   adminApiKey,
   adminRoleCodes
 } = {}) {
@@ -698,6 +767,7 @@ export function createServer({
   const resolvedJobsService = jobsService || createJobsService();
   const resolvedFeedService = feedService || createFeedService();
   const resolvedProfileService = profileService || createProfileService({ store: resolvedAuthService.store });
+  const resolvedOrganizationsService = organizationsService || createOrganizationsService();
   const resolvedAdminApiKey =
     adminApiKey !== undefined ? String(adminApiKey).trim() : String(process.env.ADMIN_API_KEY || '').trim();
   const resolvedAdminRoleCodes =
@@ -753,6 +823,7 @@ export function createServer({
       resolvedJobsService,
       resolvedFeedService,
       resolvedProfileService,
+      resolvedOrganizationsService,
       resolvedAdminApiKey,
       resolvedAdminRoleCodes,
       metrics
@@ -762,7 +833,8 @@ export function createServer({
         isKycApiError(error) ||
         isJobsApiError(error) ||
         isFeedApiError(error) ||
-        isProfileApiError(error)
+        isProfileApiError(error) ||
+        isOrganizationsApiError(error)
       ) {
         sendJson(res, error.status, {
           error: {

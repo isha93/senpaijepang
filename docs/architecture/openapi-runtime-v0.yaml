@@ -2,15 +2,18 @@ openapi: 3.0.3
 info:
   title: SenpaiJepang API (Runtime v0)
   version: 0.10.0
-  description: Runtime API contract implemented in repository as of 2026-02-28.
+  description: Runtime API contract implemented in repository as of 2026-03-01. Runtime paths are unversioned and also available via /v1 alias.
 servers:
   - url: http://localhost:4000
     description: Local development
+  - url: http://localhost:4000/v1
+    description: Local development (v1 alias)
 security:
   - bearerAuth: []
 tags:
   - name: Health
   - name: Auth
+  - name: Organizations
   - name: Jobs
   - name: Feed
   - name: Profile
@@ -139,6 +142,82 @@ paths:
                   user:
                     $ref: '#/components/schemas/User'
         '401':
+          $ref: '#/components/responses/ApiError'
+
+  /organizations:
+    post:
+      tags: [Organizations]
+      summary: Create organization profile (TSK/LPK/Employer)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateOrganizationRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Organization'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/ApiError'
+
+  /organizations/{orgId}/verification:
+    post:
+      tags: [Organizations]
+      summary: Submit organization verification request
+      parameters:
+        - in: path
+          name: orgId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrganizationVerificationRequest'
+      responses:
+        '202':
+          description: Accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrganizationVerification'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/ApiError'
+        '404':
+          $ref: '#/components/responses/ApiError'
+
+  /organizations/{orgId}/verification/status:
+    get:
+      tags: [Organizations]
+      summary: Get organization verification status
+      parameters:
+        - in: path
+          name: orgId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrganizationVerification'
+        '401':
+          $ref: '#/components/responses/ApiError'
+        '404':
           $ref: '#/components/responses/ApiError'
 
   /jobs:
@@ -802,8 +881,9 @@ paths:
   /admin/kyc/review:
     post:
       tags: [Admin]
-      summary: Apply KYC review decision (admin shared API key)
+      summary: Apply KYC review decision (admin bearer role or shared API key fallback)
       security:
+        - bearerAuth: []
         - adminApiKeyAuth: []
       requestBody:
         required: true
@@ -834,6 +914,7 @@ paths:
       tags: [Admin]
       summary: Get KYC review queue for ops/admin
       security:
+        - bearerAuth: []
         - adminApiKeyAuth: []
       parameters:
         - in: query
@@ -1012,6 +1093,73 @@ components:
           type: string
         refreshToken:
           type: string
+
+    OrganizationType:
+      type: string
+      enum: [TSK, LPK, EMPLOYER]
+
+    CreateOrganizationRequest:
+      type: object
+      required: [name, orgType, countryCode]
+      properties:
+        name:
+          type: string
+        orgType:
+          $ref: '#/components/schemas/OrganizationType'
+        countryCode:
+          type: string
+          example: JP
+
+    Organization:
+      type: object
+      required: [id, name, orgType, countryCode]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        orgType:
+          $ref: '#/components/schemas/OrganizationType'
+        countryCode:
+          type: string
+
+    OrganizationVerificationRequest:
+      type: object
+      required: [registrationNumber, legalName]
+      properties:
+        registrationNumber:
+          type: string
+        legalName:
+          type: string
+        supportingObjectKeys:
+          type: array
+          items:
+            type: string
+
+    OrganizationVerificationStatus:
+      type: string
+      enum: [PENDING, VERIFIED, MISMATCH, NOT_FOUND, REJECTED]
+
+    OrganizationVerification:
+      type: object
+      required: [id, orgId, status]
+      properties:
+        id:
+          type: string
+          format: uuid
+        orgId:
+          type: string
+          format: uuid
+        status:
+          $ref: '#/components/schemas/OrganizationVerificationStatus'
+        reasonCodes:
+          type: array
+          items:
+            type: string
+        lastCheckedAt:
+          type: string
+          format: date-time
 
     JobEmploymentType:
       type: string
@@ -1824,7 +1972,7 @@ components:
 
     AdminKycReviewRequest:
       type: object
-      required: [sessionId, decision, reviewedBy]
+      required: [sessionId, decision]
       properties:
         sessionId:
           type: string
@@ -1834,6 +1982,7 @@ components:
           enum: [MANUAL_REVIEW, VERIFIED, REJECTED]
         reviewedBy:
           type: string
+          description: Optional for bearer admin auth; defaults to authenticated admin email.
         reason:
           type: string
 

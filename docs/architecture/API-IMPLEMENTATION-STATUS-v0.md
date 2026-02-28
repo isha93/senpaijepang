@@ -1,6 +1,6 @@
 # API Implementation Status (Runtime v0)
 
-Date: 2026-02-28
+Date: 2026-03-01
 
 ## 1. Purpose
 - Menjadi referensi kondisi API yang benar-benar sudah hidup di codebase saat ini.
@@ -9,7 +9,7 @@ Date: 2026-02-28
 
 ## 2. Contract Sources
 - Target product contract (future state): `openapi-v1.yaml` (prefix `/v1`).
-- Current runtime contract (implemented): `openapi-runtime-v0.yaml` (tanpa prefix `/v1`).
+- Current runtime contract (implemented): `openapi-runtime-v0.yaml` (canonical tanpa prefix `/v1`, dengan alias `/v1/*`).
 
 ## 3. Current Scope Mode
 - Active mode: **API-only**.
@@ -25,6 +25,11 @@ Auth:
 - `POST /auth/refresh`
 - `POST /auth/logout`
 - `GET /auth/me`
+
+Organizations:
+- `POST /organizations`
+- `POST /organizations/{orgId}/verification`
+- `GET /organizations/{orgId}/verification/status`
 
 Jobs:
 - `GET /jobs`
@@ -59,8 +64,8 @@ Identity/KYC:
 - `POST /identity/kyc/provider-webhook` (header `x-kyc-webhook-secret`, `x-idempotency-key`)
 
 Admin:
-- `POST /admin/kyc/review` (header `x-admin-api-key`)
-- `GET /admin/kyc/review-queue` (header `x-admin-api-key`)
+- `POST /admin/kyc/review` (Bearer admin role, fallback header `x-admin-api-key`)
+- `GET /admin/kyc/review-queue` (Bearer admin role, fallback header `x-admin-api-key`)
 
 ## 5. Implemented Data Model (Migration-backed)
 - `001_auth_tables.sql`:
@@ -99,9 +104,10 @@ Trust status (API response):
 
 ## 7. Current Security Model
 - User endpoints: Bearer access token.
-- Admin review endpoint: shared secret `ADMIN_API_KEY`.
+- Admin endpoints: Bearer access token + role check (default role `super_admin`), fallback shared secret `ADMIN_API_KEY`.
 - Role baseline: user gets default role `sdm` at registration (`AUTH_DEFAULT_ROLE_CODE`).
-- `ADMIN_API_KEY` masih model bootstrap; target berikutnya RBAC admin token-based.
+- Role admin yang diizinkan bisa diatur via `ADMIN_ROLE_CODES` (comma-separated), default `super_admin`.
+- `ADMIN_API_KEY` dipertahankan sebagai fallback bootstrap/compatibility.
 - Development CORS headers enabled untuk integrasi client (`Authorization`, `x-admin-api-key`).
 
 ## 8. Observability Baseline
@@ -126,10 +132,9 @@ API guardrails yang aktif:
 - object key ownership prefix (`kyc/{userId}/{sessionId}/`).
 
 ## 10. Known Gaps vs `openapi-v1.yaml`
-- Runtime belum pakai prefix `/v1`.
-- Admin model masih shared key, belum role-based auth.
+- Runtime canonical paths masih unversioned; prefix `/v1` saat ini alias kompatibilitas (belum v1-only).
 - Webhook processing masih stub (belum vendor-specific signature verification).
-- Jobs, applications, and feed data source masih seed/in-memory (belum persistence DB + admin CRUD).
+- Jobs, applications, feed, dan organizations data source masih in-memory (belum persistence DB + admin CRUD penuh).
 
 ## 11. Change Control
 - Setiap perubahan endpoint runtime wajib update `openapi-runtime-v0.yaml` dan file ini di commit yang sama.
