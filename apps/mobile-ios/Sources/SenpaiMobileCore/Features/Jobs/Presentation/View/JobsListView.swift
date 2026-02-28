@@ -108,6 +108,8 @@ struct JobsListView: View {
         .navigationTitle("Jobs")
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(.visible, for: .navigationBar)
+        .toolbarBackground(AppTheme.backgroundPrimary, for: .navigationBar)
         #endif
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
