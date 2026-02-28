@@ -1,6 +1,6 @@
 import Foundation
 
-public enum AppRoute: Hashable, Sendable {
+enum AppRoute: Hashable, Sendable {
     case login
     case mainTabs
     case jobsList
@@ -9,5 +9,6 @@ public enum AppRoute: Hashable, Sendable {
     case profile
     case applicationJourney(applicationId: String)
     case feed
+    case settings
 }
 

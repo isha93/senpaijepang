@@ -35,6 +35,10 @@ final class ProfileViewModel: ObservableObject, ManagedTask {
         // Will integrate with API later
     }
 
+    func navigateToSettings() {
+        navigation.push(.settings)
+    }
+
     // MARK: - Mock Data
     static let mockProfile = UserProfile(
         id: "user-001",

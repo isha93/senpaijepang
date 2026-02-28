@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ProfileView: View {
     @ObservedObject private var viewModel: ProfileViewModel
+    @ObservedObject private var langManager = LanguageManager.shared
 
     init(viewModel: ProfileViewModel) {
         self.viewModel = viewModel
@@ -32,13 +33,15 @@ struct ProfileView: View {
             }
         }
         .background(AppTheme.backgroundPrimary)
-        .navigationTitle("My Profile")
+        .navigationTitle(langManager.localize(key: "My Profile"))
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                Button { } label: {
+                Button {
+                    viewModel.navigateToSettings()
+                } label: {
                     Image(systemName: "gearshape")
                         .foregroundStyle(AppTheme.textPrimary)
                 }
@@ -120,7 +123,7 @@ struct ProfileView: View {
             HStack(spacing: AppTheme.spacingM) {
                 // Trust Score
                 VStack(spacing: 4) {
-                    Text("Trust Score")
+                    LText("Trust Score")
                         .font(.caption2.weight(.medium))
                         .foregroundStyle(AppTheme.accent.opacity(0.8))
                     Text(profile.trustScore ?? "—")
@@ -134,11 +137,11 @@ struct ProfileView: View {
 
                 // Status
                 VStack(spacing: 4) {
-                    Text("Status")
+                    LText("Status")
                         .font(.caption2.weight(.medium))
                         .foregroundStyle(AppTheme.textSecondary)
                     HStack(spacing: 4) {
-                        Text(profile.verificationStatus.rawValue.capitalized)
+                        LText(profile.verificationStatus.rawValue.capitalized) // Depends on mock data Enum naming, might need mapping
                             .font(.headline.bold())
                             .foregroundStyle(AppTheme.textPrimary)
                         if profile.verificationStatus == .verified {
@@ -166,10 +169,10 @@ struct ProfileView: View {
         VStack(alignment: .leading, spacing: AppTheme.spacingS) {
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Profile Completion")
+                    LText("Profile Completion")
                         .font(.subheadline.bold())
                         .foregroundStyle(AppTheme.textPrimary)
-                    Text("Complete your profile to apply for jobs")
+                    LText("Complete your profile to apply for jobs")
                         .font(.caption)
                         .foregroundStyle(AppTheme.textSecondary)
                 }
@@ -189,7 +192,7 @@ struct ProfileView: View {
     @ViewBuilder
     private func documentsSection(_ documents: [VerificationDocument]) -> some View {
         VStack(alignment: .leading, spacing: AppTheme.spacingM) {
-            Text("Verification Documents")
+            LText("Verification Documents")
                 .font(.headline.bold())
                 .foregroundStyle(AppTheme.textPrimary)
                 .padding(.horizontal, 4)
@@ -213,16 +216,16 @@ struct ProfileView: View {
                         .foregroundStyle(AppTheme.accent)
                 }
 
-            Text("Verify your identity")
+            LText("Verify your identity")
                 .font(.subheadline.bold())
                 .foregroundStyle(AppTheme.textPrimary)
 
-            Text("Complete all steps to apply for high-salary jobs in Japan.")
+            LText("Complete all steps to apply for high-salary jobs in Japan.")
                 .font(.caption)
                 .foregroundStyle(AppTheme.textSecondary)
                 .multilineTextAlignment(.center)
 
-            PrimaryButton(title: "Request Final Verification") {
+            PrimaryButton(title: "Request Final Verification".localized()) {
                 viewModel.requestVerification()
             }
         }

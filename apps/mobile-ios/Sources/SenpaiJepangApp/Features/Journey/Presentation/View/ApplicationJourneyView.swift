@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ApplicationJourneyView: View {
     @StateObject private var viewModel: ApplicationJourneyViewModel
+    @ObservedObject private var langManager = LanguageManager.shared
 
     init(viewModel: ApplicationJourneyViewModel) {
         _viewModel = StateObject(wrappedValue: viewModel)
@@ -30,7 +31,7 @@ struct ApplicationJourneyView: View {
             }
         }
         .background(AppTheme.backgroundPrimary)
-        .navigationTitle("My Application")
+        .navigationTitle(langManager.localize(key: "My Application"))
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
@@ -49,7 +50,7 @@ struct ApplicationJourneyView: View {
             HStack {
                 VStack(alignment: .leading, spacing: AppTheme.spacingXS) {
                     // Active badge
-                    Text("Active")
+                    LText("Active")
                         .font(.caption2.weight(.bold))
                         .foregroundStyle(AppTheme.accent)
                         .padding(.horizontal, 10)
@@ -86,10 +87,10 @@ struct ApplicationJourneyView: View {
 
             // Step counter
             HStack(alignment: .firstTextBaseline, spacing: 4) {
-                Text("Step \(viewModel.currentStepIndex + 1)")
+                Text(String(format: "Step %@".localized(), "\(viewModel.currentStepIndex + 1)"))
                     .font(.system(size: 28, weight: .bold))
                     .foregroundStyle(AppTheme.accent)
-                Text("of \(journey.totalSteps)")
+                Text(String(format: "of %@".localized(), "\(journey.totalSteps)"))
                     .font(.headline)
                     .foregroundStyle(AppTheme.textSecondary)
             }
@@ -121,7 +122,7 @@ struct ApplicationJourneyView: View {
     @ViewBuilder
     private func timelineCard(_ journey: ApplicationJourney) -> some View {
         VStack(alignment: .leading, spacing: AppTheme.spacingXL) {
-            Text("Timeline")
+            LText("Timeline")
                 .font(.headline.bold())
                 .foregroundStyle(AppTheme.textPrimary)
 
@@ -141,7 +142,7 @@ struct ApplicationJourneyView: View {
     @ViewBuilder
     private func recentUpdatesSection(_ updates: [RecentUpdate]) -> some View {
         VStack(alignment: .leading, spacing: AppTheme.spacingM) {
-            Text("Recent Updates")
+            LText("Recent Updates")
                 .font(.headline.bold())
                 .foregroundStyle(AppTheme.textPrimary)
                 .padding(.horizontal, 4)

@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		019B45B9434D247AC030EF22 /* LanguageManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21B6576E5C82D2ED999F0B46 /* LanguageManager.swift */; };
 		029838FCF808E0AB23DE9D83 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5E986EC211B4658DA01A438 /* LoginView.swift */; };
 		05D139032546BE2EE09526C0 /* SearchBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = EDF0535B16A117D6C05E3C46 /* SearchBar.swift */; };
 		09CC8BA311884FF0004354B1 /* JobServiceProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56E7BAB258285C0B5A0A3D1C /* JobServiceProtocol.swift */; };
@@ -25,6 +26,7 @@
 		553BCACD1579B16018EA6CE4 /* JobsListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E27662E18DED29932199066 /* JobsListView.swift */; };
 		5721A643303E1F41E78EE5F1 /* SenpaiJepangApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A956ADAD7E2657081C687A3 /* SenpaiJepangApp.swift */; };
 		64B690AF20FB1BA9DFDC00E7 /* JobDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49F496EA8B0D08EF1FD37237 /* JobDetailView.swift */; };
+		65C39093A457D1BD84912C0C /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 34FCE9D3E728B038DBB96506 /* SettingsView.swift */; };
 		6660DE25EC871BC63D9B4338 /* AuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42EBFEC98B633FAE59F5E562 /* AuthService.swift */; };
 		6E0CEF1BBB90348946198EDB /* NavigationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4333224033A5864F004FD3D /* NavigationManager.swift */; };
 		887D0C1C718576AB8DB3352E /* FeedServiceProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13DE83CEBB2CBF4BB4D9673C /* FeedServiceProtocol.swift */; };
@@ -56,8 +58,10 @@
 		13DE83CEBB2CBF4BB4D9673C /* FeedServiceProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedServiceProtocol.swift; sourceTree = "<group>"; };
 		154B167D1E77CBDCC4079313 /* DocumentRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentRow.swift; sourceTree = "<group>"; };
 		1EEAAFFD85F67C47BA12E8F9 /* PrimaryButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrimaryButton.swift; sourceTree = "<group>"; };
+		21B6576E5C82D2ED999F0B46 /* LanguageManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = LanguageManager.swift; path = Sources/SenpaiJepangApp/Core/Localization/LanguageManager.swift; sourceTree = "<group>"; };
 		26D96FCEF0D1B634402760C9 /* MetaChipRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetaChipRow.swift; sourceTree = "<group>"; };
 		26DBD83BC463F60881E1E2AA /* FeedService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedService.swift; sourceTree = "<group>"; };
+		34FCE9D3E728B038DBB96506 /* SettingsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = SettingsView.swift; path = Sources/SenpaiJepangApp/Features/Profile/Presentation/View/SettingsView.swift; sourceTree = "<group>"; };
 		3A956ADAD7E2657081C687A3 /* SenpaiJepangApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SenpaiJepangApp.swift; sourceTree = "<group>"; };
 		3E27662E18DED29932199066 /* JobsListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JobsListView.swift; sourceTree = "<group>"; };
 		42EBFEC98B633FAE59F5E562 /* AuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthService.swift; sourceTree = "<group>"; };
@@ -135,6 +139,8 @@
 			children = (
 				801123C769F80C42CF08B29B /* SenpaiJepangApp */,
 				5E3FAF55B04C052ACC278E51 /* Products */,
+				21B6576E5C82D2ED999F0B46 /* LanguageManager.swift */,
+				34FCE9D3E728B038DBB96506 /* SettingsView.swift */,
 			);
 			sourceTree = "<group>";
 		};
@@ -578,8 +584,6 @@
 			dependencies = (
 			);
 			name = SenpaiJepang;
-			packageProductDependencies = (
-			);
 			productName = SenpaiJepang;
 			productReference = B734008A981D8F4C900647F8 /* SenpaiJepang.app */;
 			productType = "com.apple.product-type.application";
@@ -609,6 +613,7 @@
 			mainGroup = 14E01C53E539CE413ED89CE4;
 			minimizedProjectReferenceProxies = 1;
 			preferredProjectObjectVersion = 77;
+			productRefGroup = 5E3FAF55B04C052ACC278E51 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
@@ -664,6 +669,8 @@
 				05D139032546BE2EE09526C0 /* SearchBar.swift in Sources */,
 				5721A643303E1F41E78EE5F1 /* SenpaiJepangApp.swift in Sources */,
 				13D7D66B9EE4A2546450B3DB /* TimelineStepRow.swift in Sources */,
+				019B45B9434D247AC030EF22 /* LanguageManager.swift in Sources */,
+				65C39093A457D1BD84912C0C /* SettingsView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -59,7 +59,7 @@ struct FeedPostCard: View {
                     }
                 } label: {
                     Label(
-                        post.isSaved ? "Saved" : "Login to save",
+                        post.isSaved ? "Saved".localized() : "Login to save".localized(),
                         systemImage: post.isSaved ? "bookmark.fill" : "arrow.right.square"
                     )
                     .font(.caption)

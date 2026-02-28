@@ -27,17 +27,20 @@ struct MainTabView: View {
     }
 
     @State private var selectedTab = 0
+    @ObservedObject private var langManager = LanguageManager.shared
 
     var body: some View {
         TabView(selection: $selectedTab) {
             // Home Tab
-            NavigationStack {
-                FeedListView(viewModel: feedVM)
+            NavigationStack(path: $navigation.path) {
+                FeedListView(viewModel: feedVM) {
+                    selectedTab = 3
+                }
             }
             .background(AppTheme.backgroundPrimary)
             .tag(0)
             .tabItem {
-                Label("Home", systemImage: "house")
+                Label("Home".localized(), systemImage: "house")
             }
 
             // Jobs Tab
@@ -50,31 +53,40 @@ struct MainTabView: View {
             .background(AppTheme.backgroundPrimary)
             .tag(1)
             .tabItem {
-                Label("Jobs", systemImage: "briefcase")
+                Label("Jobs".localized(), systemImage: "briefcase")
             }
 
             // Journey Tab
-            NavigationStack {
+            NavigationStack(path: $navigation.path) {
                 ApplicationJourneyView(viewModel: journeyVM)
+                    .navigationDestination(for: AppRoute.self) { route in
+                        routeView(route)
+                    }
             }
             .background(AppTheme.backgroundPrimary)
             .tag(2)
             .tabItem {
-                Label("Journey", systemImage: "map")
+                Label("Journey".localized(), systemImage: "map")
             }
 
             // Profile Tab
-            NavigationStack {
+            NavigationStack(path: $navigation.path) {
                 ProfileView(viewModel: profileVM)
+                    .navigationDestination(for: AppRoute.self) { route in
+                        routeView(route)
+                    }
             }
             .background(AppTheme.backgroundPrimary)
             .tag(3)
             .tabItem {
-                Label("Profile", systemImage: "person")
+                Label("Profile".localized(), systemImage: "person")
             }
         }
         .tint(AppTheme.accent)
         .animation(AppTheme.animationSoft, value: selectedTab)
+        .onChange(of: selectedTab) { _, _ in
+            navigation.popToRoot()
+        }
     }
 
     @ViewBuilder
@@ -103,6 +115,8 @@ struct MainTabView: View {
                     navigation: navigation
                 )
             )
+        case .settings:
+            SettingsView()
         default:
             EmptyView()
         }

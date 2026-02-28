@@ -59,11 +59,11 @@ struct TimelineStepRow: View {
                         .font(.caption)
                         .foregroundStyle(AppTheme.textSecondary)
                 } else if let estimated = step.estimatedCompletion {
-                    Text("Estimated completion: \(estimated)")
+                    Text(String(format: "Estimated completion: %@".localized(), estimated))
                         .font(.caption)
                         .foregroundStyle(AppTheme.textSecondary)
                 } else if !isCurrent {
-                    Text("Pending")
+                    LText("Pending")
                         .font(.caption)
                         .foregroundStyle(AppTheme.textTertiary)
                 }

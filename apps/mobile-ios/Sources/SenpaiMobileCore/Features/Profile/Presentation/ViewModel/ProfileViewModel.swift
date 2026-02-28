@@ -2,15 +2,15 @@ import Combine
 import Foundation
 
 @MainActor
-public final class ProfileViewModel: ObservableObject, ManagedTask {
-    @Published public var profile: UserProfile?
-    @Published public var isLoading: Bool
-    @Published public var errorMessage: String?
+final class ProfileViewModel: ObservableObject, ManagedTask {
+    @Published var profile: UserProfile?
+    @Published var isLoading: Bool
+    @Published var errorMessage: String?
 
     private let profileService: ProfileServiceProtocol
     private let navigation: NavigationHandling
 
-    public init(
+    init(
         profileService: ProfileServiceProtocol,
         navigation: NavigationHandling
     ) {
@@ -21,7 +21,7 @@ public final class ProfileViewModel: ObservableObject, ManagedTask {
         self.errorMessage = nil
     }
 
-    public func loadProfile() async {
+    func loadProfile() async {
         if let result = await executeTask({
             try await self.profileService.fetchProfile()
         }) {
@@ -31,12 +31,16 @@ public final class ProfileViewModel: ObservableObject, ManagedTask {
         }
     }
 
-    public func requestVerification() {
+    func requestVerification() {
         // Will integrate with API later
     }
 
+    func navigateToSettings() {
+        navigation.push(.settings)
+    }
+
     // MARK: - Mock Data
-    public static let mockProfile = UserProfile(
+    static let mockProfile = UserProfile(
         id: "user-001",
         fullName: "Budi Santoso",
         phoneNumber: "+62 812-3456-7890",

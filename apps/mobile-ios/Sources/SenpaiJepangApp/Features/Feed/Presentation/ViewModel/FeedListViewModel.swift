@@ -8,6 +8,7 @@ final class FeedListViewModel: ObservableObject, ManagedTask {
     @Published var errorMessage: String?
     @Published var searchText: String
     @Published var selectedCategory: String
+    @Published var profileCompletion: Int
 
     let categories = ["All", "Visa Info", "Safety", "Job Market", "Living Guide", "Community"]
 
@@ -45,6 +46,7 @@ final class FeedListViewModel: ObservableObject, ManagedTask {
         self.errorMessage = nil
         self.searchText = ""
         self.selectedCategory = "All"
+        self.profileCompletion = 70 // Mock data for gamification banner (matches Profile mock)
     }
 
     func loadFeed() async {

@@ -78,7 +78,7 @@ struct JobCard: View {
             // Footer row
             HStack {
                 if let postedAt = job.postedAt {
-                    Text("Posted \(postedAt, style: .relative) ago")
+                    Text(String(format: "Posted %@ ago".localized(), postedAt.formatted(.relative(presentation: .named))))
                         .font(.caption2)
                         .foregroundStyle(AppTheme.textTertiary)
                 }
@@ -86,7 +86,7 @@ struct JobCard: View {
                 Spacer()
 
                 Button(action: onTap) {
-                    Text("View Detail")
+                    LText("View Detail")
                         .font(.caption.weight(.bold))
                         .foregroundStyle(.white)
                         .padding(.horizontal, 16)

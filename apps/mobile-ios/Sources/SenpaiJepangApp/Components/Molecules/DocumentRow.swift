@@ -21,14 +21,12 @@ struct DocumentRow: View {
 
             // Text
             VStack(alignment: .leading, spacing: 2) {
-                Text(document.name)
-                    .font(.subheadline.weight(.medium))
+                LText(document.name)
+                    .font(.subheadline.bold())
                     .foregroundStyle(AppTheme.textPrimary)
-                if let subtitle = document.subtitle {
-                    Text(subtitle)
-                        .font(.caption)
-                        .foregroundStyle(statusTextColor)
-                }
+                LText(document.status.rawValue.capitalized) // Relies on enum naming; could need specific maps
+                    .font(.caption2.weight(.medium))
+                    .foregroundStyle(statusTextColor)
             }
 
             Spacer()

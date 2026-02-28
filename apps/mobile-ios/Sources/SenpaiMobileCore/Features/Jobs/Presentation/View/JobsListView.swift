@@ -26,20 +26,25 @@ struct JobsListView: View {
                 .padding(.horizontal, AppTheme.spacingL)
 
                 // Search bar
-                SearchBar(text: $viewModel.searchText, placeholder: "Search for jobs in Japan...")
+                SearchBar(text: $viewModel.searchText, placeholder: "Search jobs, companies...".localized())
                     .padding(.horizontal, AppTheme.spacingL)
-                    .padding(.top, AppTheme.spacingL)
+                    .padding(.top, AppTheme.spacingM)
 
-                // Filter pills
+                // Category pills
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: AppTheme.spacingS) {
                         ForEach(viewModel.filterOptions, id: \.self) { filter in
                             CategoryPill(
-                                title: filter,
-                                isSelected: viewModel.selectedFilter == filter
+                                title: filter.localized(),
+                                isSelected: viewModel.selectedFilter.localized() == filter.localized()
                             ) {
                                 withAnimation(AppTheme.animationDefault) {
-                                    viewModel.selectedFilter = filter
+                                    if let original = viewModel.filterOptions.first(where: { $0.localized() == filter.localized() }) {
+                                        viewModel.selectedFilter = original
+                                    } else {
+                                        // Backup
+                                        viewModel.selectedFilter = filter
+                                    }
                                 }
                             }
                         }
@@ -50,12 +55,12 @@ struct JobsListView: View {
 
                 // Results header
                 HStack {
-                    Text(viewModel.selectedFilter == "All Jobs" ? "Available Jobs" : viewModel.selectedFilter)
+                    LText(viewModel.selectedFilter == "All Jobs" ? "Available Jobs" : viewModel.selectedFilter)
                         .font(.headline.bold())
                         .foregroundStyle(AppTheme.textPrimary)
                         .contentTransition(.numericText())
                     Spacer()
-                    Text("\(viewModel.jobs.count) jobs")
+                    Text(String(format: "%@ jobs".localized(), "\(viewModel.jobs.count)"))
                         .font(.caption)
                         .foregroundStyle(AppTheme.textTertiary)
                         .contentTransition(.numericText())

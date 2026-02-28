@@ -2,6 +2,7 @@ import SwiftUI
 
 struct JobDetailView: View {
     @StateObject private var viewModel: JobDetailViewModel
+    @ObservedObject private var langManager = LanguageManager.shared
 
     init(viewModel: JobDetailViewModel) {
         _viewModel = StateObject(wrappedValue: viewModel)
@@ -52,7 +53,7 @@ struct JobDetailView: View {
                                 HStack(spacing: 4) {
                                     Image(systemName: "checkmark.shield.fill")
                                         .font(.caption)
-                                    Text("Verified Employer")
+                                    LText("Verified Employer")
                                         .font(.caption.weight(.medium))
                                 }
                                 .foregroundStyle(AppTheme.accent)
@@ -68,10 +69,10 @@ struct JobDetailView: View {
                         // Tags
                         HStack(spacing: AppTheme.spacingS) {
                             if let type = detail.employmentType {
-                                tagPill(icon: "clock", text: type)
+                                tagPill(icon: "clock", text: type.localized())
                             }
                             if detail.isVisaSponsored {
-                                tagPill(icon: "briefcase.fill", text: "Visa Sponsored")
+                                tagPill(icon: "briefcase.fill", text: "Visa Sponsored".localized())
                             }
                             if let loc = detail.locationDetail {
                                 tagPill(icon: "mappin", text: loc)
@@ -100,7 +101,7 @@ struct JobDetailView: View {
 
                         // About the Role
                         VStack(alignment: .leading, spacing: AppTheme.spacingM) {
-                            sectionTitle("About the Role")
+                            sectionTitle("About the Role".localized())
                             Text(detail.description)
                                 .font(.subheadline)
                                 .foregroundStyle(AppTheme.textSecondary)
@@ -112,7 +113,7 @@ struct JobDetailView: View {
                         // Requirements
                         if !detail.requirements.isEmpty {
                             VStack(alignment: .leading, spacing: AppTheme.spacingM) {
-                                sectionTitle("Requirements")
+                                sectionTitle("Requirements".localized())
                                 ForEach(detail.requirements, id: \.self) { req in
                                     HStack(alignment: .top, spacing: AppTheme.spacingM) {
                                         Image(systemName: "checkmark.circle.fill")
@@ -156,7 +157,7 @@ struct JobDetailView: View {
 
                         // Location
                         VStack(alignment: .leading, spacing: AppTheme.spacingM) {
-                            sectionTitle("Location")
+                            sectionTitle("Location".localized())
                             RoundedRectangle(cornerRadius: AppTheme.cornerRadiusLarge, style: .continuous)
                                 .fill(AppTheme.grayMedium)
                                 .frame(height: 160)
@@ -187,7 +188,7 @@ struct JobDetailView: View {
 
             // Sticky CTA
             VStack {
-                PrimaryButton(title: "Login to apply") {
+                PrimaryButton(title: "Login to apply".localized()) {
                     viewModel.applyJob()
                 }
                 .padding(.horizontal, AppTheme.spacingL)
@@ -196,7 +197,7 @@ struct JobDetailView: View {
             .background(.ultraThinMaterial)
             .transition(.move(edge: .bottom).combined(with: .opacity))
         }
-        .navigationTitle("Job Details")
+        .navigationTitle(langManager.localize(key: "Job Details"))
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
@@ -233,7 +234,7 @@ struct JobDetailView: View {
 
     @ViewBuilder
     private func sectionTitle(_ title: String) -> some View {
-        Text(title)
+        LText(title)
             .font(.headline.bold())
             .foregroundStyle(AppTheme.textPrimary)
     }
