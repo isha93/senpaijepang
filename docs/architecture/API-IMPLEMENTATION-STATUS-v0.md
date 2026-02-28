@@ -1,16 +1,22 @@
 # API Implementation Status (Runtime v0)
 
-Date: 2026-02-27
+Date: 2026-02-28
 
 ## 1. Purpose
 - Menjadi referensi kondisi API yang benar-benar sudah hidup di codebase saat ini.
 - Mengurangi gap antara dokumen target `v1` dan implementasi runtime bertahap.
+- Menegaskan bahwa fase delivery saat ini adalah API-only.
 
 ## 2. Contract Sources
 - Target product contract (future state): `openapi-v1.yaml` (prefix `/v1`).
 - Current runtime contract (implemented): `openapi-runtime-v0.yaml` (tanpa prefix `/v1`).
 
-## 3. Implemented Endpoints
+## 3. Current Scope Mode
+- Active mode: **API-only**.
+- Frontend user/admin tidak menjadi bagian delivery repo saat ini.
+- Semua validasi fungsional dilakukan lewat endpoint API + test/smoke.
+
+## 4. Implemented Endpoints
 Auth:
 - `GET /health`
 - `GET /metrics`
@@ -28,13 +34,13 @@ Identity/KYC:
 - `POST /identity/kyc/upload-url`
 - `POST /identity/kyc/documents`
 - `GET /identity/kyc/history`
-- `POST /identity/kyc/provider-webhook` (shared secret header `x-kyc-webhook-secret`, idempotency key `x-idempotency-key`)
+- `POST /identity/kyc/provider-webhook` (header `x-kyc-webhook-secret`, `x-idempotency-key`)
 
 Admin:
-- `POST /admin/kyc/review` (shared key header `x-admin-api-key`)
-- `GET /admin/kyc/review-queue` (status/limit filter, shared key header `x-admin-api-key`)
+- `POST /admin/kyc/review` (header `x-admin-api-key`)
+- `GET /admin/kyc/review-queue` (header `x-admin-api-key`)
 
-## 4. Implemented Data Model (Migration-backed)
+## 5. Implemented Data Model (Migration-backed)
 - `001_auth_tables.sql`:
   - `users`
   - `sessions`
@@ -51,7 +57,7 @@ Admin:
   - `kyc_sessions.provider_ref`
   - `kyc_sessions.provider_metadata_json`
 
-## 5. KYC Status Model
+## 6. KYC Status Model
 Raw session statuses:
 - `CREATED`
 - `SUBMITTED`
@@ -66,40 +72,39 @@ Trust status (API response):
 - `VERIFIED`
 - `REJECTED`
 
-## 6. Current Security Model
+## 7. Current Security Model
 - User endpoints: Bearer access token.
 - Admin review endpoint: shared secret `ADMIN_API_KEY`.
 - Role baseline: user gets default role `sdm` at registration (`AUTH_DEFAULT_ROLE_CODE`).
-- Note: `ADMIN_API_KEY` adalah sementara untuk MVP bootstrap; target next step adalah RBAC admin account + scoped permissions.
-- Development CORS headers are enabled for web dashboard integration (`GET/POST/OPTIONS`, headers include `Authorization` and `x-admin-api-key`).
+- `ADMIN_API_KEY` masih model bootstrap; target berikutnya RBAC admin token-based.
+- Development CORS headers enabled untuk integrasi client (`Authorization`, `x-admin-api-key`).
 
-## 6.2 Observability Baseline
-- Structured JSON logs (`LOG_LEVEL`) for:
-  - request start / finish
-  - KYC status transition audit events (`audit.kyc.status_transition`)
-- Request correlation header:
-  - `x-request-id`
-- Runtime metrics endpoint:
-  - `GET /metrics` (in-memory counters and latency summary by route/method)
+## 8. Observability Baseline
+- Structured JSON logs (`LOG_LEVEL`) untuk request start/finish.
+- Audit event KYC transition (`audit.kyc.status_transition`).
+- Request correlation via `x-request-id`.
+- `GET /metrics` untuk in-memory counters + latency summary.
 
-## 6.1 Current KYC Upload Model
-- API generates pre-signed upload URL via `POST /identity/kyc/upload-url`.
-- Client uploads file directly to object storage (`PUT`).
-- Client confirms metadata via `POST /identity/kyc/documents` with `objectKey`.
-- Optional provider hook metadata via `POST /identity/kyc/sessions/{sessionId}/provider-metadata`.
-- Client submits session via `POST /identity/kyc/sessions/{sessionId}/submit`.
-- Provider webhook stub via `POST /identity/kyc/provider-webhook` (secret + idempotency validation).
-- API enforces:
-  - content type whitelist
-  - max file size guard
-  - SHA256 checksum format + duplicate checksum protection per session
-  - object key ownership prefix (`kyc/{userId}/{sessionId}/`)
+## 9. Current KYC Upload Model
+- API generate pre-signed upload URL via `POST /identity/kyc/upload-url`.
+- Client upload file langsung ke object storage (`PUT`).
+- Client confirm metadata via `POST /identity/kyc/documents`.
+- Optional provider metadata via `POST /identity/kyc/sessions/{sessionId}/provider-metadata`.
+- Client submit session via `POST /identity/kyc/sessions/{sessionId}/submit`.
+- Provider webhook stub via `POST /identity/kyc/provider-webhook`.
 
-## 7. Known Gaps vs `openapi-v1.yaml`
+API guardrails yang aktif:
+- content type whitelist,
+- max file size,
+- checksum SHA256 format,
+- duplicate checksum protection per session,
+- object key ownership prefix (`kyc/{userId}/{sessionId}/`).
+
+## 10. Known Gaps vs `openapi-v1.yaml`
 - Runtime belum pakai prefix `/v1`.
 - Admin model masih shared key, belum role-based auth.
-- Provider webhook processing masih stub (belum ada signature scheme/vendor-specific verification workflow).
+- Webhook processing masih stub (belum vendor-specific signature verification).
 
-## 8. Change Control
+## 11. Change Control
 - Setiap perubahan endpoint runtime wajib update `openapi-runtime-v0.yaml` dan file ini di commit yang sama.
-- Setiap fitur yang sudah production-ready dipromosikan ke `openapi-v1.yaml`.
+- Setiap fitur yang production-ready dipromosikan ke `openapi-v1.yaml`.

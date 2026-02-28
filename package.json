@@ -15,8 +15,6 @@
   },
   "scripts": {
     "dev:api": "npm run dev -w @senpaijepang/api",
-    "dev:mobile-ios": "npm run dev -w @senpaijepang/mobile-ios",
-    "dev:dashboard": "npm run dev -w @senpaijepang/dashboard",
     "dev:all": "node scripts/dev-all.mjs start",
     "stop:all": "node scripts/dev-all.mjs stop",
     "deploy:staging": "node scripts/deploy-staging.mjs",

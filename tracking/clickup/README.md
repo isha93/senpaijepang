@@ -1,92 +1,87 @@
-# ClickUp Tracking Setup (MVP)
+# ClickUp Tracking Setup (API MVP)
+
+This folder maps API MVP planning docs into an executable ClickUp board.
 
 ## Files
-- `tracking/clickup/mvp-workspace-template.json`: template (lists, labels-as-tags, tasks, checklists).
-- `scripts/setup-clickup-workspace.mjs`: provisioning script using ClickUp API v2.
-- `scripts/set-clickup-sprint-owners-due.mjs`: bulk set owner and due date by sprint prefix (`[S0]`, `[S1]`, etc.).
-- `tracking/clickup/sprint-owners-due.sample.json`: sample config for sprint owner/due-date mapping.
+- `tracking/clickup/mvp-workspace-template.json`: API-first board template (lists, labels, cards, acceptance checklist).
+- `scripts/setup-clickup-workspace.mjs`: create/reuse Space, Folder, Lists, and tasks via ClickUp API v2.
+- `scripts/set-clickup-sprint-owners-due.mjs`: bulk set assignee and due date by sprint prefix.
+- `tracking/clickup/sprint-owners-due.sample.json`: sample config for owner + due mapping.
 
-## What the script creates
-Default structure:
-- Space: `SenpaiJepang MVP 1.0 Delivery`
-- Folder: `MVP 1.0 Sprint Execution`
+## Source plans linked by template
+- `docs/architecture/MVP-API-BREAKDOWN-v1.md`
+- `docs/architecture/MVP-API-NON-TECH-GUIDE-v1.md`
+- `docs/architecture/API-PLAN-FIGMA-v1.md`
+- `docs/architecture/API-PLAN-STITCH-SCREENS-v1.md`
+
+## What provisioning creates
+- Space: `SenpaiJepang MVP API Delivery`
+- Folder: `MVP 1.0 Sprint Execution` (or `CLICKUP_FOLDER_NAME` if provided)
 - Lists:
-  - `Backlog - MVP`
+  - `Backlog - API MVP`
   - `Sprint Ready`
   - `In Progress`
   - `Review/QA`
   - `Blocked`
   - `Done`
-- Tasks: 30 MVP tasks with checklist items.
-- Labels from template are applied as task tags.
+- Cards: 14 API MVP tasks with acceptance checklists.
+- Labels from template become task tags.
 
-## 1) Prepare ClickUp credentials
-Required:
-- `CLICKUP_TOKEN` (personal API token)
+## Environment variables
+Required for real sync:
+- `CLICKUP_TOKEN`: personal API token.
 
 Optional:
-- `CLICKUP_TEAM_ID` (workspace/team id; if omitted script will use first accessible team)
-- `CLICKUP_SPACE_ID` (reuse an existing Space)
-- `CLICKUP_FOLDER_ID` (reuse an existing Folder)
-- `CLICKUP_MAX_TASK_PAGES` (default `10`, pagination safety limit per list)
-- `CLICKUP_HTTP_TIMEOUT_MS` (default `20000`)
+- `CLICKUP_TEAM_ID`: target workspace/team id.
+- `CLICKUP_SPACE_ID`: force existing Space id.
+- `CLICKUP_FOLDER_ID`: force existing Folder id.
+- `CLICKUP_FOLDER_NAME`: folder name override (default: `MVP 1.0 Sprint Execution`).
+- `CLICKUP_MAX_TASK_PAGES`: max pagination page while scanning list tasks (default: `10`).
+- `CLICKUP_HTTP_TIMEOUT_MS`: request timeout in milliseconds (default: `20000`).
 
-## 2) Dry-run (recommended)
+## 1) Dry-run first
 
 ```bash
-cd /Users/isanf/Documents/LAB/senpaijepang
+cd /Users/ichsan/Documents/senpaijepang
 node scripts/setup-clickup-workspace.mjs --dry-run
 ```
 
-## 3) Create workspace structure and tasks
+Expected dry-run output includes:
+- workspace name
+- folder name
+- list count
+- cards/tasks count
+- label count
+
+## 2) Sync to ClickUp (real run)
 
 ```bash
-cd /Users/isanf/Documents/LAB/senpaijepang
+cd /Users/ichsan/Documents/senpaijepang
 export CLICKUP_TOKEN='<your_clickup_token>'
-# optional
-# export CLICKUP_TEAM_ID='<your_team_id>'
-# export CLICKUP_SPACE_ID='<existing_space_id>'
-# export CLICKUP_FOLDER_ID='<existing_folder_id>'
+# optional:
+# export CLICKUP_TEAM_ID='<team_id>'
+# export CLICKUP_SPACE_ID='<space_id>'
+# export CLICKUP_FOLDER_ID='<folder_id>'
 node scripts/setup-clickup-workspace.mjs
 ```
 
-## 4) Custom template path (optional)
+The script is idempotent by task name per list:
+- existing tasks are skipped
+- only missing tasks are created
+
+## 3) Verify connection is correct
+Run the real sync twice:
+1. first run should create missing lists/tasks
+2. second run should mostly show `skipped` and near-zero new `created` tasks
+
+That confirms template <-> ClickUp is connected and in sync.
+
+## 4) Set sprint owner and due date (optional)
 
 ```bash
-node scripts/setup-clickup-workspace.mjs --config tracking/clickup/mvp-workspace-template.json
-```
-
-## 5) Set owner + due date for Sprint 0 and Sprint 1 (bulk)
-
-Get user IDs first:
-
-```bash
-curl -s -H "Authorization: $CLICKUP_TOKEN" https://api.clickup.com/api/v2/team/90182493856 | jq '.team.members[] | {id: .user.id, username: .user.username, email: .user.email}'
-```
-
-Copy sample config and edit assignee IDs:
-
-```bash
-cd /Users/isanf/Documents/LAB/senpaijepang
 cp tracking/clickup/sprint-owners-due.sample.json tracking/clickup/sprint-owners-due.json
-```
-
-Dry-run first:
-
-```bash
 node scripts/set-clickup-sprint-owners-due.mjs --config tracking/clickup/sprint-owners-due.json --dry-run
-```
-
-Apply:
-
-```bash
 node scripts/set-clickup-sprint-owners-due.mjs --config tracking/clickup/sprint-owners-due.json
 ```
 
-Optional:
-- add `--replace-assignees` if you want to replace existing assignees instead of only adding.
-
-## Notes
-- Script can reuse existing Space/Folder/List by name when IDs are not provided.
-- Task creation is idempotent by task name per list (existing names are skipped).
-- You can still pin a target by setting `CLICKUP_SPACE_ID` and `CLICKUP_FOLDER_ID`.
+Use `--replace-assignees` to replace current assignees instead of adding.

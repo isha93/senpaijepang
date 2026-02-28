@@ -18,11 +18,6 @@ const services = [
     name: 'api',
     npmScript: 'dev:api',
     url: 'http://localhost:4000/health'
-  },
-  {
-    name: 'dashboard',
-    npmScript: 'dev:dashboard',
-    url: 'http://localhost:3001'
   }
 ];
 
@@ -165,6 +160,18 @@ function getAliveServicesFromState(state) {
   return state.services.filter((service) => isProcessRunning(Number(service.pid)));
 }
 
+function readLogTail(logPath, maxLines = 25) {
+  if (!logPath || !fs.existsSync(logPath)) {
+    return [];
+  }
+  const content = fs.readFileSync(logPath, 'utf8');
+  const lines = content.split(/\r?\n/).filter(Boolean);
+  if (lines.length <= maxLines) {
+    return lines;
+  }
+  return lines.slice(-maxLines);
+}
+
 async function startAll() {
   const existing = readState();
   const aliveServices = getAliveServicesFromState(existing);
@@ -208,6 +215,16 @@ async function startAll() {
 
     const failed = readiness.filter((entry) => !entry.ok);
     if (failed.length > 0) {
+      for (const { service } of failed) {
+        log(`health timeout: ${service.name} (${service.url})`);
+        const tail = readLogTail(service.logPath);
+        if (tail.length > 0) {
+          log(`recent logs from ${path.relative(rootDir, service.logPath)}:`);
+          for (const line of tail) {
+            log(`  ${line}`);
+          }
+        }
+      }
       log('some services did not become healthy in time; stopping all started services');
       await stopServices(started);
       removeState();

@@ -1,11 +1,11 @@
 {
   "board": {
-    "name": "SenpaiJepang MVP 1.0 Delivery",
-    "description": "Trust-first MVP execution board (iOS + Unified Dashboard first).\nPolicy: Quality > Quantity.",
+    "name": "SenpaiJepang MVP API Delivery",
+    "description": "Trust-first MVP execution board (API-first).\nPolicy: Quality > Quantity.",
     "defaultLists": false
   },
   "lists": [
-    "Backlog - MVP",
+    "Backlog - API MVP",
     "Sprint Ready",
     "In Progress",
     "Review/QA",
@@ -13,18 +13,15 @@
     "Done"
   ],
   "labels": [
-    { "name": "Sprint S0", "color": "black" },
-    { "name": "Sprint S1", "color": "purple" },
-    { "name": "Sprint S2", "color": "blue" },
-    { "name": "Sprint S3", "color": "sky" },
-    { "name": "Sprint S4", "color": "green" },
-    { "name": "Sprint S5", "color": "yellow" },
-    { "name": "Domain Backend", "color": "red" },
-    { "name": "Domain Mobile-iOS", "color": "orange" },
-    { "name": "Domain Dashboard", "color": "lime" },
-    { "name": "Domain Dashboard-Ops", "color": "pink" },
-    { "name": "Domain Platform", "color": "black" },
-    { "name": "Domain BizOps", "color": "purple" },
+    { "name": "Milestone M0", "color": "black" },
+    { "name": "Milestone M1", "color": "purple" },
+    { "name": "Milestone M2", "color": "blue" },
+    { "name": "Milestone M3", "color": "green" },
+    { "name": "Milestone M4", "color": "yellow" },
+    { "name": "Domain Auth", "color": "orange" },
+    { "name": "Domain KYC", "color": "lime" },
+    { "name": "Domain ReviewOps", "color": "pink" },
+    { "name": "Domain Platform", "color": "red" },
     { "name": "Priority P0", "color": "red" },
     { "name": "Priority P1", "color": "orange" },
     { "name": "Priority P2", "color": "yellow" },
@@ -32,338 +29,69 @@
   ],
   "cards": [
     {
-      "name": "[S0] Setup monorepo and baseline app scaffolds",
-      "list": "Backlog - MVP",
-      "labels": ["Sprint S0", "Domain Platform", "Priority P0"],
-      "desc": "Create repo structure for api/mobile-ios/dashboard and shared packages.\nAcceptance: workspace builds on CI and local dev bootstrap is documented.",
+      "name": "[M0] Stabilize API runtime baseline",
+      "list": "Backlog - API MVP",
+      "labels": ["Milestone M0", "Domain Platform", "Priority P0"],
+      "desc": "Lock local infra + API orchestration baseline.",
       "checklist": [
-        "Create apps/api, apps/mobile-ios, apps/dashboard",
-        "Create shared packages (types, ui, config)",
-        "Document local setup command"
+        "Keep apps/api as single active app workspace",
+        "Verify dev:all and check:dev-all for API-only mode",
+        "Document bootstrap and stop flow"
       ]
     },
     {
-      "name": "[S0] Implement CI quality gates",
-      "list": "Backlog - MVP",
-      "labels": ["Sprint S0", "Domain Platform", "Priority P0", "Quality Gate"],
-      "desc": "Add lint, typecheck, unit tests, SAST, secret scanning.\nAcceptance: PR cannot merge when checks fail.",
+      "name": "[M1] Auth lifecycle hardening",
+      "list": "Backlog - API MVP",
+      "labels": ["Milestone M1", "Domain Auth", "Priority P0"],
+      "desc": "Finalize register/login/refresh/logout/me behavior and tests.",
       "checklist": [
-        "Setup GitHub Actions pipeline",
-        "Configure mandatory status checks",
-        "Add security scanning job"
+        "Token expiry and refresh rotation assertions",
+        "Memory/Postgres parity checks",
+        "Negative test coverage for auth errors"
       ]
     },
     {
-      "name": "[S0] Auth service skeleton + RBAC foundations",
-      "list": "Backlog - MVP",
-      "labels": ["Sprint S0", "Domain Backend", "Priority P1"],
-      "desc": "Implement auth module skeleton with role model and session strategy.",
+      "name": "[M2] KYC intake end-to-end",
+      "list": "Backlog - API MVP",
+      "labels": ["Milestone M2", "Domain KYC", "Priority P0"],
+      "desc": "Ship KYC session -> upload-url -> documents -> submit flow.",
       "checklist": [
-        "Create users/roles/session tables",
-        "Implement JWT access + rotating refresh",
-        "Expose role claims in token"
+        "File guardrails (content type, size, checksum)",
+        "Session ownership enforcement",
+        "Status/history consistency"
       ]
     },
     {
-      "name": "[S0] Observability baseline",
-      "list": "Backlog - MVP",
-      "labels": ["Sprint S0", "Domain Platform", "Priority P1", "Quality Gate"],
-      "desc": "Enable structured logs, tracing and API latency metrics.",
+      "name": "[M3] Review queue and decision API",
+      "list": "Backlog - API MVP",
+      "labels": ["Milestone M3", "Domain ReviewOps", "Priority P0"],
+      "desc": "Complete review queue and moderation decision endpoints.",
       "checklist": [
-        "Add trace_id correlation",
-        "Create latency/error dashboards",
-        "Create alert for API error spike"
+        "Queue filter and limit validation",
+        "Decision transitions + audit event checks",
+        "Admin API key guard coverage"
       ]
     },
     {
-      "name": "[S0] Trust policy and consent copy v1",
-      "list": "Backlog - MVP",
-      "labels": ["Sprint S0", "Domain BizOps", "Priority P0"],
-      "desc": "Finalize legal-safe wording for verification, critical consent and platform scope.",
+      "name": "[M3] Provider webhook idempotency hardening",
+      "list": "Backlog - API MVP",
+      "labels": ["Milestone M3", "Domain KYC", "Priority P1", "Quality Gate"],
+      "desc": "Strengthen provider metadata + webhook replay safety.",
       "checklist": [
-        "Draft policy content",
-        "Legal/compliance review",
-        "Publish policy version consent-v1.0"
-      ]
-    },
-
-    {
-      "name": "[S1] User registration/login flow",
-      "list": "Backlog - MVP",
-      "labels": ["Sprint S1", "Domain Backend", "Domain Mobile-iOS", "Priority P0"],
-      "desc": "Build register/login/refresh/logout endpoints and web forms.",
-      "checklist": [
-        "Register endpoint with validation",
-        "Login + refresh token flow",
-        "Session revoke/logout"
+        "Idempotency TTL behavior tests",
+        "Payload normalization constraints",
+        "Error catalog update"
       ]
     },
     {
-      "name": "[S1] KYC session lifecycle API",
-      "list": "Backlog - MVP",
-      "labels": ["Sprint S1", "Domain Backend", "Priority P0"],
-      "desc": "Implement create session, upload metadata, submit KYC, status endpoint.",
+      "name": "[M4] API release candidate gates",
+      "list": "Backlog - API MVP",
+      "labels": ["Milestone M4", "Domain Platform", "Priority P0", "Quality Gate"],
+      "desc": "Freeze contract and pass all quality checks for API MVP RC.",
       "checklist": [
-        "POST /v1/identity/kyc/sessions",
-        "POST docs and submit endpoints",
-        "GET kyc status endpoint"
-      ]
-    },
-    {
-      "name": "[S1] KYC provider adapter v1",
-      "list": "Backlog - MVP",
-      "labels": ["Sprint S1", "Domain Backend", "Priority P0", "Quality Gate"],
-      "desc": "Build provider adapter abstraction and webhook handler with idempotency.",
-      "checklist": [
-        "Vendor client wrapper",
-        "Webhook signature verification",
-        "Retry and DLQ for failures"
-      ]
-    },
-    {
-      "name": "[S1] Manual review queue v1 (Admin)",
-      "list": "Backlog - MVP",
-      "labels": ["Sprint S1", "Domain Dashboard-Ops", "Priority P1"],
-      "desc": "Admin can review pending KYC and set approve/reject outcome.",
-      "checklist": [
-        "Queue list with filters",
-        "Approve/reject actions",
-        "Reviewer audit log"
-      ]
-    },
-    {
-      "name": "[S1] Critical consent UI + consent ledger",
-      "list": "Backlog - MVP",
-      "labels": ["Sprint S1", "Domain Mobile-iOS", "Domain Backend", "Priority P0"],
-      "desc": "Interactive agreement flow with versioned consent records.",
-      "checklist": [
-        "Consent version storage",
-        "UI with explicit checkpoints",
-        "Exportable consent evidence"
-      ]
-    },
-
-    {
-      "name": "[S2] Organization profile and team roles",
-      "list": "Backlog - MVP",
-      "labels": ["Sprint S2", "Domain Backend", "Domain Dashboard", "Priority P0"],
-      "desc": "TSK/LPK organization onboarding and member management.",
-      "checklist": [
-        "Create org profile endpoint",
-        "Add org member roles",
-        "Role enforcement middleware"
-      ]
-    },
-    {
-      "name": "[S2] TSK registry sync worker",
-      "list": "Backlog - MVP",
-      "labels": ["Sprint S2", "Domain Backend", "Priority P0", "Quality Gate"],
-      "desc": "Scheduled ingestion job for official TSK registry snapshot.",
-      "checklist": [
-        "Fetch and parse registry source",
-        "Store snapshot + entities",
-        "Alert on sync failure"
-      ]
-    },
-    {
-      "name": "[S2] Organization verification engine",
-      "list": "Backlog - MVP",
-      "labels": ["Sprint S2", "Domain Backend", "Priority P0"],
-      "desc": "Match org registration to snapshot and output status with reason codes.",
-      "checklist": [
-        "Verification status model",
-        "Match algorithm rules",
-        "Reason codes response"
-      ]
-    },
-    {
-      "name": "[S2] Dashboard baseline (TSK/LPK)",
-      "list": "Backlog - MVP",
-      "labels": ["Sprint S2", "Domain Dashboard", "Priority P1"],
-      "desc": "Create dashboard shell with nav, verification tab and status widgets.",
-      "checklist": [
-        "Auth-protected dashboard shell",
-        "Verification status card",
-        "Org settings page"
-      ]
-    },
-    {
-      "name": "[S2] Mismatch resolution SOP and templates",
-      "list": "Backlog - MVP",
-      "labels": ["Sprint S2", "Domain BizOps", "Priority P1"],
-      "desc": "Ops playbook for resolving not-found/mismatch cases.",
-      "checklist": [
-        "Escalation matrix",
-        "Partner communication template",
-        "SLA target documented"
-      ]
-    },
-
-    {
-      "name": "[S3] Job posting lifecycle API",
-      "list": "Backlog - MVP",
-      "labels": ["Sprint S3", "Domain Backend", "Domain Dashboard", "Priority P0"],
-      "desc": "Create job CRUD with publish/close lifecycle for verified orgs only.",
-      "checklist": [
-        "Create/update/publish/close endpoints",
-        "Verified org enforcement",
-        "Audit log on status changes"
-      ]
-    },
-    {
-      "name": "[S3] SDM mobile-web job discovery",
-      "list": "Backlog - MVP",
-      "labels": ["Sprint S3", "Domain Mobile-iOS", "Priority P0"],
-      "desc": "Responsive job list/detail with filter by sector and prefecture.",
-      "checklist": [
-        "Mobile-first job list UI",
-        "Job detail page",
-        "Filter and pagination"
-      ]
-    },
-    {
-      "name": "[S3] Application flow + trust gates",
-      "list": "Backlog - MVP",
-      "labels": ["Sprint S3", "Domain Backend", "Domain Mobile-iOS", "Priority P0", "Quality Gate"],
-      "desc": "Candidate can apply only if KYC verified and not blacklisted.",
-      "checklist": [
-        "Application submit endpoint",
-        "Eligibility middleware",
-        "Critical consent checkpoint"
-      ]
-    },
-    {
-      "name": "[S3] Application management in dashboard",
-      "list": "Backlog - MVP",
-      "labels": ["Sprint S3", "Domain Dashboard", "Priority P1"],
-      "desc": "TSK sees applicants and can shortlist/reject with notes.",
-      "checklist": [
-        "Applicant list and filters",
-        "Status update actions",
-        "Activity timeline"
-      ]
-    },
-    {
-      "name": "[S3] Notification pipeline v1",
-      "list": "Backlog - MVP",
-      "labels": ["Sprint S3", "Domain Backend", "Priority P1"],
-      "desc": "Send transactional notifications for KYC and application status changes.",
-      "checklist": [
-        "Template store",
-        "Event-to-notification worker",
-        "Delivery status logging"
-      ]
-    },
-
-    {
-      "name": "[S4] Fraud report submission flow",
-      "list": "Backlog - MVP",
-      "labels": ["Sprint S4", "Domain Mobile-iOS", "Domain Backend", "Priority P0"],
-      "desc": "Allow users to create fraud reports with evidence attachments.",
-      "checklist": [
-        "Fraud report API",
-        "Evidence upload endpoint",
-        "Status tracking page"
-      ]
-    },
-    {
-      "name": "[S4] Case ticket engine + SLA",
-      "list": "Backlog - MVP",
-      "labels": ["Sprint S4", "Domain Dashboard-Ops", "Domain Backend", "Priority P0", "Quality Gate"],
-      "desc": "Auto-create case tickets and monitor SLA with escalation.",
-      "checklist": [
-        "Case state machine",
-        "SLA due_at computation",
-        "Breach alert job"
-      ]
-    },
-    {
-      "name": "[S4] Blacklist enforcement",
-      "list": "Backlog - MVP",
-      "labels": ["Sprint S4", "Domain Backend", "Priority P0"],
-      "desc": "Block interactions for blacklisted entities on critical actions.",
-      "checklist": [
-        "Blacklist table and API",
-        "Policy check middleware",
-        "Admin action audit logs"
-      ]
-    },
-    {
-      "name": "[S4] Trust profile API with reason codes",
-      "list": "Backlog - MVP",
-      "labels": ["Sprint S4", "Domain Backend", "Domain Mobile-iOS", "Priority P1"],
-      "desc": "Expose explainable trust factors to avoid opaque trust score behavior.",
-      "checklist": [
-        "Trust factor schema",
-        "Score calculation job",
-        "Profile endpoint response"
-      ]
-    },
-    {
-      "name": "[S4] Ops dashboard for case backlog",
-      "list": "Backlog - MVP",
-      "labels": ["Sprint S4", "Domain Dashboard-Ops", "Priority P1"],
-      "desc": "Admin panel for backlog, aging bucket, and SLA breach visibility.",
-      "checklist": [
-        "Backlog widgets",
-        "Aging and priority filters",
-        "SLA breach panel"
-      ]
-    },
-
-    {
-      "name": "[S5] Load and performance testing",
-      "list": "Backlog - MVP",
-      "labels": ["Sprint S5", "Domain Platform", "Priority P0", "Quality Gate"],
-      "desc": "Run load tests for auth, KYC status, job search, apply, and case APIs.",
-      "checklist": [
-        "Define target traffic profile",
-        "Run load test suite",
-        "Publish remediation list"
-      ]
-    },
-    {
-      "name": "[S5] Security hardening and abuse protection",
-      "list": "Backlog - MVP",
-      "labels": ["Sprint S5", "Domain Platform", "Domain Backend", "Priority P0", "Quality Gate"],
-      "desc": "Apply security controls and validate baseline defenses.",
-      "checklist": [
-        "Rate limiting and brute-force controls",
-        "Security headers and CORS policy",
-        "Vulnerability remediation"
-      ]
-    },
-    {
-      "name": "[S5] Backup-restore and DR rehearsal",
-      "list": "Backlog - MVP",
-      "labels": ["Sprint S5", "Domain Platform", "Priority P1", "Quality Gate"],
-      "desc": "Validate recovery objectives and backup integrity.",
-      "checklist": [
-        "Automated backup verification",
-        "Restore test in staging",
-        "Document RTO/RPO evidence"
-      ]
-    },
-    {
-      "name": "[S5] UAT pilot run with selected partners",
-      "list": "Backlog - MVP",
-      "labels": ["Sprint S5", "Domain BizOps", "Domain Dashboard", "Priority P0"],
-      "desc": "Run end-to-end pilot with limited TSK/LPK and collect gap list.",
-      "checklist": [
-        "Select pilot participants",
-        "Run scripted UAT scenarios",
-        "Capture sign-off and blockers"
-      ]
-    },
-    {
-      "name": "[S5] Go/No-Go review and launch checklist",
-      "list": "Backlog - MVP",
-      "labels": ["Sprint S5", "Domain BizOps", "Domain Platform", "Priority P0", "Quality Gate"],
-      "desc": "Final launch gate based on trust, reliability, and compliance criteria.",
-      "checklist": [
-        "Review quality gate metrics",
-        "Review compliance sign-offs",
-        "Approve launch or trigger reliability sprint"
+        "npm run ci pass",
+        "npm run smoke:local pass",
+        "openapi-runtime + implementation status sync"
       ]
     }
   ]
