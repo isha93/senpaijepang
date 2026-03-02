@@ -19,6 +19,7 @@ struct ApplicationStep: Equatable, Sendable, Identifiable {
     let completedAt: Date?
     let estimatedCompletion: String?
     let subtitle: String?
+    let requiresUpload: Bool
 
     init(
         id: String,
@@ -26,7 +27,8 @@ struct ApplicationStep: Equatable, Sendable, Identifiable {
         title: String,
         completedAt: Date? = nil,
         estimatedCompletion: String? = nil,
-        subtitle: String? = nil
+        subtitle: String? = nil,
+        requiresUpload: Bool = false
     ) {
         self.id = id
         self.status = status
@@ -34,6 +36,7 @@ struct ApplicationStep: Equatable, Sendable, Identifiable {
         self.completedAt = completedAt
         self.estimatedCompletion = estimatedCompletion
         self.subtitle = subtitle
+        self.requiresUpload = requiresUpload
     }
 }
 

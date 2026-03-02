@@ -20,6 +20,7 @@
 		243BCD923362E34EC11061BD /* JobSummarySection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 721E9AE06DA3025A5DA440A3 /* JobSummarySection.swift */; };
 		2F42989629B45CD8AA942949 /* FeedPostCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9D62225132F9A6280AEA97F /* FeedPostCard.swift */; };
 		322BC92C5383B5DCFD9CF091 /* MetaChipRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26D96FCEF0D1B634402760C9 /* MetaChipRow.swift */; };
+		33576E24766BF9862D4AC056 /* MockDocumentUploadCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3CF4EC240A41133B97F49AA /* MockDocumentUploadCard.swift */; };
 		3735010785017EA9FA60AB7D /* ManagedTask.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD70124E2E5D7952050F55E8 /* ManagedTask.swift */; };
 		38CCE0371508A9B731D54C62 /* AppRoute.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8002F32ADF944393432D57F /* AppRoute.swift */; };
 		40D7A478D7EB2EBA90C7B336 /* JobCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDC5FCBE16EF57E14EB1C47F /* JobCard.swift */; };
@@ -106,6 +107,7 @@
 		95232A9DB62B0BB9658BF01E /* ProfileServiceProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileServiceProtocol.swift; sourceTree = "<group>"; };
 		9A0664A938F23DB900C7284B /* TimelineStepRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelineStepRow.swift; sourceTree = "<group>"; };
 		9C48356ADF41B7CDA706FC71 /* FeedListViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedListViewModel.swift; sourceTree = "<group>"; };
+		A3CF4EC240A41133B97F49AA /* MockDocumentUploadCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockDocumentUploadCard.swift; sourceTree = "<group>"; };
 		A462532254D46B1889651F02 /* SavedJobsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedJobsView.swift; sourceTree = "<group>"; };
 		A5E986EC211B4658DA01A438 /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
 		A7179D0124A1626B7A1FE86C /* JobsListViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JobsListViewModel.swift; sourceTree = "<group>"; };
@@ -213,6 +215,7 @@
 				B9D62225132F9A6280AEA97F /* FeedPostCard.swift */,
 				CDC5FCBE16EF57E14EB1C47F /* JobCard.swift */,
 				26D96FCEF0D1B634402760C9 /* MetaChipRow.swift */,
+				A3CF4EC240A41133B97F49AA /* MockDocumentUploadCard.swift */,
 				9A0664A938F23DB900C7284B /* TimelineStepRow.swift */,
 			);
 			path = Molecules;
@@ -840,6 +843,7 @@
 				F27EED6C60AB439AEFF9F239 /* MainTabView.swift in Sources */,
 				3735010785017EA9FA60AB7D /* ManagedTask.swift in Sources */,
 				322BC92C5383B5DCFD9CF091 /* MetaChipRow.swift in Sources */,
+				33576E24766BF9862D4AC056 /* MockDocumentUploadCard.swift in Sources */,
 				8D4529F85B34B9FC65F5753B /* NavigationHandling.swift in Sources */,
 				6E0CEF1BBB90348946198EDB /* NavigationManager.swift in Sources */,
 				58A66DF2C6494DD124050235 /* NotificationsView.swift in Sources */,

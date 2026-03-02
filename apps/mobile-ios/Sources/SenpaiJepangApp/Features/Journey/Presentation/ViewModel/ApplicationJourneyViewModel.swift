@@ -67,7 +67,8 @@ final class ApplicationJourneyViewModel: ObservableObject, ManagedTask {
                 status: .visaProcessing,
                 title: "Visa Processing",
                 estimatedCompletion: "Feb 15",
-                subtitle: "Documents Verified"
+                subtitle: "Upload Medical Checkup",
+                requiresUpload: true
             ),
             ApplicationStep(
                 id: "s4",

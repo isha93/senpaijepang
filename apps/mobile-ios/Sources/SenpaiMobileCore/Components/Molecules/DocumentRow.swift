@@ -7,36 +7,44 @@ struct DocumentRow: View {
         self.document = document
     }
 
-    var body: some View {
-        HStack(spacing: AppTheme.spacingM) {
-            // Icon
-            Circle()
-                .fill(iconBackground)
-                .frame(width: 40, height: 40)
-                .overlay {
-                    Image(systemName: document.iconName)
-                        .font(.system(size: 16))
-                        .foregroundStyle(iconColor)
+    public var body: some View {
+        if document.status == .upload {
+            MockDocumentUploadCard(
+                title: document.name,
+                description: document.subtitle ?? "PDF, JPG, PNG up to 5MB",
+                isMandatory: true
+            )
+        } else {
+            HStack(spacing: AppTheme.spacingM) {
+                // Icon
+                Circle()
+                    .fill(iconBackground)
+                    .frame(width: 40, height: 40)
+                    .overlay {
+                        Image(systemName: document.iconName)
+                            .font(.system(size: 16))
+                            .foregroundStyle(iconColor)
+                    }
+
+                // Text
+                VStack(alignment: .leading, spacing: 2) {
+                    LText(document.name)
+                        .font(.subheadline.bold())
+                        .foregroundStyle(AppTheme.textPrimary)
+                    LText(document.status.rawValue.capitalized) // Relies on enum naming; could need specific maps
+                        .font(.caption2.weight(.medium))
+                        .foregroundStyle(statusTextColor)
                 }
 
-            // Text
-            VStack(alignment: .leading, spacing: 2) {
-                LText(document.name)
-                    .font(.subheadline.bold())
-                    .foregroundStyle(AppTheme.textPrimary)
-                LText(document.status.rawValue.capitalized) // Relies on enum naming; could need specific maps
-                    .font(.caption2.weight(.medium))
-                    .foregroundStyle(statusTextColor)
+                Spacer()
+
+                // Status indicator
+                statusView
             }
-
-            Spacer()
-
-            // Status indicator
-            statusView
+            .padding(AppTheme.spacingM)
+            .background(AppTheme.backgroundCard)
+            .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadiusMedium, style: .continuous))
         }
-        .padding(AppTheme.spacingM)
-        .background(AppTheme.backgroundCard)
-        .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadiusMedium, style: .continuous))
     }
 
     @ViewBuilder

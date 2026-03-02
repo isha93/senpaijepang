@@ -68,33 +68,42 @@ struct TimelineStepRow: View {
                         .foregroundStyle(AppTheme.textTertiary)
                 }
 
-                if let subtitle = step.subtitle, isCurrent {
-                    HStack(spacing: 8) {
-                        Image(systemName: "doc.text.fill")
-                            .font(.caption)
-                            .foregroundStyle(AppTheme.textSecondary)
-                        Text(subtitle)
-                            .font(.caption.weight(.medium))
-                            .foregroundStyle(AppTheme.textPrimary)
-                    }
-                    .padding(AppTheme.spacingS)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(AppTheme.grayLight)
-                    .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadiusSmall, style: .continuous))
-
-                    // Progress bar for current step
-                    GeometryReader { geo in
-                        ZStack(alignment: .leading) {
-                            RoundedRectangle(cornerRadius: 3)
-                                .fill(AppTheme.grayMedium)
-                                .frame(height: 6)
-                            RoundedRectangle(cornerRadius: 3)
-                                .fill(AppTheme.accent)
-                                .frame(width: geo.size.width * 0.7, height: 6)
-                                .animation(AppTheme.animationSoft, value: isCurrent)
+                if isCurrent {
+                    if step.requiresUpload {
+                        MockDocumentUploadCard(
+                            title: step.subtitle ?? "Document",
+                            description: "Please upload the required document to proceed.",
+                            isMandatory: true
+                        )
+                        .padding(.top, AppTheme.spacingS)
+                    } else if let subtitle = step.subtitle {
+                        HStack(spacing: 8) {
+                            Image(systemName: "doc.text.fill")
+                                .font(.caption)
+                                .foregroundStyle(AppTheme.textSecondary)
+                            Text(subtitle)
+                                .font(.caption.weight(.medium))
+                                .foregroundStyle(AppTheme.textPrimary)
                         }
+                        .padding(AppTheme.spacingS)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(AppTheme.grayLight)
+                        .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadiusSmall, style: .continuous))
+
+                        // Progress bar for current step
+                        GeometryReader { geo in
+                            ZStack(alignment: .leading) {
+                                RoundedRectangle(cornerRadius: 3)
+                                    .fill(AppTheme.grayMedium)
+                                    .frame(height: 6)
+                                RoundedRectangle(cornerRadius: 3)
+                                    .fill(AppTheme.accent)
+                                    .frame(width: geo.size.width * 0.7, height: 6)
+                                    .animation(AppTheme.animationSoft, value: isCurrent)
+                            }
+                        }
+                        .frame(height: 6)
                     }
-                    .frame(height: 6)
                 }
             }
             .padding(.bottom, isLast ? 0 : AppTheme.spacingS)
