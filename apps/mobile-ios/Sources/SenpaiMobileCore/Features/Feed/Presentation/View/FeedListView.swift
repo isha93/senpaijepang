@@ -112,7 +112,7 @@ struct FeedListView: View {
             }
             ToolbarItem(placement: .topBarTrailing) {
                 HStack(spacing: 8) {
-                    Button { showingAlert = true } label: {
+                    Button { viewModel.navigateToNotifications() } label: {
                         Image(systemName: "bell")
                             .foregroundStyle(AppTheme.textSecondary)
                     }
