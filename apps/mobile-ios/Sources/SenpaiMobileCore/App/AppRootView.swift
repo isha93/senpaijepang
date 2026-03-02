@@ -24,6 +24,8 @@ struct AppRootView: View {
         self.feedService = feedService
     }
 
+    @State private var showOnboarding: Bool = !UserDefaultsManager.shared.hasSeenOnboarding
+
     var body: some View {
         Group {
             if authState.isLoggedIn {
@@ -58,6 +60,18 @@ struct AppRootView: View {
         .animation(.easeInOut(duration: 0.3), value: authState.isLoggedIn)
         .onChange(of: authState.isLoggedIn) { _, _ in
             navigation.popToRoot()
+        }
+        .fullScreenCover(isPresented: $showOnboarding) {
+            let onboardingVM = OnboardingViewModel()
+            OnboardingView()
+                .environmentObject(onboardingVM)
+                .onAppear {
+                    onboardingVM.onComplete = {
+                        withAnimation {
+                            showOnboarding = false
+                        }
+                    }
+                }
         }
     }
 }
