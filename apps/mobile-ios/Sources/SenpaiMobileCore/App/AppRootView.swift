@@ -62,16 +62,24 @@ struct AppRootView: View {
             navigation.popToRoot()
         }
         .fullScreenCover(isPresented: $showOnboarding) {
-            let onboardingVM = OnboardingViewModel()
-            OnboardingView()
-                .environmentObject(onboardingVM)
-                .onAppear {
-                    onboardingVM.onComplete = {
-                        withAnimation {
-                            showOnboarding = false
-                        }
+            OnboardingContainerView(isPresented: $showOnboarding)
+        }
+    }
+}
+
+private struct OnboardingContainerView: View {
+    @Binding var isPresented: Bool
+    @StateObject private var onboardingVM = OnboardingViewModel()
+    
+    var body: some View {
+        OnboardingView()
+            .environmentObject(onboardingVM)
+            .onAppear {
+                onboardingVM.onComplete = {
+                    withAnimation {
+                        isPresented = false
                     }
                 }
-        }
+            }
     }
 }
