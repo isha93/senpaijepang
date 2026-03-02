@@ -1,4 +1,5 @@
 import SwiftUI
+import netfox
 
 struct AppRootView: View {
     @StateObject private var navigation: NavigationManager
@@ -31,6 +32,7 @@ struct AppRootView: View {
             if authState.isLoggedIn {
                 MainTabView(
                     navigation: navigation,
+                    authService: authService,
                     jobService: jobService,
                     journeyService: journeyService,
                     profileService: profileService,
@@ -48,7 +50,10 @@ struct AppRootView: View {
                         switch route {
                         case .registration:
                             RegistrationView(
-                                viewModel: RegistrationViewModel(navigation: navigation)
+                                viewModel: RegistrationViewModel(
+                                    authService: authService,
+                                    navigation: navigation
+                                )
                             )
                         default:
                             EmptyView()
@@ -60,6 +65,9 @@ struct AppRootView: View {
         .animation(.easeInOut(duration: 0.3), value: authState.isLoggedIn)
         .onChange(of: authState.isLoggedIn) { _, _ in
             navigation.popToRoot()
+        }
+        .onShake {
+            NFX.sharedInstance().show()
         }
         .fullScreenCover(isPresented: $showOnboarding) {
             OnboardingContainerView(isPresented: $showOnboarding)

@@ -48,7 +48,10 @@ struct AppRootView: View {
                         switch route {
                         case .registration:
                             RegistrationView(
-                                viewModel: RegistrationViewModel(navigation: navigation)
+                                viewModel: RegistrationViewModel(
+                                    authService: authService,
+                                    navigation: navigation
+                                )
                             )
                         default:
                             EmptyView()

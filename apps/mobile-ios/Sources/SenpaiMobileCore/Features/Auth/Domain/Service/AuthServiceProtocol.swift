@@ -27,4 +27,5 @@ enum AuthValidationError: LocalizedError, Equatable {
 @MainActor
 protocol AuthServiceProtocol {
     func login(email: String, password: String) async throws -> AuthSession
+    func register(fullName: String, email: String, password: String) async throws -> AuthSession
 }

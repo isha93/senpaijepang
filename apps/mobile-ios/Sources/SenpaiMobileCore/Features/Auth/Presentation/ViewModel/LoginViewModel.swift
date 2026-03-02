@@ -8,7 +8,6 @@ final class LoginViewModel: ObservableObject, ManagedTask {
     @Published var isPasswordVisible: Bool
     @Published var isLoading: Bool
     @Published var errorMessage: String?
-    @Published private(set) var currentSession: AuthSession?
 
     private let authService: AuthServiceProtocol
     private let navigation: NavigationHandling
@@ -26,7 +25,6 @@ final class LoginViewModel: ObservableObject, ManagedTask {
         self.isPasswordVisible = false
         self.isLoading = false
         self.errorMessage = nil
-        self.currentSession = nil
     }
 
     func submitLogin() async {
@@ -42,11 +40,15 @@ final class LoginViewModel: ObservableObject, ManagedTask {
             return
         }
 
-        // Mock login: simulate a 1-second delay then log in
         isLoading = true
-        try? await Task.sleep(nanoseconds: 1_000_000_000)
-        isLoading = false
-        AuthStateManager.shared.login()
+        defer { isLoading = false }
+
+        do {
+            let session = try await authService.login(email: email, password: password)
+            AuthStateManager.shared.login(session: session)
+        } catch {
+            errorMessage = error.localizedDescription
+        }
     }
 
     func togglePasswordVisibility() {

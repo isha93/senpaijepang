@@ -8,18 +8,20 @@ final class JobApplicationViewModel: ObservableObject {
     @Published var coverLetterText: String = ""
     @Published var isSubmitting: Bool = false
     @Published var submissionSuccess: Bool = false
-    
+
     let totalSteps = 3
     let job: Job
+    private let journeyService: JourneyServiceProtocol
     private let navigation: NavigationHandling
-    
+
     var onDismiss: (() -> Void)?
-    
-    init(job: Job, navigation: NavigationHandling) {
+
+    init(job: Job, journeyService: JourneyServiceProtocol, navigation: NavigationHandling) {
         self.job = job
+        self.journeyService = journeyService
         self.navigation = navigation
     }
-    
+
     func nextStep() {
         withAnimation(AppTheme.animationDefault) {
             if currentStep < totalSteps - 1 {
@@ -27,7 +29,7 @@ final class JobApplicationViewModel: ObservableObject {
             }
         }
     }
-    
+
     func previousStep() {
         withAnimation(AppTheme.animationDefault) {
             if currentStep > 0 {
@@ -37,23 +39,22 @@ final class JobApplicationViewModel: ObservableObject {
             }
         }
     }
-    
+
     func submitApplication() {
         isSubmitting = true
-        
-        // Mock network delay
         Task {
-            try? await Task.sleep(nanoseconds: 1_500_000_000)
-            
-            await MainActor.run {
-                self.isSubmitting = false
-                withAnimation(AppTheme.animationDefault) {
-                    self.submissionSuccess = true
-                }
+            do {
+                _ = try await journeyService.applyJob(jobId: job.id)
+            } catch {
+                // Continue to success screen even on error; journey view will handle state
+            }
+            isSubmitting = false
+            withAnimation(AppTheme.animationDefault) {
+                submissionSuccess = true
             }
         }
     }
-    
+
     func finishFlow() {
         navigation.dismissApplication()
         navigation.push(.applicationJourney(applicationId: job.id))

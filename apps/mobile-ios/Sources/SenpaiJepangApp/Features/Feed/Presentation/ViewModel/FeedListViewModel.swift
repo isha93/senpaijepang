@@ -33,29 +33,42 @@ final class FeedListViewModel: ObservableObject, ManagedTask {
     }
 
     private let feedService: FeedServiceProtocol
+    private let profileService: ProfileServiceProtocol
     private let navigation: NavigationHandling
 
     init(
         feedService: FeedServiceProtocol,
+        profileService: ProfileServiceProtocol,
         navigation: NavigationHandling
     ) {
         self.feedService = feedService
+        self.profileService = profileService
         self.navigation = navigation
         self.allPosts = []
         self.isLoading = false
         self.errorMessage = nil
         self.searchText = ""
         self.selectedCategory = "All"
-        self.profileCompletion = 70 // Mock data for gamification banner (matches Profile mock)
+        self.profileCompletion = 0
     }
 
     func loadFeed() async {
-        if let result = await executeTask({
+        async let feedResult = executeTask({
             try await self.feedService.fetchFeed()
-        }) {
-            allPosts = result.isEmpty ? Self.mockPosts : result
+        })
+        async let profileResult = executeTask({
+            try await self.profileService.fetchProfile()
+        })
+
+        let (posts, profile) = await (feedResult, profileResult)
+
+        if let posts {
+            allPosts = posts.isEmpty ? Self.mockPosts : posts
         } else {
             allPosts = Self.mockPosts
+        }
+        if let profile {
+            profileCompletion = profile.completionPercentage
         }
     }
 

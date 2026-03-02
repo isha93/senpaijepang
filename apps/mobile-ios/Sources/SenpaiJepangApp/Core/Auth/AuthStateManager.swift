@@ -1,29 +1,43 @@
 import Foundation
 import SwiftUI
 
-/// Manages mock authentication state for the app.
-/// When `isLoggedIn` is false, the app shows the Login screen.
-/// When `isLoggedIn` is true, the app shows the main tab interface.
 @MainActor
 final class AuthStateManager: ObservableObject {
     static let shared = AuthStateManager()
 
     @Published var isLoggedIn: Bool = false
 
-    private init() {}
+    private init() {
+        if UserDefaultsManager.shared.accessToken != nil {
+            isLoggedIn = true
+        }
+    }
 
-    func login() {
+    func login(session: AuthSession) {
+        UserDefaultsManager.shared.accessToken = session.accessToken
+        UserDefaultsManager.shared.refreshToken = session.refreshToken
         withAnimation(.easeInOut(duration: 0.3)) {
             isLoggedIn = true
         }
     }
 
     func logout() {
+        UserDefaultsManager.shared.accessToken = nil
+        UserDefaultsManager.shared.refreshToken = nil
         withAnimation(.easeInOut(duration: 0.3)) {
             isLoggedIn = false
         }
-        // Post a notification so AppRootView can reset navigation
         NotificationCenter.default.post(name: .authDidLogout, object: nil)
+    }
+}
+
+extension AuthStateManager: AuthTokenProvider {
+    nonisolated func getAccessToken() async throws -> String? {
+        UserDefaultsManager.shared.accessToken
+    }
+
+    nonisolated func refreshToken() async throws -> String? {
+        UserDefaultsManager.shared.refreshToken
     }
 }
 

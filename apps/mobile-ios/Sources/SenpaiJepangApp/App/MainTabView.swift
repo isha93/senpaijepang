@@ -7,24 +7,27 @@ struct MainTabView: View {
     @StateObject private var jobsVM: JobsListViewModel
     @StateObject private var journeyVM: ApplicationJourneyViewModel
     @StateObject private var profileVM: ProfileViewModel
+    private let authService: AuthServiceProtocol
     private let jobService: JobServiceProtocol
     private let journeyService: JourneyServiceProtocol
     private let feedService: FeedServiceProtocol
 
     init(
         navigation: NavigationManager,
+        authService: AuthServiceProtocol,
         jobService: JobServiceProtocol,
         journeyService: JourneyServiceProtocol,
         profileService: ProfileServiceProtocol,
         feedService: FeedServiceProtocol
     ) {
         self._navigation = ObservedObject(wrappedValue: navigation)
+        self.authService = authService
         self.jobService = jobService
         self.journeyService = journeyService
         self.feedService = feedService
-        _feedVM = StateObject(wrappedValue: FeedListViewModel(feedService: feedService, navigation: navigation))
+        _feedVM = StateObject(wrappedValue: FeedListViewModel(feedService: feedService, profileService: profileService, navigation: navigation))
         _jobsVM = StateObject(wrappedValue: JobsListViewModel(jobService: jobService, navigation: navigation))
-        _journeyVM = StateObject(wrappedValue: ApplicationJourneyViewModel(applicationId: "app-001", journeyService: journeyService, navigation: navigation))
+        _journeyVM = StateObject(wrappedValue: ApplicationJourneyViewModel(applicationId: "", journeyService: journeyService, navigation: navigation))
         _profileVM = StateObject(wrappedValue: ProfileViewModel(profileService: profileService, navigation: navigation))
     }
 
@@ -96,6 +99,7 @@ struct MainTabView: View {
             JobApplicationView(
                 viewModel: JobApplicationViewModel(
                     job: job,
+                    journeyService: journeyService,
                     navigation: navigation
                 )
             )
@@ -131,7 +135,7 @@ struct MainTabView: View {
         case .settings:
             SettingsView()
         case .registration:
-            RegistrationView(viewModel: RegistrationViewModel(navigation: navigation))
+            RegistrationView(viewModel: RegistrationViewModel(authService: authService, navigation: navigation))
         case .notifications:
             NotificationsView(viewModel: NotificationsViewModel(navigation: navigation))
         case .kycVerification:
