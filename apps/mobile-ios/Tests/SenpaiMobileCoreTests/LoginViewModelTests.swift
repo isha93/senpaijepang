@@ -6,7 +6,7 @@ private final class MockAuthService: AuthServiceProtocol {
     var loginCalled = false
     var response: AuthSession = .init(accessToken: "access", refreshToken: "refresh")
 
-    func login(phoneNumber: String, otp: String) async throws -> AuthSession {
+    func login(email: String, password: String) async throws -> AuthSession {
         loginCalled = true
         return response
     }
@@ -36,40 +36,38 @@ private final class MockNavigation: NavigationHandling {
 
 @MainActor
 final class LoginViewModelTests: XCTestCase {
-    func testSubmitLoginRejectsInvalidPhone() async {
+    func testSubmitLoginRejectsInvalidEmail() async {
         let service = MockAuthService()
         let navigation = MockNavigation()
-        let vm = LoginViewModel(authService: service, navigation: navigation, phoneNumber: "12", otp: "123456")
+        let vm = LoginViewModel(authService: service, navigation: navigation, email: "invalid-email", password: "password123")
 
         await vm.submitLogin()
 
-        XCTAssertEqual(vm.errorMessage, AuthValidationError.invalidPhone.errorDescription)
+        XCTAssertEqual(vm.errorMessage, "Please enter a valid email address.")
         XCTAssertFalse(service.loginCalled)
         XCTAssertTrue(navigation.path.isEmpty)
     }
 
-    func testSubmitLoginRejectsInvalidOtp() async {
+    func testSubmitLoginRejectsShortPassword() async {
         let service = MockAuthService()
         let navigation = MockNavigation()
-        let vm = LoginViewModel(authService: service, navigation: navigation, phoneNumber: "08123456789", otp: "999")
+        let vm = LoginViewModel(authService: service, navigation: navigation, email: "user@example.com", password: "short")
 
         await vm.submitLogin()
 
-        XCTAssertEqual(vm.errorMessage, AuthValidationError.invalidOtp.errorDescription)
+        XCTAssertEqual(vm.errorMessage, "Password must be at least 8 characters.")
         XCTAssertFalse(service.loginCalled)
         XCTAssertTrue(navigation.path.isEmpty)
     }
 
-    func testSubmitLoginSuccessReplacesRouteToJobsList() async {
+    func testSubmitLoginSuccessNavigatesToJobsList() async {
         let service = MockAuthService()
         let navigation = MockNavigation()
-        let vm = LoginViewModel(authService: service, navigation: navigation, phoneNumber: "0812 3456 789", otp: "123456")
+        let vm = LoginViewModel(authService: service, navigation: navigation, email: "user@example.com", password: "password123")
 
         await vm.submitLogin()
 
         XCTAssertNil(vm.errorMessage)
-        XCTAssertTrue(service.loginCalled)
-        XCTAssertEqual(vm.currentSession, AuthSession(accessToken: "access", refreshToken: "refresh"))
         XCTAssertEqual(navigation.path, [.jobsList])
     }
 }

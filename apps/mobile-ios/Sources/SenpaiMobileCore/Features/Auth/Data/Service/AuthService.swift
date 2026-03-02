@@ -1,16 +1,16 @@
 import Foundation
 
 @MainActor
-public final class AuthService: AuthServiceProtocol {
-    public typealias LoginHandler = @Sendable (String, String) async throws -> AuthSession
+final class AuthService: AuthServiceProtocol {
+    typealias LoginHandler = @Sendable (String, String) async throws -> AuthSession
 
     private let loginHandler: LoginHandler
 
-    public init(loginHandler: @escaping LoginHandler) {
+    init(loginHandler: @escaping LoginHandler) {
         self.loginHandler = loginHandler
     }
 
-    public func login(phoneNumber: String, otp: String) async throws -> AuthSession {
-        try await loginHandler(phoneNumber, otp)
+    func login(email: String, password: String) async throws -> AuthSession {
+        try await loginHandler(email, password)
     }
 }

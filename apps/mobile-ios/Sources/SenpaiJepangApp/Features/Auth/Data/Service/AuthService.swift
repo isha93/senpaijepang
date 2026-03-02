@@ -10,7 +10,7 @@ final class AuthService: AuthServiceProtocol {
         self.loginHandler = loginHandler
     }
 
-    func login(phoneNumber: String, otp: String) async throws -> AuthSession {
-        try await loginHandler(phoneNumber, otp)
+    func login(email: String, password: String) async throws -> AuthSession {
+        try await loginHandler(email, password)
     }
 }

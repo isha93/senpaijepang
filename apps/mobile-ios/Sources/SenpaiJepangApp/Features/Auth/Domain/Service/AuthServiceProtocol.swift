@@ -11,20 +11,20 @@ struct AuthSession: Equatable, Sendable {
 }
 
 enum AuthValidationError: LocalizedError, Equatable {
-    case invalidPhone
-    case invalidOtp
+    case invalidEmail
+    case invalidPassword
 
     var errorDescription: String? {
         switch self {
-        case .invalidPhone:
-            return "Phone number is invalid."
-        case .invalidOtp:
-            return "OTP must be 6 digits."
+        case .invalidEmail:
+            return "Please enter a valid email address."
+        case .invalidPassword:
+            return "Password must be at least 8 characters."
         }
     }
 }
 
 @MainActor
 protocol AuthServiceProtocol {
-    func login(phoneNumber: String, otp: String) async throws -> AuthSession
+    func login(email: String, password: String) async throws -> AuthSession
 }
