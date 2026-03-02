@@ -56,8 +56,8 @@ export class AuthService {
     return this.issueSession(user);
   }
 
-  async login({ identifier, password }) {
-    const normalizedIdentifier = String(identifier || '').trim().toLowerCase();
+  async login({ identifier, email, password }) {
+    const normalizedIdentifier = String(identifier || email || '').trim().toLowerCase();
     const user = await this.store.findUserByEmail(normalizedIdentifier);
 
     if (!user || !verifyPassword(String(password || ''), user.passwordHash)) {
