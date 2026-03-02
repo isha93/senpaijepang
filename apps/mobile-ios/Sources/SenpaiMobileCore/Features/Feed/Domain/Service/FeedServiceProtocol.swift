@@ -1,6 +1,6 @@
 import Foundation
 
-public struct FeedPost: Equatable, Sendable, Identifiable {
+public struct FeedPost: Equatable, Sendable, Identifiable, Hashable {
     public let id: String
     public let authorName: String
     public let content: String

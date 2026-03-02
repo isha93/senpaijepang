@@ -63,6 +63,10 @@ final class FeedListViewModel: ObservableObject, ManagedTask {
         navigation.push(.notifications)
     }
 
+    func navigateToArticle(_ post: FeedPost) {
+        navigation.push(.articleDetail(post: post))
+    }
+
     func toggleSave(_ post: FeedPost) async {
         // Try service first, fall back to local toggle
         if let updated = await executeTask({

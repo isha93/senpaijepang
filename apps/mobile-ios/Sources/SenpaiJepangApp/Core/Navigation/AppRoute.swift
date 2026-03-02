@@ -12,6 +12,7 @@ enum AppRoute: Hashable, Sendable {
     case profile
     case applicationJourney(applicationId: String)
     case feed
+    case articleDetail(post: FeedPost)
     case settings
 }
 

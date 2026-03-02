@@ -9,6 +9,7 @@ struct MainTabView: View {
     @StateObject private var profileVM: ProfileViewModel
     private let jobService: JobServiceProtocol
     private let journeyService: JourneyServiceProtocol
+    private let feedService: FeedServiceProtocol
 
     init(
         navigation: NavigationManager,
@@ -20,6 +21,7 @@ struct MainTabView: View {
         self._navigation = ObservedObject(wrappedValue: navigation)
         self.jobService = jobService
         self.journeyService = journeyService
+        self.feedService = feedService
         _feedVM = StateObject(wrappedValue: FeedListViewModel(feedService: feedService, navigation: navigation))
         _jobsVM = StateObject(wrappedValue: JobsListViewModel(jobService: jobService, navigation: navigation))
         _journeyVM = StateObject(wrappedValue: ApplicationJourneyViewModel(applicationId: "app-001", journeyService: journeyService, navigation: navigation))
@@ -134,6 +136,14 @@ struct MainTabView: View {
             NotificationsView(viewModel: NotificationsViewModel(navigation: navigation))
         case .kycVerification:
             KYCVerificationView(viewModel: KYCViewModel(navigation: navigation))
+        case .articleDetail(let post):
+            ArticleDetailView(
+                viewModel: ArticleDetailViewModel(
+                    post: post,
+                    feedService: feedService,
+                    navigation: navigation
+                )
+            )
         default:
             EmptyView()
         }
