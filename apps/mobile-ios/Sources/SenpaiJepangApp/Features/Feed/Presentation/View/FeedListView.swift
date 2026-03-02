@@ -3,7 +3,6 @@ import SwiftUI
 struct FeedListView: View {
     @ObservedObject private var viewModel: FeedListViewModel
     @ObservedObject private var langManager = LanguageManager.shared
-    @State private var showingAlert = false
 
     private let onNavigateToProfile: () -> Void
 
@@ -135,11 +134,6 @@ struct FeedListView: View {
                     }
                 }
             }
-        }
-        .alert(langManager.localize(key: "Coming Soon"), isPresented: $showingAlert) {
-            Button(langManager.localize(key: "OK"), role: .cancel) { }
-        } message: {
-            Text(langManager.localize(key: "This feature is not yet available in the mock version."))
         }
         .overlay {
             if viewModel.isLoading { ProgressView() }

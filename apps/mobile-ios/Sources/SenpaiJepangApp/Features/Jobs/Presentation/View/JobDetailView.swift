@@ -11,7 +11,14 @@ struct JobDetailView: View {
     var body: some View {
         ZStack(alignment: .bottom) {
             ScrollView {
-                if let detail = viewModel.detail {
+                if !viewModel.isLoading && viewModel.detail == nil {
+                    EmptyStateView(
+                        icon: "briefcase",
+                        title: "Job Not Available",
+                        message: "We couldn't load the details for this position. Please go back and try again."
+                    )
+                    .padding(.top, AppTheme.spacingXXL)
+                } else if let detail = viewModel.detail {
                     VStack(spacing: 0) {
                         // Header — logo + info
                         VStack(spacing: AppTheme.spacingM) {

@@ -3,7 +3,6 @@ import SwiftUI
 struct JobsListView: View {
     @ObservedObject private var viewModel: JobsListViewModel
     @ObservedObject private var langManager = LanguageManager.shared
-    @State private var showingAlert = false
 
     init(viewModel: JobsListViewModel) {
         self.viewModel = viewModel
@@ -111,25 +110,6 @@ struct JobsListView: View {
         .toolbarBackground(.visible, for: .navigationBar)
         .toolbarBackground(AppTheme.backgroundPrimary, for: .navigationBar)
         #endif
-        .toolbar {
-            ToolbarItem(placement: .topBarLeading) {
-                Button { showingAlert = true } label: {
-                    Image(systemName: "line.3.horizontal")
-                        .foregroundStyle(AppTheme.textPrimary)
-                }
-            }
-            ToolbarItem(placement: .topBarTrailing) {
-                Button { showingAlert = true } label: {
-                    Image(systemName: "slider.horizontal.3")
-                        .foregroundStyle(AppTheme.accent)
-                }
-            }
-        }
-        .alert(langManager.localize(key: "Coming Soon"), isPresented: $showingAlert) {
-            Button(langManager.localize(key: "OK"), role: .cancel) { }
-        } message: {
-            Text(langManager.localize(key: "This feature is not yet available in the mock version."))
-        }
         .overlay {
             if viewModel.isLoading {
                 ProgressView()
