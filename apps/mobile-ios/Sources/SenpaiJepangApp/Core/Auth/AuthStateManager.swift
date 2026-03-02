@@ -22,5 +22,11 @@ final class AuthStateManager: ObservableObject {
         withAnimation(.easeInOut(duration: 0.3)) {
             isLoggedIn = false
         }
+        // Post a notification so AppRootView can reset navigation
+        NotificationCenter.default.post(name: .authDidLogout, object: nil)
     }
+}
+
+extension Notification.Name {
+    static let authDidLogout = Notification.Name("authDidLogout")
 }
