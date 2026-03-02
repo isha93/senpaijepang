@@ -5,6 +5,7 @@ import SwiftUI
 @MainActor
 final class NavigationManager: ObservableObject, NavigationHandling {
     @Published var path: [AppRoute]
+    @Published var presentedJobApplication: Job?
 
     init(path: [AppRoute] = []) {
         self.path = path
@@ -29,5 +30,13 @@ final class NavigationManager: ObservableObject, NavigationHandling {
 
     func sync(path newPath: [AppRoute]) {
         path = newPath
+    }
+
+    func presentApplication(for job: Job) {
+        presentedJobApplication = job
+    }
+
+    func dismissApplication() {
+        presentedJobApplication = nil
     }
 }

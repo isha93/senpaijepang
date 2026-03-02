@@ -10,7 +10,6 @@ enum AppRoute: Hashable, Sendable {
     case jobDetail(jobId: String)
     case savedJobs
     case profile
-    case applyJob(job: Job)
     case applicationJourney(applicationId: String)
     case feed
     case settings

@@ -90,6 +90,14 @@ struct MainTabView: View {
         .onChange(of: selectedTab) { _, _ in
             navigation.popToRoot()
         }
+        .fullScreenCover(item: $navigation.presentedJobApplication) { job in
+            JobApplicationView(
+                viewModel: JobApplicationViewModel(
+                    job: job,
+                    navigation: navigation
+                )
+            )
+        }
     }
 
     @ViewBuilder
@@ -126,13 +134,6 @@ struct MainTabView: View {
             NotificationsView(viewModel: NotificationsViewModel(navigation: navigation))
         case .kycVerification:
             KYCVerificationView(viewModel: KYCViewModel(navigation: navigation))
-        case .applyJob(let job):
-            JobApplicationView(
-                viewModel: JobApplicationViewModel(
-                    job: job,
-                    navigation: navigation
-                )
-            )
         default:
             EmptyView()
         }

@@ -33,7 +33,7 @@ final class JobApplicationViewModel: ObservableObject {
             if currentStep > 0 {
                 currentStep -= 1
             } else {
-                navigation.pop()
+                navigation.dismissApplication()
             }
         }
     }
@@ -55,7 +55,7 @@ final class JobApplicationViewModel: ObservableObject {
     }
     
     func finishFlow() {
-        navigation.popToRoot()
+        navigation.dismissApplication()
         navigation.push(.applicationJourney(applicationId: job.id))
     }
 }

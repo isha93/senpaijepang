@@ -8,4 +8,6 @@ public protocol NavigationHandling: AnyObject {
     func pop()
     func popToRoot()
     func replace(with route: AppRoute)
+    func presentApplication(for job: Job)
+    func dismissApplication()
 }

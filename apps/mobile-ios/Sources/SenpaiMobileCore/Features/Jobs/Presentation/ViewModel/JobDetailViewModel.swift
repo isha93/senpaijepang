@@ -36,7 +36,7 @@ final class JobDetailViewModel: ObservableObject, ManagedTask {
 
     func applyJob() {
         if let job = detail?.job {
-            navigation.push(.applyJob(job: job))
+            navigation.presentApplication(for: job)
         }
     }
 
