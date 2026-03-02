@@ -188,7 +188,7 @@ struct JobDetailView: View {
 
             // Sticky CTA
             VStack {
-                PrimaryButton(title: "Login to apply".localized()) {
+                PrimaryButton(title: "Lamar Pekerjaan") {
                     viewModel.applyJob()
                 }
                 .padding(.horizontal, AppTheme.spacingL)
