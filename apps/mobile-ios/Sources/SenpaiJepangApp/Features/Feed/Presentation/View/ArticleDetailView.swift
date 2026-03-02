@@ -169,15 +169,15 @@ struct ArticleDetailView: View {
                             .foregroundColor(AppTheme.textPrimary)
                         
                         HStack(spacing: 8) {
-                            Text("12 Okt 2025") // Mocked date or use formatter
+                            Text(viewModel.formattedDate)
                                 .font(.caption)
                                 .foregroundColor(AppTheme.textTertiary)
-                            
+
                             Circle()
                                 .fill(AppTheme.textTertiary)
                                 .frame(width: 4, height: 4)
-                            
-                            Text("3 min read") // Mocked read time
+
+                            Text(viewModel.readTime)
                                 .font(.caption)
                                 .foregroundColor(AppTheme.textTertiary)
                         }
@@ -201,42 +201,44 @@ struct ArticleDetailView: View {
             .padding(.top, AppTheme.spacingXL)
             .padding(.bottom, AppTheme.spacingL)
             
-            // Body Content (Mocked rich text based on HTML)
+            // Body Content
             VStack(alignment: .leading, spacing: AppTheme.spacingL) {
-                Text(viewModel.post.content) // Could be extended to support real Markdown/HTML
+                Text(viewModel.post.content)
                     .font(.system(size: 17))
                     .foregroundColor(AppTheme.textPrimary)
                     .lineSpacing(8)
-                
-                Text("Poin Utama Perubahan Regulasi")
+
+                let section = viewModel.bodySection
+
+                Text(section.heading)
                     .font(.title2.bold())
                     .foregroundColor(AppTheme.textPrimary)
                     .padding(.top, AppTheme.spacingM)
-                
-                Text("Beberapa sektor kini mendapatkan prioritas lebih tinggi dalam proses verifikasi dokumen. Berikut adalah beberapa persyaratan terbaru yang perlu Anda siapkan:")
+
+                Text(section.body)
                     .font(.system(size: 17))
                     .foregroundColor(AppTheme.textPrimary)
                     .lineSpacing(8)
-                    
+
                 VStack(alignment: .leading, spacing: AppTheme.spacingM) {
-                    bulletPoint("Sertifikat JFT-Basic atau JLPT N4 masih menjadi syarat mutlak kemampuan bahasa.")
-                    bulletPoint("Penambahan sektor baru dalam kategori SSW 1 untuk industri teknologi hijau.")
-                    bulletPoint("Sistem pelaporan kesehatan digital yang terintegrasi dengan aplikasi imigrasi.")
+                    ForEach(section.bullets, id: \.self) { bullet in
+                        bulletPoint(bullet)
+                    }
                 }
-                
+
                 // Blockquote
                 HStack(spacing: 0) {
                     Rectangle()
                         .fill(AppTheme.accent)
                         .frame(width: 4)
-                    
+
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("\"Visi 2026 adalah menciptakan ekosistem kerja yang lebih inklusif bagi tenaga kerja global, di mana efisiensi birokrasi menjadi prioritas utama kami.\"")
+                        Text("\"\(section.quote)\"")
                             .font(.system(size: 17, weight: .regular, design: .serif).italic())
                             .foregroundColor(AppTheme.textSecondary)
                             .lineSpacing(6)
-                        
-                        Text("— Kementrian Kehakiman Jepang")
+
+                        Text(section.quoteAuthor)
                             .font(.caption.bold())
                             .foregroundColor(AppTheme.textPrimary)
                     }
@@ -246,11 +248,6 @@ struct ArticleDetailView: View {
                 }
                 .clipShape(RoundedCorner(radius: 12, corners: [.topRight, .bottomRight]))
                 .padding(.vertical, AppTheme.spacingM)
-                
-                Text("Bagi para kandidat yang sedang dalam proses persiapan, sangat disarankan untuk segera memperbarui data paspor dan memastikan sertifikat keahlian bidang (Skill Test) masih dalam masa berlaku.")
-                    .font(.system(size: 17))
-                    .foregroundColor(AppTheme.textPrimary)
-                    .lineSpacing(8)
             }
             .padding(.horizontal, AppTheme.spacingL)
             
