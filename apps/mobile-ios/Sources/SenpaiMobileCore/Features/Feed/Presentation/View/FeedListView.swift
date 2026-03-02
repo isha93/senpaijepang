@@ -116,14 +116,18 @@ struct FeedListView: View {
                         Image(systemName: "bell")
                             .foregroundStyle(AppTheme.textSecondary)
                     }
-                    Circle()
-                        .fill(AppTheme.accentLight)
-                        .frame(width: 32, height: 32)
-                        .overlay {
-                            Text("B")
-                                .font(.caption.bold())
-                                .foregroundStyle(AppTheme.accent)
-                        }
+                    Button { 
+                        onNavigateToProfile() 
+                    } label: {
+                        Circle()
+                            .fill(AppTheme.accentLight)
+                            .frame(width: 32, height: 32)
+                            .overlay {
+                                Text("B")
+                                    .font(.caption.bold())
+                                    .foregroundStyle(AppTheme.accent)
+                            }
+                    }
                 }
             }
         }
