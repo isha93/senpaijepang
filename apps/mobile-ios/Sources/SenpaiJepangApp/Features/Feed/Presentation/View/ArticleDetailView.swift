@@ -4,8 +4,8 @@ struct ArticleDetailView: View {
     @StateObject private var viewModel: ArticleDetailViewModel
     @Environment(\.dismiss) private var dismiss
 
-    init(viewModel: ArticleDetailViewModel) {
-        self._viewModel = StateObject(wrappedValue: viewModel)
+    init(viewModel: @autoclosure @escaping () -> ArticleDetailViewModel) {
+        self._viewModel = StateObject(wrappedValue: viewModel())
     }
 
     var body: some View {
@@ -57,8 +57,8 @@ struct ArticleDetailView: View {
                             Rectangle().fill(AppTheme.grayLight)
                         }
                     }
-                    .frame(width: geo.size.width, height: max(geo.size.height + (isScrollingDown ? 0 : minY), geo.size.height))
-                    .offset(y: isScrollingDown ? minY : -minY)
+                    .frame(width: geo.size.width, height: geo.size.height + (isScrollingDown ? 0 : max(0, minY)))
+                    .offset(y: isScrollingDown ? 0 : -minY)
                 } else {
                     // Fallback to gradient if no image
                     LinearGradient(
@@ -66,8 +66,8 @@ struct ArticleDetailView: View {
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
-                    .frame(width: geo.size.width, height: max(geo.size.height + (isScrollingDown ? 0 : minY), geo.size.height))
-                    .offset(y: isScrollingDown ? minY : -minY)
+                    .frame(width: geo.size.width, height: geo.size.height + (isScrollingDown ? 0 : max(0, minY)))
+                    .offset(y: isScrollingDown ? 0 : -minY)
                 }
                 
                 // Overlay Gradient
