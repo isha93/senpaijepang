@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct OnboardingView: View {
-    @StateObject private var viewModel = OnboardingViewModel()
+    @EnvironmentObject private var viewModel: OnboardingViewModel
     
     // For bouncing animation in Step 2
     @State private var isBouncing = false
