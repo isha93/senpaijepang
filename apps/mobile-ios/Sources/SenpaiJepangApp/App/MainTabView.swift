@@ -126,6 +126,13 @@ struct MainTabView: View {
             NotificationsView(viewModel: NotificationsViewModel(navigation: navigation))
         case .kycVerification:
             KYCVerificationView(viewModel: KYCViewModel(navigation: navigation))
+        case .applyJob(let job):
+            JobApplicationView(
+                viewModel: JobApplicationViewModel(
+                    job: job,
+                    navigation: navigation
+                )
+            )
         default:
             EmptyView()
         }
