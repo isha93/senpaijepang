@@ -35,7 +35,7 @@ struct AppRootView: View {
                     feedService: feedService
                 )
             } else {
-                NavigationStack {
+                NavigationStack(path: $navigation.path) {
                     LoginView(
                         viewModel: LoginViewModel(
                             authService: authService,
