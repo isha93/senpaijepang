@@ -56,10 +56,8 @@ struct AppRootView: View {
             }
         }
         .animation(.easeInOut(duration: 0.3), value: authState.isLoggedIn)
-        .onChange(of: authState.isLoggedIn) { _, isLoggedIn in
-            if !isLoggedIn {
-                navigation.popToRoot()
-            }
+        .onChange(of: authState.isLoggedIn) { _, _ in
+            navigation.popToRoot()
         }
     }
 }
