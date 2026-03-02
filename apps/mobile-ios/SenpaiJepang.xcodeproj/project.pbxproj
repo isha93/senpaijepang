@@ -3,122 +3,126 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 63;
+	objectVersion = 77;
 	objects = {
 
 /* Begin PBXBuildFile section */
-		019B45B9434D247AC030EF22 /* LanguageManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21B6576E5C82D2ED999F0B46 /* LanguageManager.swift */; };
 		029838FCF808E0AB23DE9D83 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5E986EC211B4658DA01A438 /* LoginView.swift */; };
 		05D139032546BE2EE09526C0 /* SearchBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = EDF0535B16A117D6C05E3C46 /* SearchBar.swift */; };
 		09CC8BA311884FF0004354B1 /* JobServiceProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56E7BAB258285C0B5A0A3D1C /* JobServiceProtocol.swift */; };
 		0D9F2EB68BD1ABBE9B9E7863 /* SavedJobsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A462532254D46B1889651F02 /* SavedJobsView.swift */; };
 		13D7D66B9EE4A2546450B3DB /* TimelineStepRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A0664A938F23DB900C7284B /* TimelineStepRow.swift */; };
+		1D6FF7CD187F7711BD3C265F /* OnboardingViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64CAB1C95AD8973710B6F907 /* OnboardingViewModel.swift */; };
+		20CEE86FB5E31B288B274CB1 /* RegistrationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 717A4EBDD64DC90BDD482D5D /* RegistrationView.swift */; };
 		2235EABE86F6CB8AFC747605 /* ApplicationJourneyViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = E78BBC0FC1B326D944C437E6 /* ApplicationJourneyViewModel.swift */; };
 		237B8AC2223E6DD6D622754C /* ProfileServiceProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95232A9DB62B0BB9658BF01E /* ProfileServiceProtocol.swift */; };
 		243BCD923362E34EC11061BD /* JobSummarySection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 721E9AE06DA3025A5DA440A3 /* JobSummarySection.swift */; };
-		2E99E684D20476D2719E3A3B /* UserDefaultsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A6577553A44A08D89659EB6 /* UserDefaultsManager.swift */; };
 		2F42989629B45CD8AA942949 /* FeedPostCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9D62225132F9A6280AEA97F /* FeedPostCard.swift */; };
-		3213E59D1B75122B7E86C402 /* OnboardingViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B545340AF8AA893D31C93672 /* OnboardingViewModel.swift */; };
-		3215328893F487ED61C3CA7A /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD8221C27A58F6DE01303A13 /* OnboardingView.swift */; };
 		322BC92C5383B5DCFD9CF091 /* MetaChipRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26D96FCEF0D1B634402760C9 /* MetaChipRow.swift */; };
-		354CA1014D52D2353EF09DA9 /* KYCVerificationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E9FD351C2010E0AA584A828 /* KYCVerificationView.swift */; };
 		3735010785017EA9FA60AB7D /* ManagedTask.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD70124E2E5D7952050F55E8 /* ManagedTask.swift */; };
 		38CCE0371508A9B731D54C62 /* AppRoute.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8002F32ADF944393432D57F /* AppRoute.swift */; };
 		40D7A478D7EB2EBA90C7B336 /* JobCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDC5FCBE16EF57E14EB1C47F /* JobCard.swift */; };
 		4825C89F5FB746E4CB6DA598 /* CategoryFilterRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF546357F1F129BBAB8FCD08 /* CategoryFilterRow.swift */; };
 		4A5BBB26573C6E714AF16FF3 /* BadgePill.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94EED8D7FC03804A56ADC5B4 /* BadgePill.swift */; };
+		4BFF998E285DC86BE41EBD03 /* NotificationsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B71155FCC3F1134B6A11DFE /* NotificationsViewModel.swift */; };
+		51A0B6AE2A6A5F06F481C260 /* AuthStateManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3912D4ABC350F491AA1F5255 /* AuthStateManager.swift */; };
+		51F5C9A1519F1C12BD7581B9 /* UserDefaultsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74FCEA7432650C63C74D96BC /* UserDefaultsManager.swift */; };
 		553BCACD1579B16018EA6CE4 /* JobsListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E27662E18DED29932199066 /* JobsListView.swift */; };
 		5721A643303E1F41E78EE5F1 /* SenpaiJepangApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A956ADAD7E2657081C687A3 /* SenpaiJepangApp.swift */; };
-		5C6740C178CE8F9F6466C14C /* NotificationsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64161BE497ABEAC2984FA0E7 /* NotificationsViewModel.swift */; };
+		58A66DF2C6494DD124050235 /* NotificationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF4162FAFEE63DA1E6D33D31 /* NotificationsView.swift */; };
+		5A36A550DA33B92092BC1D1A /* JobApplicationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6CE5D2C8CFC805B6A1FF044F /* JobApplicationView.swift */; };
+		63FD8CD3ADD85CF9365F46F1 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C60E8FA7AC694B7626429D3F /* SettingsView.swift */; };
 		64B690AF20FB1BA9DFDC00E7 /* JobDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49F496EA8B0D08EF1FD37237 /* JobDetailView.swift */; };
-		65C39093A457D1BD84912C0C /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 34FCE9D3E728B038DBB96506 /* SettingsView.swift */; };
 		6660DE25EC871BC63D9B4338 /* AuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42EBFEC98B633FAE59F5E562 /* AuthService.swift */; };
 		6E0CEF1BBB90348946198EDB /* NavigationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4333224033A5864F004FD3D /* NavigationManager.swift */; };
-		76B39D19D7C93E97A330312E /* NotificationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83BA428DDB98BDEB49CE0A94 /* NotificationsView.swift */; };
-		85F67D537C6D2E4BCEB5121E /* RegistrationViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C3B379CFC9231F243F01371 /* RegistrationViewModel.swift */; };
+		7E137564BE75EC6588045676 /* EmptyStateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDA917EF7C240F5B332654E2 /* EmptyStateView.swift */; };
 		887D0C1C718576AB8DB3352E /* FeedServiceProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13DE83CEBB2CBF4BB4D9673C /* FeedServiceProtocol.swift */; };
 		8CADED6FD67C60DFE4B16D5D /* LoginViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CD8378045CF61BF4E917163 /* LoginViewModel.swift */; };
 		8D4529F85B34B9FC65F5753B /* NavigationHandling.swift in Sources */ = {isa = PBXBuildFile; fileRef = 659DD4EC92A17779D5C214A3 /* NavigationHandling.swift */; };
-		9C7C5DB52F5348B2006BE581 /* EmptyStateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C7C5DB42F5348B2006BE581 /* EmptyStateView.swift */; };
-		9D59A4A75ADDD71E67AFDCFA /* AuthStateManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57185CDF21B5C589BF221E0E /* AuthStateManager.swift */; };
+		9E0D7A2134999CD2AB4AAB60 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0104A4124EADA7A15FBF052B /* OnboardingView.swift */; };
 		A7E24CFF92132A1D41A70D56 /* JourneyService.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3B71E2D2641F7B62DE61CF0 /* JourneyService.swift */; };
 		A987B9ED62D1F615E08EE00F /* FeedListViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C48356ADF41B7CDA706FC71 /* FeedListViewModel.swift */; };
 		B1669A4174B6D0CC23E3E6FA /* JourneyServiceProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BEF57A827BDD7F9AB24DB44 /* JourneyServiceProtocol.swift */; };
+		B5BD9F6D409C11292C18D12F /* KYCVerificationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4ACD9D81D5D2F2347E3F7070 /* KYCVerificationView.swift */; };
 		B9CEBD66A5D1134455513C82 /* FeedListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F13CABDCBF60EF786445502 /* FeedListView.swift */; };
 		BB4662DB2D38975D6831F0B8 /* JobDetailViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83322DC818F85F4243D03D4A /* JobDetailViewModel.swift */; };
 		BCB663685E6CB86C3B0FD9C9 /* DocumentRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 154B167D1E77CBDCC4079313 /* DocumentRow.swift */; };
+		BFC3CBB36B6229F325DF66F2 /* RegistrationViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C16486C3B3FD13900EF470D0 /* RegistrationViewModel.swift */; };
+		CA6EA223D0F9713DB69EBA06 /* LanguageManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09501A48E0DB811E2D101E2B /* LanguageManager.swift */; };
 		CAACFC21B3622DB8C664FFDE /* ProfileViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBD408DBE62077007A6F9A87 /* ProfileViewModel.swift */; };
 		CAB2B06D131AEABC9FE2C21B /* FeedService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26DBD83BC463F60881E1E2AA /* FeedService.swift */; };
 		CDB69D5703298E67C3F17673 /* AppRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A89771D2640131244CCD0493 /* AppRootView.swift */; };
 		CE717BA8B8E3ABC6032A17EF /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD5B8B405DCCDEB915AAA125 /* ProfileView.swift */; };
+		CF5F4BB1974B29485E621957 /* JobApplicationViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1FBEDFFD0FFF8126EF001BAC /* JobApplicationViewModel.swift */; };
+		E2AC00D2BC629A2BD4040BE2 /* KYCViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 568928D12F47F9A1B065B5EA /* KYCViewModel.swift */; };
 		E4E52953B2E3684345C4534A /* ApplicationJourneyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6693B3D66659B51643A3E40D /* ApplicationJourneyView.swift */; };
 		E586FAFFF5ECB3B875396F3D /* JobService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 727C8F082EA466E7C1232D38 /* JobService.swift */; };
 		E8E370912D04EF52EECBF0F5 /* ProfileService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5CBC2CDEA9992C8E1DF69F7 /* ProfileService.swift */; };
 		EC2E322893E334D586BC87FA /* JobsListViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7179D0124A1626B7A1FE86C /* JobsListViewModel.swift */; };
 		F030FCB8DEAAC15DB9B3FDDD /* SavedJobsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4DF96486F786085EDD7562BE /* SavedJobsViewModel.swift */; };
 		F27EED6C60AB439AEFF9F239 /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C33EB1B505B758B6E4BCA99 /* MainTabView.swift */; };
-		F2C7307CBC759AF6C8F752FA /* RegistrationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD473D6E67E741CA9168A88C /* RegistrationView.swift */; };
-		F319F1B4BD670CA15F0A8894 /* KYCViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAE322F8F5BC9B0ED96CCED8 /* KYCViewModel.swift */; };
 		FAEDEEF9E5F8E93857FF4ACD /* AppTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F0729F2F8B466D3E157EADF /* AppTheme.swift */; };
 		FE3C692F747AC6493612D7EC /* AuthServiceProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE106AA656EC0CFEE236A27D /* AuthServiceProtocol.swift */; };
 		FF2F2C9A89E1833A4061F4AF /* PrimaryButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1EEAAFFD85F67C47BA12E8F9 /* PrimaryButton.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		0104A4124EADA7A15FBF052B /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
+		09501A48E0DB811E2D101E2B /* LanguageManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LanguageManager.swift; sourceTree = "<group>"; };
 		0CD8378045CF61BF4E917163 /* LoginViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginViewModel.swift; sourceTree = "<group>"; };
 		13DE83CEBB2CBF4BB4D9673C /* FeedServiceProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedServiceProtocol.swift; sourceTree = "<group>"; };
 		154B167D1E77CBDCC4079313 /* DocumentRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentRow.swift; sourceTree = "<group>"; };
 		1EEAAFFD85F67C47BA12E8F9 /* PrimaryButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrimaryButton.swift; sourceTree = "<group>"; };
-		21B6576E5C82D2ED999F0B46 /* LanguageManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = LanguageManager.swift; path = Sources/SenpaiJepangApp/Core/Localization/LanguageManager.swift; sourceTree = "<group>"; };
+		1FBEDFFD0FFF8126EF001BAC /* JobApplicationViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JobApplicationViewModel.swift; sourceTree = "<group>"; };
 		26D96FCEF0D1B634402760C9 /* MetaChipRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetaChipRow.swift; sourceTree = "<group>"; };
 		26DBD83BC463F60881E1E2AA /* FeedService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedService.swift; sourceTree = "<group>"; };
-		34FCE9D3E728B038DBB96506 /* SettingsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = SettingsView.swift; path = Sources/SenpaiJepangApp/Features/Profile/Presentation/View/SettingsView.swift; sourceTree = "<group>"; };
+		2B71155FCC3F1134B6A11DFE /* NotificationsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationsViewModel.swift; sourceTree = "<group>"; };
+		3912D4ABC350F491AA1F5255 /* AuthStateManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthStateManager.swift; sourceTree = "<group>"; };
 		3A956ADAD7E2657081C687A3 /* SenpaiJepangApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SenpaiJepangApp.swift; sourceTree = "<group>"; };
 		3E27662E18DED29932199066 /* JobsListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JobsListView.swift; sourceTree = "<group>"; };
 		42EBFEC98B633FAE59F5E562 /* AuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthService.swift; sourceTree = "<group>"; };
 		49F496EA8B0D08EF1FD37237 /* JobDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JobDetailView.swift; sourceTree = "<group>"; };
+		4ACD9D81D5D2F2347E3F7070 /* KYCVerificationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KYCVerificationView.swift; sourceTree = "<group>"; };
 		4BEF57A827BDD7F9AB24DB44 /* JourneyServiceProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JourneyServiceProtocol.swift; sourceTree = "<group>"; };
 		4C33EB1B505B758B6E4BCA99 /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
 		4DF96486F786085EDD7562BE /* SavedJobsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedJobsViewModel.swift; sourceTree = "<group>"; };
+		568928D12F47F9A1B065B5EA /* KYCViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KYCViewModel.swift; sourceTree = "<group>"; };
 		56E7BAB258285C0B5A0A3D1C /* JobServiceProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JobServiceProtocol.swift; sourceTree = "<group>"; };
-		57185CDF21B5C589BF221E0E /* AuthStateManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AuthStateManager.swift; path = Sources/SenpaiJepangApp/Core/Auth/AuthStateManager.swift; sourceTree = "<group>"; };
-		5A6577553A44A08D89659EB6 /* UserDefaultsManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = UserDefaultsManager.swift; path = Sources/SenpaiJepangApp/Core/Storage/UserDefaultsManager.swift; sourceTree = "<group>"; };
 		5F0729F2F8B466D3E157EADF /* AppTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppTheme.swift; sourceTree = "<group>"; };
-		64161BE497ABEAC2984FA0E7 /* NotificationsViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = NotificationsViewModel.swift; path = Sources/SenpaiJepangApp/Features/Notifications/NotificationsViewModel.swift; sourceTree = "<group>"; };
+		64CAB1C95AD8973710B6F907 /* OnboardingViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingViewModel.swift; sourceTree = "<group>"; };
 		659DD4EC92A17779D5C214A3 /* NavigationHandling.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NavigationHandling.swift; sourceTree = "<group>"; };
 		6693B3D66659B51643A3E40D /* ApplicationJourneyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApplicationJourneyView.swift; sourceTree = "<group>"; };
-		6C3B379CFC9231F243F01371 /* RegistrationViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = RegistrationViewModel.swift; path = Sources/SenpaiJepangApp/Features/Auth/Presentation/ViewModel/RegistrationViewModel.swift; sourceTree = "<group>"; };
-		6E9FD351C2010E0AA584A828 /* KYCVerificationView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = KYCVerificationView.swift; path = Sources/SenpaiJepangApp/Features/Verification/Presentation/View/KYCVerificationView.swift; sourceTree = "<group>"; };
+		6CE5D2C8CFC805B6A1FF044F /* JobApplicationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JobApplicationView.swift; sourceTree = "<group>"; };
+		717A4EBDD64DC90BDD482D5D /* RegistrationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RegistrationView.swift; sourceTree = "<group>"; };
 		721E9AE06DA3025A5DA440A3 /* JobSummarySection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JobSummarySection.swift; sourceTree = "<group>"; };
 		727C8F082EA466E7C1232D38 /* JobService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JobService.swift; sourceTree = "<group>"; };
+		74FCEA7432650C63C74D96BC /* UserDefaultsManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserDefaultsManager.swift; sourceTree = "<group>"; };
 		83322DC818F85F4243D03D4A /* JobDetailViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JobDetailViewModel.swift; sourceTree = "<group>"; };
-		83BA428DDB98BDEB49CE0A94 /* NotificationsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = NotificationsView.swift; path = Sources/SenpaiJepangApp/Features/Notifications/NotificationsView.swift; sourceTree = "<group>"; };
 		8F13CABDCBF60EF786445502 /* FeedListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedListView.swift; sourceTree = "<group>"; };
 		94EED8D7FC03804A56ADC5B4 /* BadgePill.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BadgePill.swift; sourceTree = "<group>"; };
 		95232A9DB62B0BB9658BF01E /* ProfileServiceProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileServiceProtocol.swift; sourceTree = "<group>"; };
 		9A0664A938F23DB900C7284B /* TimelineStepRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelineStepRow.swift; sourceTree = "<group>"; };
 		9C48356ADF41B7CDA706FC71 /* FeedListViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedListViewModel.swift; sourceTree = "<group>"; };
-		9C7C5DB42F5348B2006BE581 /* EmptyStateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmptyStateView.swift; sourceTree = "<group>"; };
 		A462532254D46B1889651F02 /* SavedJobsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedJobsView.swift; sourceTree = "<group>"; };
 		A5E986EC211B4658DA01A438 /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
 		A7179D0124A1626B7A1FE86C /* JobsListViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JobsListViewModel.swift; sourceTree = "<group>"; };
 		A89771D2640131244CCD0493 /* AppRootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppRootView.swift; sourceTree = "<group>"; };
-		AAE322F8F5BC9B0ED96CCED8 /* KYCViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = KYCViewModel.swift; path = Sources/SenpaiJepangApp/Features/Verification/Presentation/ViewModel/KYCViewModel.swift; sourceTree = "<group>"; };
 		AD70124E2E5D7952050F55E8 /* ManagedTask.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManagedTask.swift; sourceTree = "<group>"; };
-		B545340AF8AA893D31C93672 /* OnboardingViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = OnboardingViewModel.swift; path = Sources/SenpaiJepangApp/Features/Onboarding/Presentation/ViewModel/OnboardingViewModel.swift; sourceTree = "<group>"; };
 		B5CBC2CDEA9992C8E1DF69F7 /* ProfileService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileService.swift; sourceTree = "<group>"; };
 		B734008A981D8F4C900647F8 /* SenpaiJepang.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = SenpaiJepang.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B8002F32ADF944393432D57F /* AppRoute.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppRoute.swift; sourceTree = "<group>"; };
 		B9D62225132F9A6280AEA97F /* FeedPostCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedPostCard.swift; sourceTree = "<group>"; };
 		BBD408DBE62077007A6F9A87 /* ProfileViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileViewModel.swift; sourceTree = "<group>"; };
+		BF4162FAFEE63DA1E6D33D31 /* NotificationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationsView.swift; sourceTree = "<group>"; };
+		C16486C3B3FD13900EF470D0 /* RegistrationViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RegistrationViewModel.swift; sourceTree = "<group>"; };
 		C4333224033A5864F004FD3D /* NavigationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NavigationManager.swift; sourceTree = "<group>"; };
+		C60E8FA7AC694B7626429D3F /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		CD5B8B405DCCDEB915AAA125 /* ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileView.swift; sourceTree = "<group>"; };
-		CD8221C27A58F6DE01303A13 /* OnboardingView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = OnboardingView.swift; path = Sources/SenpaiJepangApp/Features/Onboarding/Presentation/View/OnboardingView.swift; sourceTree = "<group>"; };
+		CDA917EF7C240F5B332654E2 /* EmptyStateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmptyStateView.swift; sourceTree = "<group>"; };
 		CDC5FCBE16EF57E14EB1C47F /* JobCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JobCard.swift; sourceTree = "<group>"; };
 		E3B71E2D2641F7B62DE61CF0 /* JourneyService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JourneyService.swift; sourceTree = "<group>"; };
 		E78BBC0FC1B326D944C437E6 /* ApplicationJourneyViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApplicationJourneyViewModel.swift; sourceTree = "<group>"; };
 		EDF0535B16A117D6C05E3C46 /* SearchBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchBar.swift; sourceTree = "<group>"; };
-		FD473D6E67E741CA9168A88C /* RegistrationView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = RegistrationView.swift; path = Sources/SenpaiJepangApp/Features/Auth/Presentation/View/RegistrationView.swift; sourceTree = "<group>"; };
 		FE106AA656EC0CFEE236A27D /* AuthServiceProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthServiceProtocol.swift; sourceTree = "<group>"; };
 		FF546357F1F129BBAB8FCD08 /* CategoryFilterRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategoryFilterRow.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -148,22 +152,12 @@
 			path = Data;
 			sourceTree = "<group>";
 		};
-		0A2B71E7EEFA9F190062F624 /* Presentation */ = {
+		0E02C173F8B96FD4E67269AC /* Onboarding */ = {
 			isa = PBXGroup;
 			children = (
-				40B83FD224F4803660DB8F62 /* View */,
-				EA75247D1ED4B1C484BD3908 /* ViewModel */,
+				F8FE64475934F349BAD7CFA5 /* Presentation */,
 			);
-			name = Presentation;
-			sourceTree = "<group>";
-		};
-		0F51DE4809371D3FA18490AA /* Presentation */ = {
-			isa = PBXGroup;
-			children = (
-				EFB6F0A43BDEB2EEFD4153CE /* View */,
-				3FB451BEA821DDD2D97AE980 /* ViewModel */,
-			);
-			name = Presentation;
+			path = Onboarding;
 			sourceTree = "<group>";
 		};
 		129C80082A0338E7131FD2C0 /* Service */ = {
@@ -179,24 +173,14 @@
 			children = (
 				801123C769F80C42CF08B29B /* SenpaiJepangApp */,
 				5E3FAF55B04C052ACC278E51 /* Products */,
-				21B6576E5C82D2ED999F0B46 /* LanguageManager.swift */,
-				34FCE9D3E728B038DBB96506 /* SettingsView.swift */,
-				24B6F6C46C888A069F3AC95B /* Sources */,
 			);
-			sourceTree = "<group>";
-		};
-		173E40891F38B46DAF5C6DCA /* Verification */ = {
-			isa = PBXGroup;
-			children = (
-				0F51DE4809371D3FA18490AA /* Presentation */,
-			);
-			name = Verification;
 			sourceTree = "<group>";
 		};
 		1BC367A357F346A44C8162BC /* ViewModel */ = {
 			isa = PBXGroup;
 			children = (
 				0CD8378045CF61BF4E917163 /* LoginViewModel.swift */,
+				C16486C3B3FD13900EF470D0 /* RegistrationViewModel.swift */,
 			);
 			path = ViewModel;
 			sourceTree = "<group>";
@@ -207,14 +191,6 @@
 				95232A9DB62B0BB9658BF01E /* ProfileServiceProtocol.swift */,
 			);
 			path = Service;
-			sourceTree = "<group>";
-		};
-		24B6F6C46C888A069F3AC95B /* Sources */ = {
-			isa = PBXGroup;
-			children = (
-				A35D1F82BC42E04822438623 /* SenpaiJepangApp */,
-			);
-			name = Sources;
 			sourceTree = "<group>";
 		};
 		259A7CB93FF0DA731BC412DC /* Service */ = {
@@ -228,8 +204,8 @@
 		2A3A76EAEE011D5DA1192FB0 /* Molecules */ = {
 			isa = PBXGroup;
 			children = (
-				9C7C5DB42F5348B2006BE581 /* EmptyStateView.swift */,
 				154B167D1E77CBDCC4079313 /* DocumentRow.swift */,
+				CDA917EF7C240F5B332654E2 /* EmptyStateView.swift */,
 				B9D62225132F9A6280AEA97F /* FeedPostCard.swift */,
 				CDC5FCBE16EF57E14EB1C47F /* JobCard.swift */,
 				26D96FCEF0D1B634402760C9 /* MetaChipRow.swift */,
@@ -248,6 +224,14 @@
 			path = Feed;
 			sourceTree = "<group>";
 		};
+		311480F4AD5412C0432CDC79 /* View */ = {
+			isa = PBXGroup;
+			children = (
+				4ACD9D81D5D2F2347E3F7070 /* KYCVerificationView.swift */,
+			);
+			path = View;
+			sourceTree = "<group>";
+		};
 		3E486A54C802D76F3C7AA1F0 /* ViewModel */ = {
 			isa = PBXGroup;
 			children = (
@@ -264,22 +248,6 @@
 				00A2FCA923014DD9CA5679C7 /* Organisms */,
 			);
 			path = Components;
-			sourceTree = "<group>";
-		};
-		3FB451BEA821DDD2D97AE980 /* ViewModel */ = {
-			isa = PBXGroup;
-			children = (
-				AAE322F8F5BC9B0ED96CCED8 /* KYCViewModel.swift */,
-			);
-			name = ViewModel;
-			sourceTree = "<group>";
-		};
-		40B83FD224F4803660DB8F62 /* View */ = {
-			isa = PBXGroup;
-			children = (
-				CD8221C27A58F6DE01303A13 /* OnboardingView.swift */,
-			);
-			name = View;
 			sourceTree = "<group>";
 		};
 		420B0D4E8BF0879C85329E4D /* Task */ = {
@@ -322,12 +290,12 @@
 			path = Service;
 			sourceTree = "<group>";
 		};
-		52924065B9C93569785C7C10 /* Core */ = {
+		5235B8042AF0020E560A93C7 /* JobApplication */ = {
 			isa = PBXGroup;
 			children = (
-				AEC55FFC2622BDA9050A82E1 /* Storage */,
+				7E213F1380692F4DC0CCE983 /* Presentation */,
 			);
-			name = Core;
+			path = JobApplication;
 			sourceTree = "<group>";
 		};
 		5B70C2CF3FEDA09D65408168 /* View */ = {
@@ -357,7 +325,10 @@
 		5FE3CE65C6E8946559C59570 /* Core */ = {
 			isa = PBXGroup;
 			children = (
+				E83EC4F441831C046057CEB3 /* Auth */,
+				B41700CC7C54A82637E06189 /* Localization */,
 				CFA9DFEE4EBB20AC6C23CAB7 /* Navigation */,
+				E258B80FEB7801F8C41B8D2C /* Storage */,
 				420B0D4E8BF0879C85329E4D /* Task */,
 				482296387780A8F8F62E185D /* Theme */,
 			);
@@ -373,6 +344,14 @@
 			path = Presentation;
 			sourceTree = "<group>";
 		};
+		6C7E508408834413132B0B5E /* ViewModel */ = {
+			isa = PBXGroup;
+			children = (
+				568928D12F47F9A1B065B5EA /* KYCViewModel.swift */,
+			);
+			path = ViewModel;
+			sourceTree = "<group>";
+		};
 		6E4E67962C8344231814372C /* Data */ = {
 			isa = PBXGroup;
 			children = (
@@ -381,12 +360,13 @@
 			path = Data;
 			sourceTree = "<group>";
 		};
-		6EC2A840C1E8D9CA8808063B /* ViewModel */ = {
+		71681ACF5679C6D92888B723 /* Presentation */ = {
 			isa = PBXGroup;
 			children = (
-				6C3B379CFC9231F243F01371 /* RegistrationViewModel.swift */,
+				311480F4AD5412C0432CDC79 /* View */,
+				6C7E508408834413132B0B5E /* ViewModel */,
 			);
-			name = ViewModel;
+			path = Presentation;
 			sourceTree = "<group>";
 		};
 		72BE13973ABB697085654930 /* Service */ = {
@@ -402,9 +382,13 @@
 			children = (
 				C7C9E771AEA9CCD828C154FB /* Auth */,
 				305598960B3D8EFC503DF024 /* Feed */,
+				5235B8042AF0020E560A93C7 /* JobApplication */,
 				EFA9D59BD510C9CE28E78C37 /* Jobs */,
 				ED024DBBBB39628C0055B28F /* Journey */,
+				CBF23A96AC160C10FB628398 /* Notifications */,
+				0E02C173F8B96FD4E67269AC /* Onboarding */,
 				B19027862F86AF6A38199F82 /* Profile */,
+				8225F7DB06F2C38055525C63 /* Verification */,
 			);
 			path = Features;
 			sourceTree = "<group>";
@@ -415,6 +399,15 @@
 				4D1141867CDD7FB2296FAEF4 /* Service */,
 			);
 			path = Data;
+			sourceTree = "<group>";
+		};
+		7E213F1380692F4DC0CCE983 /* Presentation */ = {
+			isa = PBXGroup;
+			children = (
+				DA5C96929D33F749346D8C73 /* View */,
+				DF494FE41B11CCCB244E5CB5 /* ViewModel */,
+			);
+			path = Presentation;
 			sourceTree = "<group>";
 		};
 		801123C769F80C42CF08B29B /* SenpaiJepangApp */ = {
@@ -428,6 +421,22 @@
 			);
 			name = SenpaiJepangApp;
 			path = Sources/SenpaiJepangApp;
+			sourceTree = "<group>";
+		};
+		8225F7DB06F2C38055525C63 /* Verification */ = {
+			isa = PBXGroup;
+			children = (
+				71681ACF5679C6D92888B723 /* Presentation */,
+			);
+			path = Verification;
+			sourceTree = "<group>";
+		};
+		86350106822F9B323C72F744 /* View */ = {
+			isa = PBXGroup;
+			children = (
+				0104A4124EADA7A15FBF052B /* OnboardingView.swift */,
+			);
+			path = View;
 			sourceTree = "<group>";
 		};
 		874A73C5ECEEF264C925A6BB /* App */ = {
@@ -475,15 +484,6 @@
 			path = ViewModel;
 			sourceTree = "<group>";
 		};
-		93D9D48CBDDC52D137A7EB88 /* Notifications */ = {
-			isa = PBXGroup;
-			children = (
-				64161BE497ABEAC2984FA0E7 /* NotificationsViewModel.swift */,
-				83BA428DDB98BDEB49CE0A94 /* NotificationsView.swift */,
-			);
-			name = Notifications;
-			sourceTree = "<group>";
-		};
 		984CB97BA5EFEAE35E1F791B /* Service */ = {
 			isa = PBXGroup;
 			children = (
@@ -517,16 +517,6 @@
 			path = Presentation;
 			sourceTree = "<group>";
 		};
-		A35D1F82BC42E04822438623 /* SenpaiJepangApp */ = {
-			isa = PBXGroup;
-			children = (
-				B10A089CA7C2859EE618A155 /* Features */,
-				B2DBAD7FD1E954704030F1AA /* Auth */,
-				52924065B9C93569785C7C10 /* Core */,
-			);
-			name = SenpaiJepangApp;
-			sourceTree = "<group>";
-		};
 		A5E70F0983CF9BB20EBCAB2B /* Domain */ = {
 			isa = PBXGroup;
 			children = (
@@ -539,35 +529,9 @@
 			isa = PBXGroup;
 			children = (
 				CD5B8B405DCCDEB915AAA125 /* ProfileView.swift */,
+				C60E8FA7AC694B7626429D3F /* SettingsView.swift */,
 			);
 			path = View;
-			sourceTree = "<group>";
-		};
-		AE56A21AC7C397A7D35CB24C /* View */ = {
-			isa = PBXGroup;
-			children = (
-				FD473D6E67E741CA9168A88C /* RegistrationView.swift */,
-			);
-			name = View;
-			sourceTree = "<group>";
-		};
-		AEC55FFC2622BDA9050A82E1 /* Storage */ = {
-			isa = PBXGroup;
-			children = (
-				5A6577553A44A08D89659EB6 /* UserDefaultsManager.swift */,
-			);
-			name = Storage;
-			sourceTree = "<group>";
-		};
-		B10A089CA7C2859EE618A155 /* Features */ = {
-			isa = PBXGroup;
-			children = (
-				F12323A10D83FB6619A49296 /* Auth */,
-				93D9D48CBDDC52D137A7EB88 /* Notifications */,
-				173E40891F38B46DAF5C6DCA /* Verification */,
-				DE44D64EBE0811F4156F2EA2 /* Onboarding */,
-			);
-			name = Features;
 			sourceTree = "<group>";
 		};
 		B19027862F86AF6A38199F82 /* Profile */ = {
@@ -580,12 +544,12 @@
 			path = Profile;
 			sourceTree = "<group>";
 		};
-		B2DBAD7FD1E954704030F1AA /* Auth */ = {
+		B41700CC7C54A82637E06189 /* Localization */ = {
 			isa = PBXGroup;
 			children = (
-				57185CDF21B5C589BF221E0E /* AuthStateManager.swift */,
+				09501A48E0DB811E2D101E2B /* LanguageManager.swift */,
 			);
-			name = Auth;
+			path = Localization;
 			sourceTree = "<group>";
 		};
 		B7D6EE319A8CE59996483CC1 /* Presentation */ = {
@@ -595,15 +559,6 @@
 				1BC367A357F346A44C8162BC /* ViewModel */,
 			);
 			path = Presentation;
-			sourceTree = "<group>";
-		};
-		BB8F6C3CE9C13E29A12E59C2 /* Presentation */ = {
-			isa = PBXGroup;
-			children = (
-				AE56A21AC7C397A7D35CB24C /* View */,
-				6EC2A840C1E8D9CA8808063B /* ViewModel */,
-			);
-			name = Presentation;
 			sourceTree = "<group>";
 		};
 		C3B233931BC9630D3ED8BF92 /* ViewModel */ = {
@@ -624,6 +579,23 @@
 			path = Auth;
 			sourceTree = "<group>";
 		};
+		C8342270BCE173777E3F0BFC /* ViewModel */ = {
+			isa = PBXGroup;
+			children = (
+				64CAB1C95AD8973710B6F907 /* OnboardingViewModel.swift */,
+			);
+			path = ViewModel;
+			sourceTree = "<group>";
+		};
+		CBF23A96AC160C10FB628398 /* Notifications */ = {
+			isa = PBXGroup;
+			children = (
+				BF4162FAFEE63DA1E6D33D31 /* NotificationsView.swift */,
+				2B71155FCC3F1134B6A11DFE /* NotificationsViewModel.swift */,
+			);
+			path = Notifications;
+			sourceTree = "<group>";
+		};
 		CFA9DFEE4EBB20AC6C23CAB7 /* Navigation */ = {
 			isa = PBXGroup;
 			children = (
@@ -638,6 +610,7 @@
 			isa = PBXGroup;
 			children = (
 				A5E986EC211B4658DA01A438 /* LoginView.swift */,
+				717A4EBDD64DC90BDD482D5D /* RegistrationView.swift */,
 			);
 			path = View;
 			sourceTree = "<group>";
@@ -650,12 +623,20 @@
 			path = Data;
 			sourceTree = "<group>";
 		};
-		DE44D64EBE0811F4156F2EA2 /* Onboarding */ = {
+		DA5C96929D33F749346D8C73 /* View */ = {
 			isa = PBXGroup;
 			children = (
-				0A2B71E7EEFA9F190062F624 /* Presentation */,
+				6CE5D2C8CFC805B6A1FF044F /* JobApplicationView.swift */,
 			);
-			name = Onboarding;
+			path = View;
+			sourceTree = "<group>";
+		};
+		DF494FE41B11CCCB244E5CB5 /* ViewModel */ = {
+			isa = PBXGroup;
+			children = (
+				1FBEDFFD0FFF8126EF001BAC /* JobApplicationViewModel.swift */,
+			);
+			path = ViewModel;
 			sourceTree = "<group>";
 		};
 		E23EB0021107172DE4F42CFB /* Service */ = {
@@ -664,6 +645,14 @@
 				B5CBC2CDEA9992C8E1DF69F7 /* ProfileService.swift */,
 			);
 			path = Service;
+			sourceTree = "<group>";
+		};
+		E258B80FEB7801F8C41B8D2C /* Storage */ = {
+			isa = PBXGroup;
+			children = (
+				74FCEA7432650C63C74D96BC /* UserDefaultsManager.swift */,
+			);
+			path = Storage;
 			sourceTree = "<group>";
 		};
 		E364F832CA84547B780EB738 /* Atoms */ = {
@@ -677,6 +666,14 @@
 			path = Atoms;
 			sourceTree = "<group>";
 		};
+		E83EC4F441831C046057CEB3 /* Auth */ = {
+			isa = PBXGroup;
+			children = (
+				3912D4ABC350F491AA1F5255 /* AuthStateManager.swift */,
+			);
+			path = Auth;
+			sourceTree = "<group>";
+		};
 		E86A7E0326C20F3B01991D0E /* Presentation */ = {
 			isa = PBXGroup;
 			children = (
@@ -684,14 +681,6 @@
 				90EFEF97D9570BEA54684F2D /* ViewModel */,
 			);
 			path = Presentation;
-			sourceTree = "<group>";
-		};
-		EA75247D1ED4B1C484BD3908 /* ViewModel */ = {
-			isa = PBXGroup;
-			children = (
-				B545340AF8AA893D31C93672 /* OnboardingViewModel.swift */,
-			);
-			name = ViewModel;
 			sourceTree = "<group>";
 		};
 		ED024DBBBB39628C0055B28F /* Journey */ = {
@@ -722,22 +711,6 @@
 			path = Jobs;
 			sourceTree = "<group>";
 		};
-		EFB6F0A43BDEB2EEFD4153CE /* View */ = {
-			isa = PBXGroup;
-			children = (
-				6E9FD351C2010E0AA584A828 /* KYCVerificationView.swift */,
-			);
-			name = View;
-			sourceTree = "<group>";
-		};
-		F12323A10D83FB6619A49296 /* Auth */ = {
-			isa = PBXGroup;
-			children = (
-				BB8F6C3CE9C13E29A12E59C2 /* Presentation */,
-			);
-			name = Auth;
-			sourceTree = "<group>";
-		};
 		F7E31FDE09D396C22F2CE6B3 /* Presentation */ = {
 			isa = PBXGroup;
 			children = (
@@ -755,6 +728,15 @@
 			path = Service;
 			sourceTree = "<group>";
 		};
+		F8FE64475934F349BAD7CFA5 /* Presentation */ = {
+			isa = PBXGroup;
+			children = (
+				86350106822F9B323C72F744 /* View */,
+				C8342270BCE173777E3F0BFC /* ViewModel */,
+			);
+			path = Presentation;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -769,6 +751,8 @@
 			dependencies = (
 			);
 			name = SenpaiJepang;
+			packageProductDependencies = (
+			);
 			productName = SenpaiJepang;
 			productReference = B734008A981D8F4C900647F8 /* SenpaiJepang.app */;
 			productType = "com.apple.product-type.application";
@@ -797,7 +781,7 @@
 			);
 			mainGroup = 14E01C53E539CE413ED89CE4;
 			minimizedProjectReferenceProxies = 1;
-			productRefGroup = 5E3FAF55B04C052ACC278E51 /* Products */;
+			preferredProjectObjectVersion = 77;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
@@ -818,14 +802,18 @@
 				2235EABE86F6CB8AFC747605 /* ApplicationJourneyViewModel.swift in Sources */,
 				6660DE25EC871BC63D9B4338 /* AuthService.swift in Sources */,
 				FE3C692F747AC6493612D7EC /* AuthServiceProtocol.swift in Sources */,
+				51A0B6AE2A6A5F06F481C260 /* AuthStateManager.swift in Sources */,
 				4A5BBB26573C6E714AF16FF3 /* BadgePill.swift in Sources */,
 				4825C89F5FB746E4CB6DA598 /* CategoryFilterRow.swift in Sources */,
 				BCB663685E6CB86C3B0FD9C9 /* DocumentRow.swift in Sources */,
+				7E137564BE75EC6588045676 /* EmptyStateView.swift in Sources */,
 				B9CEBD66A5D1134455513C82 /* FeedListView.swift in Sources */,
 				A987B9ED62D1F615E08EE00F /* FeedListViewModel.swift in Sources */,
 				2F42989629B45CD8AA942949 /* FeedPostCard.swift in Sources */,
 				CAB2B06D131AEABC9FE2C21B /* FeedService.swift in Sources */,
 				887D0C1C718576AB8DB3352E /* FeedServiceProtocol.swift in Sources */,
+				5A36A550DA33B92092BC1D1A /* JobApplicationView.swift in Sources */,
+				CF5F4BB1974B29485E621957 /* JobApplicationViewModel.swift in Sources */,
 				40D7A478D7EB2EBA90C7B336 /* JobCard.swift in Sources */,
 				64B690AF20FB1BA9DFDC00E7 /* JobDetailView.swift in Sources */,
 				BB4662DB2D38975D6831F0B8 /* JobDetailViewModel.swift in Sources */,
@@ -836,36 +824,34 @@
 				EC2E322893E334D586BC87FA /* JobsListViewModel.swift in Sources */,
 				A7E24CFF92132A1D41A70D56 /* JourneyService.swift in Sources */,
 				B1669A4174B6D0CC23E3E6FA /* JourneyServiceProtocol.swift in Sources */,
+				B5BD9F6D409C11292C18D12F /* KYCVerificationView.swift in Sources */,
+				E2AC00D2BC629A2BD4040BE2 /* KYCViewModel.swift in Sources */,
+				CA6EA223D0F9713DB69EBA06 /* LanguageManager.swift in Sources */,
 				029838FCF808E0AB23DE9D83 /* LoginView.swift in Sources */,
 				8CADED6FD67C60DFE4B16D5D /* LoginViewModel.swift in Sources */,
-				9C7C5DB52F5348B2006BE581 /* EmptyStateView.swift in Sources */,
 				F27EED6C60AB439AEFF9F239 /* MainTabView.swift in Sources */,
 				3735010785017EA9FA60AB7D /* ManagedTask.swift in Sources */,
 				322BC92C5383B5DCFD9CF091 /* MetaChipRow.swift in Sources */,
 				8D4529F85B34B9FC65F5753B /* NavigationHandling.swift in Sources */,
 				6E0CEF1BBB90348946198EDB /* NavigationManager.swift in Sources */,
+				58A66DF2C6494DD124050235 /* NotificationsView.swift in Sources */,
+				4BFF998E285DC86BE41EBD03 /* NotificationsViewModel.swift in Sources */,
+				9E0D7A2134999CD2AB4AAB60 /* OnboardingView.swift in Sources */,
+				1D6FF7CD187F7711BD3C265F /* OnboardingViewModel.swift in Sources */,
 				FF2F2C9A89E1833A4061F4AF /* PrimaryButton.swift in Sources */,
 				E8E370912D04EF52EECBF0F5 /* ProfileService.swift in Sources */,
 				237B8AC2223E6DD6D622754C /* ProfileServiceProtocol.swift in Sources */,
 				CE717BA8B8E3ABC6032A17EF /* ProfileView.swift in Sources */,
 				CAACFC21B3622DB8C664FFDE /* ProfileViewModel.swift in Sources */,
+				20CEE86FB5E31B288B274CB1 /* RegistrationView.swift in Sources */,
+				BFC3CBB36B6229F325DF66F2 /* RegistrationViewModel.swift in Sources */,
 				0D9F2EB68BD1ABBE9B9E7863 /* SavedJobsView.swift in Sources */,
 				F030FCB8DEAAC15DB9B3FDDD /* SavedJobsViewModel.swift in Sources */,
 				05D139032546BE2EE09526C0 /* SearchBar.swift in Sources */,
 				5721A643303E1F41E78EE5F1 /* SenpaiJepangApp.swift in Sources */,
+				63FD8CD3ADD85CF9365F46F1 /* SettingsView.swift in Sources */,
 				13D7D66B9EE4A2546450B3DB /* TimelineStepRow.swift in Sources */,
-				019B45B9434D247AC030EF22 /* LanguageManager.swift in Sources */,
-				65C39093A457D1BD84912C0C /* SettingsView.swift in Sources */,
-				F2C7307CBC759AF6C8F752FA /* RegistrationView.swift in Sources */,
-				85F67D537C6D2E4BCEB5121E /* RegistrationViewModel.swift in Sources */,
-				9D59A4A75ADDD71E67AFDCFA /* AuthStateManager.swift in Sources */,
-				5C6740C178CE8F9F6466C14C /* NotificationsViewModel.swift in Sources */,
-				76B39D19D7C93E97A330312E /* NotificationsView.swift in Sources */,
-				354CA1014D52D2353EF09DA9 /* KYCVerificationView.swift in Sources */,
-				F319F1B4BD670CA15F0A8894 /* KYCViewModel.swift in Sources */,
-				2E99E684D20476D2719E3A3B /* UserDefaultsManager.swift in Sources */,
-				3215328893F487ED61C3CA7A /* OnboardingView.swift in Sources */,
-				3213E59D1B75122B7E86C402 /* OnboardingViewModel.swift in Sources */,
+				51F5C9A1519F1C12BD7581B9 /* UserDefaultsManager.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

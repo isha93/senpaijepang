@@ -71,7 +71,7 @@ struct JobApplicationView: View {
                     .font(.system(size: 20, weight: .semibold))
                     .foregroundStyle(AppTheme.textPrimary)
                     .frame(width: 40, height: 40)
-                    .background(Circle().fill(AppTheme.backgroundSecondary).opacity(0.5))
+                    .background(Circle().fill(AppTheme.grayLight).opacity(0.5))
             }
             
             Spacer()
@@ -114,30 +114,39 @@ struct JobApplicationView: View {
                         Text(viewModel.job.title)
                             .font(.system(size: 16, weight: .bold))
                             .foregroundStyle(AppTheme.textPrimary)
-                        Text(viewModel.job.company)
+                        Text(viewModel.job.companyName)
                             .font(.system(size: 14, weight: .semibold))
                             .foregroundStyle(AppTheme.accent)
                     }
                     
                     Spacer()
                     
-                    if let url = try? viewModel.job.companyLogoURL?.asURL() {
-                        AsyncImage(url: url) { image in
-                            image.resizable().scaledToFill()
-                        } placeholder: {
-                            Color(.systemGray6)
-                        }
-                        .frame(width: 56, height: 56)
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color(.systemGray5), lineWidth: 1))
-                    } else {
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(Color(.systemGray6))
+                    ZStack(alignment: .bottomTrailing) {
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .fill(Color.white)
                             .frame(width: 56, height: 56)
+                            .shadow(color: .black.opacity(0.06), radius: 8, x: 0, y: 2)
+                            .overlay {
+                                Text(viewModel.job.companyLogoInitial ?? String(viewModel.job.companyName.prefix(1)))
+                                    .font(.title2.bold())
+                                    .foregroundStyle(AppTheme.accent)
+                            }
+                        
+                        if viewModel.job.isVerifiedEmployer {
+                            Circle()
+                                .fill(AppTheme.accent)
+                                .frame(width: 16, height: 16)
+                                .overlay {
+                                    Image(systemName: "checkmark")
+                                        .font(.system(size: 8, weight: .bold))
+                                        .foregroundStyle(.white)
+                                }
+                                .offset(x: 2, y: 2)
+                        }
                     }
                 }
                 .padding(16)
-                .background(AppTheme.backgroundSecondary)
+                .background(AppTheme.grayLight)
                 .clipShape(RoundedRectangle(cornerRadius: 16))
                 .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color(.systemGray5), lineWidth: 1))
                 
@@ -216,7 +225,7 @@ struct JobApplicationView: View {
                     .padding(16)
                     .background(AppTheme.backgroundPrimary)
                     .clipShape(RoundedRectangle(cornerRadius: 16))
-                    .overlay(RoundedRectangle(cornerRadius: 16).stroke(StyleConstants.dashedBorder.stroke, style: StrokeStyle(lineWidth: 2, dash: [6])))
+                    .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color(.systemGray4), style: StrokeStyle(lineWidth: 2, dash: [6])))
                 }
             }
             .padding(24)
@@ -241,7 +250,7 @@ struct JobApplicationView: View {
                         .foregroundStyle(AppTheme.textPrimary)
                         .padding(12)
                         .frame(minHeight: 240)
-                        .background(AppTheme.backgroundSecondary)
+                        .background(AppTheme.grayLight)
                         .clipShape(RoundedRectangle(cornerRadius: 16))
                         .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color(.systemGray5), lineWidth: 1))
                         .onChange(of: viewModel.coverLetterText) { newValue, _ in
@@ -334,7 +343,7 @@ struct JobApplicationView: View {
                 .foregroundStyle(color)
         }
         .padding(16)
-        .background(AppTheme.backgroundSecondary.opacity(0.5))
+        .background(AppTheme.grayLight.opacity(0.5))
         .clipShape(RoundedRectangle(cornerRadius: 16))
         .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color(.systemGray5), lineWidth: 1))
     }

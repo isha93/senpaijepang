@@ -1,6 +1,6 @@
 import Foundation
 
-struct Job: Equatable, Sendable, Identifiable {
+struct Job: Equatable, Sendable, Identifiable, Hashable {
     let id: String
     let title: String
     let companyName: String
