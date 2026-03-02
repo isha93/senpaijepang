@@ -8,6 +8,7 @@ import { createObjectStorageFromEnv } from './identity/object-storage.js';
 import { createLogger } from './observability/logger.js';
 import { createPostgresJobsService } from './jobs/postgres-service.js';
 import { createPostgresFeedService } from './feed/postgres-service.js';
+import { bootstrapAdminAccount } from './auth/bootstrap-admin.js';
 
 async function createAuthStoreFromEnv(env = process.env) {
   const mode = String(env.AUTH_STORE || 'memory').trim().toLowerCase();
@@ -47,6 +48,13 @@ async function main() {
     env: process.env,
     logger
   });
+
+  await bootstrapAdminAccount({
+    env: process.env,
+    store: authStore.store,
+    logger
+  });
+
   let jobsService;
   let feedService;
 

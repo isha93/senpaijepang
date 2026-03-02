@@ -2,7 +2,7 @@
 
 Repo ini adalah "mesin belakang" (backend API) untuk proses verifikasi trust di platform migrasi kerja Indonesia -> Jepang.
 
-Frontend web user/admin sengaja belum dikerjakan di repo ini. Fokus delivery repo ini: API stabil, kontrak sinkron, dan siap integrasi iOS bertahap.
+Frontend web user/admin production belum selesai, tapi dashboard internal MVP React sudah tersedia di `apps/web-admin` dan terkoneksi endpoint runtime utama. Fokus delivery repo ini tetap: API stabil, kontrak sinkron, dan siap konsumsi client.
 
 ## Ringkas Dalam 30 Detik
 - Apa yang sudah jalan: auth, KYC intake/review, jobs/feed/admin CRUD, organizations verification, persistence Postgres untuk alur utama.
@@ -99,6 +99,8 @@ Expected output akhir: `DEV_ALL_CHECK_OK`
 | Command | Untuk apa |
 |---|---|
 | `npm run dev:api` | Nyalain API mode development |
+| `npm run dev:web-admin` | Nyalain dashboard internal React (desktop/mobile web adaptif) |
+| `npm run build:web-admin` | Build dashboard React untuk validasi release asset |
 | `npm run dev:all` | Nyalain infra + API sekalian |
 | `npm run stop:all` | Matikan service hasil `dev:all` |
 | `npm run migrate:api` | Jalankan migration database |
@@ -171,6 +173,11 @@ Expected output akhir: `DEV_ALL_CHECK_OK`
 - `DATABASE_URL=postgresql://...` (wajib kalau `AUTH_STORE=postgres`)
 - `ADMIN_API_KEY=...` (wajib untuk endpoint `/admin/*`)
 - `ADMIN_ROLE_CODES=super_admin` (opsional, default role admin yang diizinkan)
+- `BOOTSTRAP_ADMIN_EMAIL=admin@senpaijepang.com` (opsional, aktifkan auto-create admin saat startup)
+- `BOOTSTRAP_ADMIN_PASSWORD=...` (wajib jika `BOOTSTRAP_ADMIN_EMAIL` diisi)
+- `BOOTSTRAP_ADMIN_FULL_NAME=Admin Senpai` (opsional)
+- `BOOTSTRAP_ADMIN_ROLE_CODES=super_admin,sdm,lpk,tsk,kaisha` (opsional)
+- `BOOTSTRAP_ADMIN_RESET_PASSWORD=false` (set `true` kalau mau reset password akun bootstrap saat startup)
 - `OBJECT_STORAGE_PROVIDER=memory|s3`
 - `KYC_PROVIDER_WEBHOOK_REQUIRE_SIGNATURE=true|false`
 - `KYC_PROVIDER_WEBHOOK_MAX_SKEW_SEC=300`
@@ -187,6 +194,8 @@ Detail lengkap: `.env.example`
 - [Status Implementasi Runtime API](docs/architecture/API-IMPLEMENTATION-STATUS-v0.md)
 - [Kontrak Runtime OpenAPI](docs/architecture/openapi-runtime-v0.yaml)
 - [Hosting Options MVP](docs/architecture/HOSTING-OPTIONS-MVP-v1.md)
+- [Dashboard Stitch Prompt](docs/architecture/DASHBOARD-STITCH-PROMPT-v1.md)
+- [Web Admin Implementation Plan](docs/architecture/WEB-ADMIN-IMPLEMENTATION-PLAN-v1.md)
 - [Sprint Plan Lama (Archived)](docs/architecture/MVP-SPRINT-PLAN-v1.md)
 
 ## Istilah Singkat Biar Nyambung

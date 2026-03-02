@@ -15,7 +15,10 @@
   },
   "scripts": {
     "dev:api": "npm run dev -w @senpaijepang/api",
+    "dev:web-admin": "npm run dev -w @senpaijepang/web-admin",
     "start:api": "npm run start -w @senpaijepang/api",
+    "build:web-admin": "npm run build -w @senpaijepang/web-admin",
+    "preview:web-admin": "npm run preview -w @senpaijepang/web-admin",
     "dev:all": "node scripts/dev-all.mjs start",
     "stop:all": "node scripts/dev-all.mjs stop",
     "deploy:staging": "node scripts/deploy-staging.mjs",

@@ -160,6 +160,22 @@ export class PostgresAuthStore {
     return mapUserRow(result.rows[0]);
   }
 
+  async updateUserPasswordHash({ userId, passwordHash }) {
+    const result = await this.pool.query(
+      `
+        UPDATE users
+        SET
+          password_hash = $2,
+          updated_at = NOW()
+        WHERE id = $1
+        RETURNING id, full_name, email, password_hash, avatar_url, created_at, updated_at
+      `,
+      [userId, passwordHash]
+    );
+
+    return mapUserRow(result.rows[0]);
+  }
+
   async ensureUserRole({ userId, roleCode }) {
     const normalizedRoleCode = String(roleCode || '')
       .trim()

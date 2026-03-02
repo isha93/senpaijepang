@@ -108,6 +108,17 @@ export class InMemoryAuthStore {
     return user;
   }
 
+  updateUserPasswordHash({ userId, passwordHash }) {
+    const user = this.usersById.get(userId);
+    if (!user) {
+      return null;
+    }
+
+    user.passwordHash = passwordHash;
+    user.updatedAt = new Date().toISOString();
+    return user;
+  }
+
   ensureUserRole({ userId, roleCode }) {
     if (!this.usersById.has(userId)) {
       return false;
