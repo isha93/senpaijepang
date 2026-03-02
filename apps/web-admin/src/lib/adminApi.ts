@@ -91,6 +91,7 @@ export type AdminKycReviewQueueResponse = {
   filters: {
     status: KycRawStatus[];
   };
+  pageInfo: JobPageInfo;
   items: AdminKycReviewQueueItem[];
 };
 
@@ -114,6 +115,17 @@ export type AdminFeedPost = {
 export type AdminFeedPostListResponse = {
   items: AdminFeedPost[];
   pageInfo: JobPageInfo;
+};
+
+export type AdminFeedPostUpsertInput = Omit<AdminFeedPost, 'id'>;
+
+export type AdminFeedPostEnvelope = {
+  post: AdminFeedPost;
+};
+
+export type AdminFeedPostDeleteResponse = {
+  removed: boolean;
+  postId: string;
 };
 
 export type FeedPost = {
@@ -164,6 +176,17 @@ export type AdminJob = {
 export type AdminJobListResponse = {
   items: AdminJob[];
   pageInfo: JobPageInfo;
+};
+
+export type AdminJobUpsertInput = Omit<AdminJob, 'id'>;
+
+export type AdminJobEnvelope = {
+  job: AdminJob;
+};
+
+export type AdminJobDeleteResponse = {
+  removed: boolean;
+  jobId: string;
 };
 
 export type OrganizationVerificationStatus = 'PENDING' | 'VERIFIED' | 'MISMATCH' | 'NOT_FOUND' | 'REJECTED';
@@ -236,6 +259,7 @@ export function getMetrics() {
 
 export function getAdminKycReviewQueue(params: {
   status?: 'DEFAULT' | 'ALL' | KycRawStatus;
+  cursor?: number;
   limit?: number;
 } = {}) {
   const query = buildQuery(params);
@@ -264,6 +288,26 @@ export function getAdminFeedPosts(params: {
   return adminRequest<AdminFeedPostListResponse>(`/admin/feed/posts${query}`);
 }
 
+export function createAdminFeedPost(body: AdminFeedPostUpsertInput) {
+  return adminRequest<AdminFeedPostEnvelope>('/admin/feed/posts', {
+    method: 'POST',
+    body
+  });
+}
+
+export function updateAdminFeedPost(postId: string, body: Partial<AdminFeedPostUpsertInput>) {
+  return adminRequest<AdminFeedPostEnvelope>(`/admin/feed/posts/${postId}`, {
+    method: 'PATCH',
+    body
+  });
+}
+
+export function deleteAdminFeedPost(postId: string) {
+  return adminRequest<AdminFeedPostDeleteResponse>(`/admin/feed/posts/${postId}`, {
+    method: 'DELETE'
+  });
+}
+
 export function getPublicFeedPosts(params: {
   q?: string;
   category?: string;
@@ -281,6 +325,26 @@ export function getAdminJobs(params: {
 } = {}) {
   const query = buildQuery(params);
   return adminRequest<AdminJobListResponse>(`/admin/jobs${query}`);
+}
+
+export function createAdminJob(body: AdminJobUpsertInput) {
+  return adminRequest<AdminJobEnvelope>('/admin/jobs', {
+    method: 'POST',
+    body
+  });
+}
+
+export function updateAdminJob(jobId: string, body: Partial<AdminJobUpsertInput>) {
+  return adminRequest<AdminJobEnvelope>(`/admin/jobs/${jobId}`, {
+    method: 'PATCH',
+    body
+  });
+}
+
+export function deleteAdminJob(jobId: string) {
+  return adminRequest<AdminJobDeleteResponse>(`/admin/jobs/${jobId}`, {
+    method: 'DELETE'
+  });
 }
 
 export function getAdminOrganizations(params: {

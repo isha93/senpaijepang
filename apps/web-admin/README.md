@@ -31,3 +31,5 @@ For quick local login/testing, backend can auto-create:
 - `/jobs` -> `/admin/jobs`
 - `/organizations` -> `/admin/organizations`, `PATCH /admin/organizations/{orgId}/verification`
 - `/system` -> `/health`, `/metrics`
+
+KYC review queue supports cursor pagination via `cursor` + `limit` query params and returns `pageInfo`.

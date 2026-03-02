@@ -303,7 +303,7 @@ export class InMemoryAuthStore {
       .filter(Boolean);
   }
 
-  listKycSessionsByStatuses({ statuses, limit }) {
+  listKycSessionsByStatuses({ statuses, cursor = 0, limit }) {
     const allowed = new Set((statuses || []).filter(Boolean));
     const sessions = Array.from(this.kycSessionsById.values())
       .filter((session) => (allowed.size === 0 ? true : allowed.has(session.status)))
@@ -313,7 +313,13 @@ export class InMemoryAuthStore {
         return rightTime - leftTime;
       });
 
-    return sessions.slice(0, limit);
+    const normalizedCursor = Number.isFinite(Number(cursor)) ? Math.max(0, Math.floor(Number(cursor))) : 0;
+    const normalizedLimit = Number.isFinite(Number(limit)) ? Math.max(1, Math.floor(Number(limit))) : 25;
+
+    return {
+      items: sessions.slice(normalizedCursor, normalizedCursor + normalizedLimit),
+      total: sessions.length
+    };
   }
 
   listIdentityDocumentsBySessionId(kycSessionId) {

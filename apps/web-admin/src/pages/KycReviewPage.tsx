@@ -11,6 +11,7 @@ type FilterKey = 'all' | 'pending' | 'verifying' | 'on-hold' | 'verified' | 'rej
 type DecisionState = 'reject' | 'manual' | 'verify';
 
 const filterOrder: FilterKey[] = ['all', 'pending', 'verifying', 'on-hold', 'verified', 'rejected'];
+const PAGE_SIZE = 20;
 
 function filterToStatus(filter: FilterKey): 'ALL' | KycRawStatus {
   if (filter === 'all') return 'ALL';
@@ -64,9 +65,21 @@ function decisionToApi(decision: DecisionState): 'REJECTED' | 'MANUAL_REVIEW' | 
   return 'VERIFIED';
 }
 
+function parseCursorValue(value: string | number | null | undefined) {
+  if (value === null || value === undefined || value === '') {
+    return null;
+  }
+  const cursor = Number(value);
+  if (!Number.isInteger(cursor) || cursor < 0) {
+    return null;
+  }
+  return cursor;
+}
+
 export function KycReviewPage() {
   const [statusFilter, setStatusFilter] = useState<FilterKey>('all');
   const [rows, setRows] = useState<AdminKycReviewQueueItem[]>([]);
+  const [total, setTotal] = useState(0);
   const [activeId, setActiveId] = useState('');
   const [decision, setDecision] = useState<DecisionState>('manual');
   const [reason, setReason] = useState('');
@@ -74,16 +87,24 @@ export function KycReviewPage() {
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitMessage, setSubmitMessage] = useState<string | null>(null);
+  const [currentCursor, setCurrentCursor] = useState(0);
+  const [nextCursor, setNextCursor] = useState<number | null>(null);
+  const [cursorHistory, setCursorHistory] = useState<number[]>([]);
 
-  async function loadQueue(filter: FilterKey) {
+  async function loadQueue(filter: FilterKey, cursor = 0) {
     setLoading(true);
     setError(null);
     try {
       const response = await getAdminKycReviewQueue({
         status: filterToStatus(filter),
-        limit: 100
+        cursor,
+        limit: PAGE_SIZE
       });
       setRows(response.items);
+      setTotal(response.pageInfo.total);
+      const resolvedCursor = parseCursorValue(response.pageInfo.cursor) ?? cursor;
+      setCurrentCursor(resolvedCursor);
+      setNextCursor(parseCursorValue(response.pageInfo.nextCursor));
       setActiveId((prev) => {
         if (prev && response.items.some((item) => item.session.id === prev)) {
           return prev;
@@ -97,14 +118,18 @@ export function KycReviewPage() {
           : 'Failed to load KYC queue';
       setError(message);
       setRows([]);
+      setTotal(0);
       setActiveId('');
+      setCurrentCursor(cursor);
+      setNextCursor(null);
     } finally {
       setLoading(false);
     }
   }
 
   useEffect(() => {
-    void loadQueue(statusFilter);
+    setCursorHistory([]);
+    void loadQueue(statusFilter, 0);
   }, [statusFilter]);
 
   const active = useMemo(
@@ -113,11 +138,31 @@ export function KycReviewPage() {
   );
 
   const currentRisk = active ? riskTag(active.riskFlags) : { label: 'None', className: 'none' };
+  const rangeStart = rows.length === 0 ? 0 : currentCursor + 1;
+  const rangeEnd = rows.length === 0 ? 0 : Math.min(currentCursor + rows.length, total);
+  const currentPage = Math.floor(currentCursor / PAGE_SIZE) + 1;
 
   function cycleFilter() {
     const index = filterOrder.indexOf(statusFilter);
     const next = filterOrder[(index + 1) % filterOrder.length];
     setStatusFilter(next);
+  }
+
+  function goToPreviousPage() {
+    if (cursorHistory.length === 0 || loading) {
+      return;
+    }
+    const targetCursor = cursorHistory[cursorHistory.length - 1];
+    setCursorHistory((prev) => prev.slice(0, -1));
+    void loadQueue(statusFilter, targetCursor);
+  }
+
+  function goToNextPage() {
+    if (nextCursor === null || loading) {
+      return;
+    }
+    setCursorHistory((prev) => [...prev, currentCursor]);
+    void loadQueue(statusFilter, nextCursor);
   }
 
   async function submitDecision() {
@@ -136,7 +181,7 @@ export function KycReviewPage() {
       });
       setSubmitMessage('Decision submitted. Queue refreshed.');
       setReason('');
-      await loadQueue(statusFilter);
+      await loadQueue(statusFilter, currentCursor);
     } catch (err) {
       const message =
         typeof err === 'object' && err && 'message' in err
@@ -154,14 +199,22 @@ export function KycReviewPage() {
         <div className="kyc-header">
           <div>
             <h3>KYC Review Queue</h3>
-            <p>{loading ? 'Loading queue...' : `${rows.length} requests in current filter`}</p>
+            <p>
+              {loading
+                ? 'Loading queue...'
+                : `${total} request${total === 1 ? '' : 's'} in ${statusLabel(statusFilter)} filter`}
+            </p>
           </div>
 
           <div className="kyc-actions">
             <button type="button" onClick={cycleFilter}>
               Filter: {statusLabel(statusFilter)}
             </button>
-            <button type="button" className="btn-primary" onClick={() => void loadQueue(statusFilter)}>
+            <button
+              type="button"
+              className="btn-primary"
+              onClick={() => void loadQueue(statusFilter, currentCursor)}
+            >
               Refresh
             </button>
           </div>
@@ -225,10 +278,19 @@ export function KycReviewPage() {
             </div>
 
             <div className="table-pagination">
-              <span>Showing {rows.length} items</span>
+              <span>
+                Showing {rangeStart}-{rangeEnd} of {total}
+              </span>
               <div className="pagination-buttons">
-                <button type="button">Prev</button>
-                <button type="button">Next</button>
+                <button type="button" onClick={goToPreviousPage} disabled={loading || cursorHistory.length === 0}>
+                  Prev
+                </button>
+                <button type="button" className="is-active">
+                  {currentPage}
+                </button>
+                <button type="button" onClick={goToNextPage} disabled={loading || nextCursor === null}>
+                  Next
+                </button>
               </div>
             </div>
           </section>

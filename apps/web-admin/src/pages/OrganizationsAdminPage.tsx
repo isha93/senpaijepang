@@ -8,6 +8,7 @@ import {
 
 type OrgTypeFilter = 'ALL' | 'TSK' | 'LPK' | 'EMPLOYER';
 type VerificationFilter = 'ALL' | OrganizationVerificationStatus;
+const PAGE_SIZE = 20;
 
 function mapStatusChip(status: OrganizationVerificationStatus | null) {
   if (status === 'VERIFIED') {
@@ -34,6 +35,17 @@ function mapStatusChip(status: OrganizationVerificationStatus | null) {
   };
 }
 
+function parseCursorValue(value: string | number | null | undefined) {
+  if (value === null || value === undefined || value === '') {
+    return null;
+  }
+  const cursor = Number(value);
+  if (!Number.isInteger(cursor) || cursor < 0) {
+    return null;
+  }
+  return cursor;
+}
+
 export function OrganizationsAdminPage() {
   const [rows, setRows] = useState<AdminOrganizationListItem[]>([]);
   const [total, setTotal] = useState(0);
@@ -43,18 +55,25 @@ export function OrganizationsAdminPage() {
   const [error, setError] = useState<string | null>(null);
   const [updatingOrgId, setUpdatingOrgId] = useState<string | null>(null);
   const [submitMessage, setSubmitMessage] = useState<string | null>(null);
+  const [currentCursor, setCurrentCursor] = useState(0);
+  const [nextCursor, setNextCursor] = useState<number | null>(null);
+  const [cursorHistory, setCursorHistory] = useState<number[]>([]);
 
-  async function loadOrganizations() {
+  async function loadOrganizations(cursor = 0) {
     setLoading(true);
     setError(null);
     try {
       const result = await getAdminOrganizations({
-        limit: 100,
+        cursor,
+        limit: PAGE_SIZE,
         orgType: orgType === 'ALL' ? undefined : orgType,
         verificationStatus: verificationStatus === 'ALL' ? undefined : verificationStatus
       });
       setRows(result.items);
       setTotal(result.pageInfo.total);
+      const resolvedCursor = parseCursorValue(result.pageInfo.cursor) ?? cursor;
+      setCurrentCursor(resolvedCursor);
+      setNextCursor(parseCursorValue(result.pageInfo.nextCursor));
     } catch (err) {
       const message =
         typeof err === 'object' && err && 'message' in err
@@ -63,14 +82,34 @@ export function OrganizationsAdminPage() {
       setError(message);
       setRows([]);
       setTotal(0);
+      setCurrentCursor(cursor);
+      setNextCursor(null);
     } finally {
       setLoading(false);
     }
   }
 
   useEffect(() => {
-    void loadOrganizations();
+    setCursorHistory([]);
+    void loadOrganizations(0);
   }, [orgType, verificationStatus]);
+
+  function goToPreviousPage() {
+    if (cursorHistory.length === 0 || loading) {
+      return;
+    }
+    const targetCursor = cursorHistory[cursorHistory.length - 1];
+    setCursorHistory((prev) => prev.slice(0, -1));
+    void loadOrganizations(targetCursor);
+  }
+
+  function goToNextPage() {
+    if (nextCursor === null || loading) {
+      return;
+    }
+    setCursorHistory((prev) => [...prev, currentCursor]);
+    void loadOrganizations(nextCursor);
+  }
 
   async function updateStatus(orgId: string, status: OrganizationVerificationStatus) {
     setUpdatingOrgId(orgId);
@@ -81,7 +120,7 @@ export function OrganizationsAdminPage() {
         reasonCodes: status === 'REJECTED' ? ['manual_reject'] : undefined
       });
       setSubmitMessage(`Organization ${status.toLowerCase()} successfully.`);
-      await loadOrganizations();
+      await loadOrganizations(currentCursor);
     } catch (err) {
       const message =
         typeof err === 'object' && err && 'message' in err
@@ -118,7 +157,7 @@ export function OrganizationsAdminPage() {
             <option value="NOT_FOUND">NOT_FOUND</option>
             <option value="REJECTED">REJECTED</option>
           </select>
-          <button type="button" className="btn-primary" onClick={() => void loadOrganizations()}>
+          <button type="button" className="btn-primary" onClick={() => void loadOrganizations(currentCursor)}>
             Refresh
           </button>
         </div>
@@ -179,6 +218,25 @@ export function OrganizationsAdminPage() {
               ) : null}
             </tbody>
           </table>
+        </div>
+      </div>
+
+      <div className="table-pagination">
+        <span>
+          {loading
+            ? 'Loading...'
+            : `Showing ${rows.length === 0 ? 0 : currentCursor + 1} to ${currentCursor + rows.length} of ${total} entries`}
+        </span>
+        <div className="pagination-buttons">
+          <button type="button" onClick={goToPreviousPage} disabled={loading || cursorHistory.length === 0}>
+            Previous
+          </button>
+          <button type="button" className="is-active">
+            {Math.floor(currentCursor / PAGE_SIZE) + 1}
+          </button>
+          <button type="button" onClick={goToNextPage} disabled={loading || nextCursor === null}>
+            Next
+          </button>
         </div>
       </div>
     </section>

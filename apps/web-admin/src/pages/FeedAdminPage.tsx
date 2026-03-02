@@ -1,21 +1,60 @@
-import { useEffect, useMemo, useState } from 'react';
-import { AdminFeedPost, FeedPost, getAdminFeedPosts, getPublicFeedPosts } from '../lib/adminApi';
+import { FormEvent, useEffect, useMemo, useState } from 'react';
+import {
+  AdminFeedPost,
+  AdminFeedPostUpsertInput,
+  FeedPost,
+  createAdminFeedPost,
+  deleteAdminFeedPost,
+  getAdminFeedPosts,
+  getPublicFeedPosts,
+  updateAdminFeedPost
+} from '../lib/adminApi';
 
 const filters = ['All Posts', 'Visa Info', 'Safety', 'Lifestyle', 'Job Opportunities'] as const;
 
 type FilterName = (typeof filters)[number];
+type FeedFormState = {
+  title: string;
+  excerpt: string;
+  category: string;
+  author: string;
+  imageUrl: string;
+  publishedAt: string;
+};
+
+const DEFAULT_FEED_FORM: FeedFormState = {
+  title: '',
+  excerpt: '',
+  category: 'VISA',
+  author: '',
+  imageUrl: '',
+  publishedAt: ''
+};
+
+const PAGE_SIZE = 20;
 
 function normalize(text: string) {
   return text.trim().toLowerCase();
 }
 
-function matchesFilter(category: string, filter: FilterName) {
-  if (filter === 'All Posts') return true;
-  if (filter === 'Job Opportunities') {
-    const value = normalize(category);
-    return value.includes('job');
+function parseCursorValue(value: string | number | null | undefined) {
+  if (value === null || value === undefined || value === '') {
+    return null;
   }
-  return normalize(category) === normalize(filter);
+  const cursor = Number(value);
+  if (!Number.isInteger(cursor) || cursor < 0) {
+    return null;
+  }
+  return cursor;
+}
+
+function matchesFilter(category: string, filter: FilterName) {
+  const value = normalize(category);
+  if (filter === 'All Posts') return true;
+  if (filter === 'Visa Info') return value.includes('visa');
+  if (filter === 'Safety') return value.includes('safety') || value.includes('risk');
+  if (filter === 'Lifestyle') return value.includes('lifestyle') || value.includes('life') || value.includes('community');
+  return value.includes('job') || value.includes('career') || value.includes('interview');
 }
 
 function categoryTone(category: string) {
@@ -55,70 +94,292 @@ function formatDate(iso: string | undefined) {
   });
 }
 
+function toDateTimeLocal(iso: string | undefined) {
+  if (!iso) return '';
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) {
+    return '';
+  }
+  const offsetMs = date.getTimezoneOffset() * 60 * 1000;
+  return new Date(date.getTime() - offsetMs).toISOString().slice(0, 16);
+}
+
+function toFeedForm(post: AdminFeedPost): FeedFormState {
+  return {
+    title: post.title,
+    excerpt: post.excerpt,
+    category: post.category,
+    author: post.author,
+    imageUrl: post.imageUrl || '',
+    publishedAt: toDateTimeLocal(post.publishedAt)
+  };
+}
+
+function toFeedPayload(form: FeedFormState): AdminFeedPostUpsertInput {
+  const title = form.title.trim();
+  const excerpt = form.excerpt.trim();
+  const category = form.category.trim().toUpperCase();
+  const author = form.author.trim();
+  const imageUrl = form.imageUrl.trim();
+  const publishedAtRaw = form.publishedAt.trim();
+
+  if (!title) {
+    throw new Error('Title is required');
+  }
+  if (!excerpt) {
+    throw new Error('Excerpt is required');
+  }
+  if (!category) {
+    throw new Error('Category is required');
+  }
+  if (!author) {
+    throw new Error('Author is required');
+  }
+
+  let publishedAt: string | undefined;
+  if (publishedAtRaw) {
+    const parsed = Date.parse(publishedAtRaw);
+    if (!Number.isFinite(parsed)) {
+      throw new Error('Published date must be valid');
+    }
+    publishedAt = new Date(parsed).toISOString();
+  }
+
+  return {
+    title,
+    excerpt,
+    category,
+    author,
+    imageUrl: imageUrl || null,
+    publishedAt: publishedAt || new Date().toISOString()
+  };
+}
+
 export function FeedAdminPage() {
   const [activeTab, setActiveTab] = useState<'management' | 'preview'>('management');
   const [activeFilter, setActiveFilter] = useState<FilterName>('All Posts');
   const [adminPosts, setAdminPosts] = useState<AdminFeedPost[]>([]);
   const [publicPosts, setPublicPosts] = useState<FeedPost[]>([]);
-  const [total, setTotal] = useState(0);
+  const [adminTotal, setAdminTotal] = useState(0);
+  const [publicTotal, setPublicTotal] = useState(0);
+  const [adminCursor, setAdminCursor] = useState(0);
+  const [adminNextCursor, setAdminNextCursor] = useState<number | null>(null);
+  const [adminCursorHistory, setAdminCursorHistory] = useState<number[]>([]);
+  const [publicCursor, setPublicCursor] = useState(0);
+  const [publicNextCursor, setPublicNextCursor] = useState<number | null>(null);
+  const [publicCursorHistory, setPublicCursorHistory] = useState<number[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [actionMessage, setActionMessage] = useState<string | null>(null);
+  const [deletingPostId, setDeletingPostId] = useState<string | null>(null);
+  const [modalMode, setModalMode] = useState<'create' | 'edit' | null>(null);
+  const [editingPostId, setEditingPostId] = useState<string | null>(null);
+  const [form, setForm] = useState<FeedFormState>(DEFAULT_FEED_FORM);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  async function loadData({
+    adminCursor: adminCursorInput,
+    publicCursor: publicCursorInput
+  }: {
+    adminCursor?: number;
+    publicCursor?: number;
+  } = {}) {
+    const targetAdminCursor = adminCursorInput ?? adminCursor;
+    const targetPublicCursor = publicCursorInput ?? publicCursor;
+    setLoading(true);
+    setError(null);
+
+    try {
+      const [adminData, publicData] = await Promise.all([
+        getAdminFeedPosts({
+          cursor: targetAdminCursor,
+          limit: PAGE_SIZE
+        }),
+        getPublicFeedPosts({
+          cursor: targetPublicCursor,
+          limit: PAGE_SIZE
+        })
+      ]);
+      setAdminPosts(adminData.items);
+      setPublicPosts(publicData.items);
+      setAdminTotal(adminData.pageInfo.total);
+      setPublicTotal(publicData.pageInfo.total);
+      setAdminCursor(parseCursorValue(adminData.pageInfo.cursor) ?? targetAdminCursor);
+      setAdminNextCursor(parseCursorValue(adminData.pageInfo.nextCursor));
+      setPublicCursor(parseCursorValue(publicData.pageInfo.cursor) ?? targetPublicCursor);
+      setPublicNextCursor(parseCursorValue(publicData.pageInfo.nextCursor));
+    } catch (err) {
+      const message =
+        typeof err === 'object' && err && 'message' in err
+          ? String((err as { message: unknown }).message)
+          : 'Failed to load feed data';
+      setError(message);
+    } finally {
+      setLoading(false);
+    }
+  }
 
   useEffect(() => {
-    let active = true;
+    setAdminCursorHistory([]);
+    setPublicCursorHistory([]);
+    void loadData({
+      adminCursor: 0,
+      publicCursor: 0
+    });
+  }, [activeFilter]);
 
-    async function load() {
-      setLoading(true);
-      setError(null);
-
-      try {
-        const [adminData, publicData] = await Promise.all([
-          getAdminFeedPosts({ limit: 50 }),
-          getPublicFeedPosts({ limit: 20 })
-        ]);
-
-        if (!active) {
-          return;
-        }
-
-        setAdminPosts(adminData.items);
-        setPublicPosts(publicData.items);
-        setTotal(adminData.pageInfo.total);
-      } catch (err) {
-        if (!active) {
-          return;
-        }
-
-        const message =
-          typeof err === 'object' && err && 'message' in err
-            ? String((err as { message: unknown }).message)
-            : 'Failed to load feed data';
-        setError(message);
-      } finally {
-        if (active) {
-          setLoading(false);
-        }
-      }
-    }
-
-    void load();
-
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  const sourceRows = activeTab === 'management' ? adminPosts : publicPosts;
-
-  const visibleRows = useMemo(
-    () => sourceRows.filter((item) => matchesFilter(item.category, activeFilter)),
-    [activeFilter, sourceRows]
+  const managementRows = useMemo(
+    () => adminPosts.filter((item) => matchesFilter(item.category, activeFilter)),
+    [activeFilter, adminPosts]
   );
+  const previewRowsForTable = useMemo(
+    () => publicPosts.filter((item) => matchesFilter(item.category, activeFilter)),
+    [activeFilter, publicPosts]
+  );
+  const activityRows = activeTab === 'management' ? managementRows : previewRowsForTable;
 
   const previewRows = useMemo(
     () => publicPosts.filter((item) => matchesFilter(item.category, activeFilter)).slice(0, 2),
     [activeFilter, publicPosts]
   );
+
+  function openCreateModal() {
+    setModalMode('create');
+    setEditingPostId(null);
+    setForm(DEFAULT_FEED_FORM);
+    setFormError(null);
+  }
+
+  function openEditModal(post: AdminFeedPost) {
+    setModalMode('edit');
+    setEditingPostId(post.id);
+    setForm(toFeedForm(post));
+    setFormError(null);
+  }
+
+  function closeModal() {
+    if (isSubmitting) {
+      return;
+    }
+    setModalMode(null);
+    setEditingPostId(null);
+    setFormError(null);
+  }
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!modalMode) {
+      return;
+    }
+
+    setFormError(null);
+    setActionMessage(null);
+    setIsSubmitting(true);
+
+    try {
+      const payload = toFeedPayload(form);
+      if (modalMode === 'create') {
+        await createAdminFeedPost(payload);
+        setActionMessage('Post created successfully.');
+      } else {
+        if (!editingPostId) {
+          throw new Error('Missing post target');
+        }
+        await updateAdminFeedPost(editingPostId, payload);
+        setActionMessage('Post updated successfully.');
+      }
+      setModalMode(null);
+      setEditingPostId(null);
+      await loadData();
+    } catch (err) {
+      const message =
+        typeof err === 'object' && err && 'message' in err
+          ? String((err as { message: unknown }).message)
+          : 'Failed to save post';
+      setFormError(message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  async function handleDelete(post: AdminFeedPost) {
+    if (deletingPostId) {
+      return;
+    }
+
+    const confirmed = window.confirm(`Delete "${post.title}"? This action cannot be undone.`);
+    if (!confirmed) {
+      return;
+    }
+
+    setDeletingPostId(post.id);
+    setActionMessage(null);
+    setError(null);
+    try {
+      await deleteAdminFeedPost(post.id);
+      setActionMessage('Post deleted successfully.');
+      await loadData();
+    } catch (err) {
+      const message =
+        typeof err === 'object' && err && 'message' in err
+          ? String((err as { message: unknown }).message)
+          : 'Failed to delete post';
+      setActionMessage(message);
+    } finally {
+      setDeletingPostId(null);
+    }
+  }
+
+  function goToPreviousPage() {
+    if (loading) {
+      return;
+    }
+
+    if (activeTab === 'management') {
+      if (adminCursorHistory.length === 0) {
+        return;
+      }
+      const targetCursor = adminCursorHistory[adminCursorHistory.length - 1];
+      setAdminCursorHistory((prev) => prev.slice(0, -1));
+      void loadData({ adminCursor: targetCursor });
+      return;
+    }
+
+    if (publicCursorHistory.length === 0) {
+      return;
+    }
+    const targetCursor = publicCursorHistory[publicCursorHistory.length - 1];
+    setPublicCursorHistory((prev) => prev.slice(0, -1));
+    void loadData({ publicCursor: targetCursor });
+  }
+
+  function goToNextPage() {
+    if (loading) {
+      return;
+    }
+
+    if (activeTab === 'management') {
+      if (adminNextCursor === null) {
+        return;
+      }
+      setAdminCursorHistory((prev) => [...prev, adminCursor]);
+      void loadData({ adminCursor: adminNextCursor });
+      return;
+    }
+
+    if (publicNextCursor === null) {
+      return;
+    }
+    setPublicCursorHistory((prev) => [...prev, publicCursor]);
+    void loadData({ publicCursor: publicNextCursor });
+  }
+
+  const activeCursor = activeTab === 'management' ? adminCursor : publicCursor;
+  const activeTotal = activeTab === 'management' ? adminTotal : publicTotal;
+  const activeRowsCount = activeTab === 'management' ? managementRows.length : previewRowsForTable.length;
+  const hasPreviousPage = activeTab === 'management' ? adminCursorHistory.length > 0 : publicCursorHistory.length > 0;
+  const hasNextPage = activeTab === 'management' ? adminNextCursor !== null : publicNextCursor !== null;
 
   return (
     <section className="surface-card page-section feed-page">
@@ -127,7 +388,7 @@ export function FeedAdminPage() {
           <h3>Feed Posts</h3>
           <p>Manage content and QA the public feed view.</p>
         </div>
-        <button type="button" className="btn-primary">
+        <button type="button" className="btn-primary" onClick={openCreateModal}>
           Create Post
         </button>
       </div>
@@ -163,6 +424,7 @@ export function FeedAdminPage() {
       </div>
 
       {error ? <p className="auth-error">{error}</p> : null}
+      {actionMessage ? <p className="inline-note">{actionMessage}</p> : null}
 
       <section className="surface-card" style={{ padding: 0, overflow: 'hidden' }}>
         <div className="table-wrap">
@@ -178,38 +440,83 @@ export function FeedAdminPage() {
               </tr>
             </thead>
             <tbody>
-              {visibleRows.map((item) => {
-                const status = deriveStatus(item.publishedAt);
-                return (
-                  <tr key={item.id}>
-                    <td>
-                      <div className="table-title">
-                        <span className="table-avatar" />
-                        <span>{item.title}</span>
-                      </div>
-                    </td>
-                    <td>
-                      <span className={categoryTone(item.category)}>{item.category}</span>
-                    </td>
-                    <td>
-                      <div className="table-author">
-                        <span className="round" />
-                        <span>{item.author}</span>
-                      </div>
-                    </td>
-                    <td>{formatDate(item.publishedAt)}</td>
-                    <td>
-                      <span className={statusClass(status)}>{status}</span>
-                    </td>
-                    <td>
-                      <button type="button" className="table-action">
-                        {activeTab === 'management' ? 'Edit' : 'Preview'}
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-              {!loading && visibleRows.length === 0 ? (
+              {activeTab === 'management'
+                ? managementRows.map((item) => {
+                    const status = deriveStatus(item.publishedAt);
+                    return (
+                      <tr key={item.id}>
+                        <td>
+                          <div className="table-title">
+                            <span className="table-avatar" />
+                            <span>{item.title}</span>
+                          </div>
+                        </td>
+                        <td>
+                          <span className={categoryTone(item.category)}>{item.category}</span>
+                        </td>
+                        <td>
+                          <div className="table-author">
+                            <span className="round" />
+                            <span>{item.author}</span>
+                          </div>
+                        </td>
+                        <td>{formatDate(item.publishedAt)}</td>
+                        <td>
+                          <span className={statusClass(status)}>{status}</span>
+                        </td>
+                        <td className="action-cell">
+                          <button type="button" onClick={() => openEditModal(item)} disabled={Boolean(deletingPostId)}>
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            className="danger"
+                            onClick={() => void handleDelete(item)}
+                            disabled={deletingPostId === item.id}
+                          >
+                            {deletingPostId === item.id ? 'Deleting...' : 'Delete'}
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })
+                : previewRowsForTable.map((item) => {
+                    const status = deriveStatus(item.publishedAt);
+                    return (
+                      <tr key={item.id}>
+                        <td>
+                          <div className="table-title">
+                            <span className="table-avatar" />
+                            <span>{item.title}</span>
+                          </div>
+                        </td>
+                        <td>
+                          <span className={categoryTone(item.category)}>{item.category}</span>
+                        </td>
+                        <td>
+                          <div className="table-author">
+                            <span className="round" />
+                            <span>{item.author}</span>
+                          </div>
+                        </td>
+                        <td>{formatDate(item.publishedAt)}</td>
+                        <td>
+                          <span className={statusClass(status)}>{status}</span>
+                        </td>
+                        <td>
+                          <button type="button" className="table-action">
+                            Preview
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+              {!loading && activeTab === 'management' && managementRows.length === 0 ? (
+                <tr>
+                  <td colSpan={6}>No posts found for this filter.</td>
+                </tr>
+              ) : null}
+              {!loading && activeTab === 'preview' && previewRowsForTable.length === 0 ? (
                 <tr>
                   <td colSpan={6}>No posts found for this filter.</td>
                 </tr>
@@ -222,15 +529,18 @@ export function FeedAdminPage() {
           <span>
             {loading
               ? 'Loading...'
-              : `Showing 1 to ${visibleRows.length} of ${activeTab === 'management' ? total : publicPosts.length} entries`}
+              : `Showing ${activeRowsCount === 0 ? 0 : activeCursor + 1} to ${activeCursor + activeRowsCount} of ${activeTotal} entries`}
           </span>
           <div className="pagination-buttons">
-            <button type="button">Previous</button>
-            <button type="button" className="is-active">
-              1
+            <button type="button" onClick={goToPreviousPage} disabled={loading || !hasPreviousPage}>
+              Previous
             </button>
-            <button type="button">2</button>
-            <button type="button">Next</button>
+            <button type="button" className="is-active">
+              {Math.floor(activeCursor / PAGE_SIZE) + 1}
+            </button>
+            <button type="button" onClick={goToNextPage} disabled={loading || !hasNextPage}>
+              Next
+            </button>
           </div>
         </div>
       </section>
@@ -243,7 +553,7 @@ export function FeedAdminPage() {
           </div>
 
           <ul className="mini-list">
-            {visibleRows.slice(0, 2).map((item) => (
+            {activityRows.slice(0, 2).map((item) => (
               <li key={item.id}>
                 <span className="mini-dot" />
                 <div>
@@ -252,7 +562,7 @@ export function FeedAdminPage() {
                 </div>
               </li>
             ))}
-            {visibleRows.length === 0 ? (
+            {activityRows.length === 0 ? (
               <li>
                 <span className="mini-dot danger" />
                 <div>
@@ -301,6 +611,92 @@ export function FeedAdminPage() {
           </div>
         </section>
       </div>
+
+      {modalMode ? (
+        <div className="modal-backdrop">
+          <div className="modal-card">
+            <div className="modal-head">
+              <h4>{modalMode === 'create' ? 'Create Post' : 'Edit Post'}</h4>
+              <button type="button" className="btn-secondary" onClick={closeModal} disabled={isSubmitting}>
+                Close
+              </button>
+            </div>
+
+            <form className="job-form" onSubmit={handleSubmit}>
+              <div className="job-form-grid">
+                <label>
+                  Title
+                  <input
+                    value={form.title}
+                    onChange={(event) => setForm((prev) => ({ ...prev, title: event.target.value }))}
+                    placeholder="Update Visa Kerja 2026"
+                    required
+                  />
+                </label>
+
+                <label>
+                  Category
+                  <input
+                    value={form.category}
+                    onChange={(event) => setForm((prev) => ({ ...prev, category: event.target.value }))}
+                    placeholder="VISA"
+                    required
+                  />
+                </label>
+
+                <label>
+                  Author
+                  <input
+                    value={form.author}
+                    onChange={(event) => setForm((prev) => ({ ...prev, author: event.target.value }))}
+                    placeholder="Senpai Ops"
+                    required
+                  />
+                </label>
+
+                <label>
+                  Published At
+                  <input
+                    type="datetime-local"
+                    value={form.publishedAt}
+                    onChange={(event) => setForm((prev) => ({ ...prev, publishedAt: event.target.value }))}
+                  />
+                </label>
+              </div>
+
+              <label>
+                Excerpt
+                <textarea
+                  value={form.excerpt}
+                  onChange={(event) => setForm((prev) => ({ ...prev, excerpt: event.target.value }))}
+                  rows={4}
+                  required
+                />
+              </label>
+
+              <label>
+                Image URL (optional)
+                <input
+                  value={form.imageUrl}
+                  onChange={(event) => setForm((prev) => ({ ...prev, imageUrl: event.target.value }))}
+                  placeholder="https://..."
+                />
+              </label>
+
+              {formError ? <p className="auth-error">{formError}</p> : null}
+
+              <div className="modal-actions">
+                <button type="button" className="btn-secondary" onClick={closeModal} disabled={isSubmitting}>
+                  Cancel
+                </button>
+                <button type="submit" className="btn-primary" disabled={isSubmitting}>
+                  {isSubmitting ? 'Saving...' : modalMode === 'create' ? 'Create Post' : 'Save Changes'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }

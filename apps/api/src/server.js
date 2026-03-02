@@ -919,9 +919,11 @@ async function handleRequest(
     }
 
     const status = url.searchParams.get('status') || undefined;
+    const cursor = url.searchParams.get('cursor') || undefined;
     const limit = url.searchParams.get('limit') || undefined;
     const result = await kycService.listReviewQueue({
       status,
+      cursor,
       limit
     });
     sendJson(res, 200, result);

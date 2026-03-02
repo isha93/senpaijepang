@@ -293,6 +293,17 @@ function normalizeQueueLimit(limit) {
   return Math.floor(normalized);
 }
 
+function normalizeQueueCursor(cursor) {
+  if (cursor === undefined || cursor === null || String(cursor).trim() === '') {
+    return 0;
+  }
+  const normalized = Number(cursor);
+  if (!Number.isFinite(normalized) || normalized < 0) {
+    throw new KycApiError(400, 'invalid_cursor', 'cursor must be a non-negative integer');
+  }
+  return Math.floor(normalized);
+}
+
 function normalizeReviewedBy(reviewedBy) {
   const normalized = String(reviewedBy || '')
     .trim();
@@ -788,13 +799,23 @@ export class KycService {
     };
   }
 
-  async listReviewQueue({ status, limit }) {
+  async listReviewQueue({ status, cursor, limit }) {
     const statuses = normalizeReviewQueueStatus(status);
+    const queueCursor = normalizeQueueCursor(cursor);
     const queueLimit = normalizeQueueLimit(limit);
-    const sessions = await this.store.listKycSessionsByStatuses({
+
+    const sessionPage = await this.store.listKycSessionsByStatuses({
       statuses,
+      cursor: queueCursor,
       limit: queueLimit
     });
+    const sessions = Array.isArray(sessionPage) ? sessionPage : sessionPage.items || [];
+    const total = Array.isArray(sessionPage)
+      ? sessions.length
+      : Number.isFinite(Number(sessionPage.total))
+        ? Math.max(0, Math.floor(Number(sessionPage.total)))
+        : sessions.length;
+    const nextCursor = queueCursor + sessions.length < total ? String(queueCursor + sessions.length) : null;
 
     const items = await Promise.all(
       sessions.map(async (session) => {
@@ -828,6 +849,12 @@ export class KycService {
       count: items.length,
       filters: {
         status: statuses
+      },
+      pageInfo: {
+        cursor: String(queueCursor),
+        nextCursor,
+        limit: queueLimit,
+        total
       },
       items
     };

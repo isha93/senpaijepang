@@ -1104,6 +1104,11 @@ textarea {
   background: var(--accent);
 }
 
+.pagination-buttons button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .feed-bottom {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1634,6 +1639,98 @@ textarea {
   background: rgba(255, 69, 58, 0.1);
 }
 
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: rgba(12, 20, 15, 0.45);
+  backdrop-filter: blur(2px);
+  padding: 24px 12px;
+  overflow-y: auto;
+}
+
+.modal-card {
+  width: min(900px, 100%);
+  margin: 0 auto;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  box-shadow: 0 24px 70px rgba(16, 25, 18, 0.24);
+}
+
+.modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.modal-head h4 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.job-form {
+  display: grid;
+  gap: 12px;
+  padding: 14px 16px 16px;
+}
+
+.job-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.job-form label {
+  display: grid;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--muted-strong);
+  font-weight: 700;
+}
+
+.job-form input,
+.job-form select,
+.job-form textarea {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 9px 10px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 13px;
+}
+
+.job-toggle-row {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.job-toggle-row label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.job-toggle-row input[type='checkbox'] {
+  width: 15px;
+  height: 15px;
+  margin: 0;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
 .mobile-nav {
   position: fixed;
   left: 0;
@@ -1768,6 +1865,10 @@ textarea {
     right: 12px;
     left: 12px;
     width: auto;
+  }
+
+  .job-form-grid {
+    grid-template-columns: 1fr;
   }
 }
 

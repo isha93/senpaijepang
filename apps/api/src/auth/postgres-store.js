@@ -487,8 +487,10 @@ export class PostgresAuthStore {
     return result.rows.map((row) => mapKycStatusEventRow(row));
   }
 
-  async listKycSessionsByStatuses({ statuses, limit }) {
+  async listKycSessionsByStatuses({ statuses, cursor = 0, limit }) {
     const normalizedStatuses = Array.isArray(statuses) ? statuses.filter(Boolean) : [];
+    const normalizedCursor = Number.isFinite(Number(cursor)) ? Math.max(0, Math.floor(Number(cursor))) : 0;
+    const normalizedLimit = Number.isFinite(Number(limit)) ? Math.max(1, Math.floor(Number(limit))) : 25;
     const query = `
       SELECT
         id,
@@ -506,11 +508,25 @@ export class PostgresAuthStore {
       WHERE ($1::text[] IS NULL OR status = ANY($1::text[]))
       ORDER BY COALESCE(submitted_at, created_at) DESC
       LIMIT $2
+      OFFSET $3
     `;
 
-    const params = [normalizedStatuses.length > 0 ? normalizedStatuses : null, limit];
-    const result = await this.pool.query(query, params);
-    return result.rows.map((row) => mapKycSessionRow(row));
+    const countQuery = `
+      SELECT COUNT(*)::int AS total
+      FROM kyc_sessions
+      WHERE ($1::text[] IS NULL OR status = ANY($1::text[]))
+    `;
+
+    const statusParam = normalizedStatuses.length > 0 ? normalizedStatuses : null;
+    const [result, countResult] = await Promise.all([
+      this.pool.query(query, [statusParam, normalizedLimit, normalizedCursor]),
+      this.pool.query(countQuery, [statusParam])
+    ]);
+
+    return {
+      items: result.rows.map((row) => mapKycSessionRow(row)),
+      total: Number(countResult.rows[0]?.total || 0)
+    };
   }
 
   async listIdentityDocumentsBySessionId(kycSessionId) {

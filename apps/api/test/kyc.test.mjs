@@ -756,11 +756,21 @@ test('admin review queue returns submitted sessions with documents', async () =>
       });
       assert.equal(queue.res.status, 200);
       assert.equal(queue.body.count, 1);
+      assert.equal(queue.body.pageInfo.cursor, '0');
+      assert.equal(queue.body.pageInfo.nextCursor, null);
+      assert.equal(queue.body.pageInfo.limit, 10);
+      assert.equal(queue.body.pageInfo.total, 1);
       assert.equal(queue.body.items[0].session.id, sessionId);
       assert.equal(queue.body.items[0].session.status, 'SUBMITTED');
       assert.equal(queue.body.items[0].user.email, 'queue@example.com');
       assert.equal(queue.body.items[0].documentCount, 1);
       assert.equal(queue.body.items[0].documents[0].objectKey, uploadUrl.body.upload.objectKey);
+
+      const invalidCursor = await getJson(baseUrl, '/admin/kyc/review-queue?cursor=-1', {
+        headers: { 'x-admin-api-key': TEST_ADMIN_API_KEY }
+      });
+      assert.equal(invalidCursor.res.status, 400);
+      assert.equal(invalidCursor.body.error.code, 'invalid_cursor');
 
       const invalidStatus = await getJson(baseUrl, '/admin/kyc/review-queue?status=NOT_VALID', {
         headers: { 'x-admin-api-key': TEST_ADMIN_API_KEY }
