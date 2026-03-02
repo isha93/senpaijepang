@@ -84,7 +84,7 @@ final class RegistrationViewModel: ObservableObject {
             }
             
         case .allSet:
-            navigation.replace(with: .jobsList)
+            AuthStateManager.shared.login()
         }
     }
     
@@ -111,7 +111,7 @@ final class RegistrationViewModel: ObservableObject {
     }
     
     func goToDashboard() {
-        navigation.replace(with: .jobsList)
+        AuthStateManager.shared.login()
     }
     
     private func isValidEmail(_ value: String) -> Bool {

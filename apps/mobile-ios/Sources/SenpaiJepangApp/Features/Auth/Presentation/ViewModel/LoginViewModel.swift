@@ -42,11 +42,11 @@ final class LoginViewModel: ObservableObject, ManagedTask {
             return
         }
 
-        // Mock login: simulate a 1-second delay then navigate
+        // Mock login: simulate a 1-second delay then log in
         isLoading = true
         try? await Task.sleep(nanoseconds: 1_000_000_000)
         isLoading = false
-        navigation.replace(with: .jobsList)
+        AuthStateManager.shared.login()
     }
 
     func togglePasswordVisibility() {

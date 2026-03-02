@@ -2,6 +2,7 @@ import SwiftUI
 
 struct AppRootView: View {
     @StateObject private var navigation: NavigationManager
+    @ObservedObject private var authState = AuthStateManager.shared
     private let authService: AuthServiceProtocol
     private let jobService: JobServiceProtocol
     private let journeyService: JourneyServiceProtocol
@@ -24,12 +25,36 @@ struct AppRootView: View {
     }
 
     var body: some View {
-        MainTabView(
-            navigation: navigation,
-            jobService: jobService,
-            journeyService: journeyService,
-            profileService: profileService,
-            feedService: feedService
-        )
+        Group {
+            if authState.isLoggedIn {
+                MainTabView(
+                    navigation: navigation,
+                    jobService: jobService,
+                    journeyService: journeyService,
+                    profileService: profileService,
+                    feedService: feedService
+                )
+            } else {
+                NavigationStack {
+                    LoginView(
+                        viewModel: LoginViewModel(
+                            authService: authService,
+                            navigation: navigation
+                        )
+                    )
+                    .navigationDestination(for: AppRoute.self) { route in
+                        switch route {
+                        case .registration:
+                            RegistrationView(
+                                viewModel: RegistrationViewModel(navigation: navigation)
+                            )
+                        default:
+                            EmptyView()
+                        }
+                    }
+                }
+            }
+        }
+        .animation(.easeInOut(duration: 0.3), value: authState.isLoggedIn)
     }
 }
