@@ -21,12 +21,16 @@ struct ProfileView: View {
                         .staggeredAppear(delay: 0.1)
 
                     // Verification Documents
-                    documentsSection(profile.documents)
-                        .staggeredAppear(delay: 0.15)
+                    if !profile.documents.isEmpty {
+                        documentsSection(profile.documents)
+                            .staggeredAppear(delay: 0.15)
+                    }
 
-                    // CTA
-                    verificationCTA
-                        .staggeredAppear(delay: 0.2)
+                    // CTA — only show when not yet verified
+                    if profile.verificationStatus != .verified {
+                        verificationCTA
+                            .staggeredAppear(delay: 0.2)
+                    }
                 }
                 .padding(.horizontal, AppTheme.spacingL)
                 .padding(.bottom, AppTheme.spacingXXL)

@@ -102,7 +102,7 @@ struct ApplicationJourneyView: View {
                     .font(.headline)
                     .foregroundStyle(AppTheme.textPrimary)
 
-                if let estimated = currentStep.estimatedCompletion {
+                if currentStep.estimatedCompletion != nil {
                     Text("Your documents are currently being reviewed by the immigration bureau.")
                         .font(.subheadline)
                         .foregroundStyle(AppTheme.textSecondary)
@@ -134,6 +134,7 @@ struct ApplicationJourneyView: View {
                 )
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(AppTheme.spacingXL)
         .cardStyle()
     }
