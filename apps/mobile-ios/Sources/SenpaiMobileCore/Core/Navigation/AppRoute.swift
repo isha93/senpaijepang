@@ -4,6 +4,7 @@ enum AppRoute: Hashable, Sendable {
     case login
     case registration
     case notifications
+    case kycVerification
     case mainTabs
     case jobsList
     case jobDetail(jobId: String)

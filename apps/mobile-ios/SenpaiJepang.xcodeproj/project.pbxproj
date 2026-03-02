@@ -18,6 +18,7 @@
 		243BCD923362E34EC11061BD /* JobSummarySection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 721E9AE06DA3025A5DA440A3 /* JobSummarySection.swift */; };
 		2F42989629B45CD8AA942949 /* FeedPostCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9D62225132F9A6280AEA97F /* FeedPostCard.swift */; };
 		322BC92C5383B5DCFD9CF091 /* MetaChipRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26D96FCEF0D1B634402760C9 /* MetaChipRow.swift */; };
+		354CA1014D52D2353EF09DA9 /* KYCVerificationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E9FD351C2010E0AA584A828 /* KYCVerificationView.swift */; };
 		3735010785017EA9FA60AB7D /* ManagedTask.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD70124E2E5D7952050F55E8 /* ManagedTask.swift */; };
 		38CCE0371508A9B731D54C62 /* AppRoute.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8002F32ADF944393432D57F /* AppRoute.swift */; };
 		40D7A478D7EB2EBA90C7B336 /* JobCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDC5FCBE16EF57E14EB1C47F /* JobCard.swift */; };
@@ -54,6 +55,7 @@
 		F030FCB8DEAAC15DB9B3FDDD /* SavedJobsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4DF96486F786085EDD7562BE /* SavedJobsViewModel.swift */; };
 		F27EED6C60AB439AEFF9F239 /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C33EB1B505B758B6E4BCA99 /* MainTabView.swift */; };
 		F2C7307CBC759AF6C8F752FA /* RegistrationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD473D6E67E741CA9168A88C /* RegistrationView.swift */; };
+		F319F1B4BD670CA15F0A8894 /* KYCViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAE322F8F5BC9B0ED96CCED8 /* KYCViewModel.swift */; };
 		FAEDEEF9E5F8E93857FF4ACD /* AppTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F0729F2F8B466D3E157EADF /* AppTheme.swift */; };
 		FE3C692F747AC6493612D7EC /* AuthServiceProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE106AA656EC0CFEE236A27D /* AuthServiceProtocol.swift */; };
 		FF2F2C9A89E1833A4061F4AF /* PrimaryButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1EEAAFFD85F67C47BA12E8F9 /* PrimaryButton.swift */; };
@@ -82,6 +84,7 @@
 		659DD4EC92A17779D5C214A3 /* NavigationHandling.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NavigationHandling.swift; sourceTree = "<group>"; };
 		6693B3D66659B51643A3E40D /* ApplicationJourneyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApplicationJourneyView.swift; sourceTree = "<group>"; };
 		6C3B379CFC9231F243F01371 /* RegistrationViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = RegistrationViewModel.swift; path = Sources/SenpaiJepangApp/Features/Auth/Presentation/ViewModel/RegistrationViewModel.swift; sourceTree = "<group>"; };
+		6E9FD351C2010E0AA584A828 /* KYCVerificationView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = KYCVerificationView.swift; path = Sources/SenpaiJepangApp/Features/Verification/Presentation/View/KYCVerificationView.swift; sourceTree = "<group>"; };
 		721E9AE06DA3025A5DA440A3 /* JobSummarySection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JobSummarySection.swift; sourceTree = "<group>"; };
 		727C8F082EA466E7C1232D38 /* JobService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JobService.swift; sourceTree = "<group>"; };
 		83322DC818F85F4243D03D4A /* JobDetailViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JobDetailViewModel.swift; sourceTree = "<group>"; };
@@ -96,6 +99,7 @@
 		A5E986EC211B4658DA01A438 /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
 		A7179D0124A1626B7A1FE86C /* JobsListViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JobsListViewModel.swift; sourceTree = "<group>"; };
 		A89771D2640131244CCD0493 /* AppRootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppRootView.swift; sourceTree = "<group>"; };
+		AAE322F8F5BC9B0ED96CCED8 /* KYCViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = KYCViewModel.swift; path = Sources/SenpaiJepangApp/Features/Verification/Presentation/ViewModel/KYCViewModel.swift; sourceTree = "<group>"; };
 		AD70124E2E5D7952050F55E8 /* ManagedTask.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManagedTask.swift; sourceTree = "<group>"; };
 		B5CBC2CDEA9992C8E1DF69F7 /* ProfileService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileService.swift; sourceTree = "<group>"; };
 		B734008A981D8F4C900647F8 /* SenpaiJepang.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = SenpaiJepang.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -138,6 +142,15 @@
 			path = Data;
 			sourceTree = "<group>";
 		};
+		0F51DE4809371D3FA18490AA /* Presentation */ = {
+			isa = PBXGroup;
+			children = (
+				EFB6F0A43BDEB2EEFD4153CE /* View */,
+				3FB451BEA821DDD2D97AE980 /* ViewModel */,
+			);
+			name = Presentation;
+			sourceTree = "<group>";
+		};
 		129C80082A0338E7131FD2C0 /* Service */ = {
 			isa = PBXGroup;
 			children = (
@@ -155,6 +168,14 @@
 				34FCE9D3E728B038DBB96506 /* SettingsView.swift */,
 				24B6F6C46C888A069F3AC95B /* Sources */,
 			);
+			sourceTree = "<group>";
+		};
+		173E40891F38B46DAF5C6DCA /* Verification */ = {
+			isa = PBXGroup;
+			children = (
+				0F51DE4809371D3FA18490AA /* Presentation */,
+			);
+			name = Verification;
 			sourceTree = "<group>";
 		};
 		1BC367A357F346A44C8162BC /* ViewModel */ = {
@@ -228,6 +249,14 @@
 				00A2FCA923014DD9CA5679C7 /* Organisms */,
 			);
 			path = Components;
+			sourceTree = "<group>";
+		};
+		3FB451BEA821DDD2D97AE980 /* ViewModel */ = {
+			isa = PBXGroup;
+			children = (
+				AAE322F8F5BC9B0ED96CCED8 /* KYCViewModel.swift */,
+			);
+			name = ViewModel;
 			sourceTree = "<group>";
 		};
 		420B0D4E8BF0879C85329E4D /* Task */ = {
@@ -495,6 +524,7 @@
 			children = (
 				F12323A10D83FB6619A49296 /* Auth */,
 				93D9D48CBDDC52D137A7EB88 /* Notifications */,
+				173E40891F38B46DAF5C6DCA /* Verification */,
 			);
 			name = Features;
 			sourceTree = "<group>";
@@ -635,6 +665,14 @@
 			path = Jobs;
 			sourceTree = "<group>";
 		};
+		EFB6F0A43BDEB2EEFD4153CE /* View */ = {
+			isa = PBXGroup;
+			children = (
+				6E9FD351C2010E0AA584A828 /* KYCVerificationView.swift */,
+			);
+			name = View;
+			sourceTree = "<group>";
+		};
 		F12323A10D83FB6619A49296 /* Auth */ = {
 			isa = PBXGroup;
 			children = (
@@ -766,6 +804,8 @@
 				9D59A4A75ADDD71E67AFDCFA /* AuthStateManager.swift in Sources */,
 				5C6740C178CE8F9F6466C14C /* NotificationsViewModel.swift in Sources */,
 				76B39D19D7C93E97A330312E /* NotificationsView.swift in Sources */,
+				354CA1014D52D2353EF09DA9 /* KYCVerificationView.swift in Sources */,
+				F319F1B4BD670CA15F0A8894 /* KYCViewModel.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

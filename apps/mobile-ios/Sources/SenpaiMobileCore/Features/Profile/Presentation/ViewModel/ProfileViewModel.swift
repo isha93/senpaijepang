@@ -32,7 +32,7 @@ final class ProfileViewModel: ObservableObject, ManagedTask {
     }
 
     func requestVerification() {
-        // Will integrate with API later
+        navigation.push(.kycVerification)
     }
 
     func navigateToSettings() {

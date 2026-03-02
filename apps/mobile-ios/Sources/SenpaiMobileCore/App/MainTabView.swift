@@ -124,6 +124,8 @@ struct MainTabView: View {
             RegistrationView(viewModel: RegistrationViewModel(navigation: navigation))
         case .notifications:
             NotificationsView(viewModel: NotificationsViewModel(navigation: navigation))
+        case .kycVerification:
+            KYCVerificationView(viewModel: KYCViewModel(navigation: navigation))
         default:
             EmptyView()
         }
