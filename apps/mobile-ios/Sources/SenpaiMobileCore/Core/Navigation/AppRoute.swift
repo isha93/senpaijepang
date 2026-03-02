@@ -2,6 +2,7 @@ import Foundation
 
 enum AppRoute: Hashable, Sendable {
     case login
+    case registration
     case mainTabs
     case jobsList
     case jobDetail(jobId: String)

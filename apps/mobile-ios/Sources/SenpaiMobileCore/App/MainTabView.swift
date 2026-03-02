@@ -117,6 +117,8 @@ struct MainTabView: View {
             )
         case .settings:
             SettingsView()
+        case .registration:
+            RegistrationView(viewModel: RegistrationViewModel(navigation: navigation))
         default:
             EmptyView()
         }

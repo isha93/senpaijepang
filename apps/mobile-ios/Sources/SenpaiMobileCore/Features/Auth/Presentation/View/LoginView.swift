@@ -190,7 +190,7 @@ struct LoginView: View {
                         LText("Don't have an account?")
                             .font(.system(size: 16))
                             .foregroundStyle(AppTheme.textSecondary)
-                        Button { } label: {
+                        Button { viewModel.navigateToRegistration() } label: {
                             LText("Sign up")
                                 .font(.system(size: 16, weight: .bold))
                                 .foregroundStyle(AppTheme.accent)

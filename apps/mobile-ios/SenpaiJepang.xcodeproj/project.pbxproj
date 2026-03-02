@@ -29,6 +29,7 @@
 		65C39093A457D1BD84912C0C /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 34FCE9D3E728B038DBB96506 /* SettingsView.swift */; };
 		6660DE25EC871BC63D9B4338 /* AuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42EBFEC98B633FAE59F5E562 /* AuthService.swift */; };
 		6E0CEF1BBB90348946198EDB /* NavigationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4333224033A5864F004FD3D /* NavigationManager.swift */; };
+		85F67D537C6D2E4BCEB5121E /* RegistrationViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C3B379CFC9231F243F01371 /* RegistrationViewModel.swift */; };
 		887D0C1C718576AB8DB3352E /* FeedServiceProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13DE83CEBB2CBF4BB4D9673C /* FeedServiceProtocol.swift */; };
 		8CADED6FD67C60DFE4B16D5D /* LoginViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CD8378045CF61BF4E917163 /* LoginViewModel.swift */; };
 		8D4529F85B34B9FC65F5753B /* NavigationHandling.swift in Sources */ = {isa = PBXBuildFile; fileRef = 659DD4EC92A17779D5C214A3 /* NavigationHandling.swift */; };
@@ -49,6 +50,7 @@
 		EC2E322893E334D586BC87FA /* JobsListViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7179D0124A1626B7A1FE86C /* JobsListViewModel.swift */; };
 		F030FCB8DEAAC15DB9B3FDDD /* SavedJobsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4DF96486F786085EDD7562BE /* SavedJobsViewModel.swift */; };
 		F27EED6C60AB439AEFF9F239 /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C33EB1B505B758B6E4BCA99 /* MainTabView.swift */; };
+		F2C7307CBC759AF6C8F752FA /* RegistrationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD473D6E67E741CA9168A88C /* RegistrationView.swift */; };
 		FAEDEEF9E5F8E93857FF4ACD /* AppTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F0729F2F8B466D3E157EADF /* AppTheme.swift */; };
 		FE3C692F747AC6493612D7EC /* AuthServiceProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE106AA656EC0CFEE236A27D /* AuthServiceProtocol.swift */; };
 		FF2F2C9A89E1833A4061F4AF /* PrimaryButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1EEAAFFD85F67C47BA12E8F9 /* PrimaryButton.swift */; };
@@ -74,6 +76,7 @@
 		5F0729F2F8B466D3E157EADF /* AppTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppTheme.swift; sourceTree = "<group>"; };
 		659DD4EC92A17779D5C214A3 /* NavigationHandling.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NavigationHandling.swift; sourceTree = "<group>"; };
 		6693B3D66659B51643A3E40D /* ApplicationJourneyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApplicationJourneyView.swift; sourceTree = "<group>"; };
+		6C3B379CFC9231F243F01371 /* RegistrationViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = RegistrationViewModel.swift; path = Sources/SenpaiJepangApp/Features/Auth/Presentation/ViewModel/RegistrationViewModel.swift; sourceTree = "<group>"; };
 		721E9AE06DA3025A5DA440A3 /* JobSummarySection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JobSummarySection.swift; sourceTree = "<group>"; };
 		727C8F082EA466E7C1232D38 /* JobService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JobService.swift; sourceTree = "<group>"; };
 		83322DC818F85F4243D03D4A /* JobDetailViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JobDetailViewModel.swift; sourceTree = "<group>"; };
@@ -99,6 +102,7 @@
 		E3B71E2D2641F7B62DE61CF0 /* JourneyService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JourneyService.swift; sourceTree = "<group>"; };
 		E78BBC0FC1B326D944C437E6 /* ApplicationJourneyViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApplicationJourneyViewModel.swift; sourceTree = "<group>"; };
 		EDF0535B16A117D6C05E3C46 /* SearchBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchBar.swift; sourceTree = "<group>"; };
+		FD473D6E67E741CA9168A88C /* RegistrationView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = RegistrationView.swift; path = Sources/SenpaiJepangApp/Features/Auth/Presentation/View/RegistrationView.swift; sourceTree = "<group>"; };
 		FE106AA656EC0CFEE236A27D /* AuthServiceProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthServiceProtocol.swift; sourceTree = "<group>"; };
 		FF546357F1F129BBAB8FCD08 /* CategoryFilterRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategoryFilterRow.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -143,6 +147,7 @@
 				5E3FAF55B04C052ACC278E51 /* Products */,
 				21B6576E5C82D2ED999F0B46 /* LanguageManager.swift */,
 				34FCE9D3E728B038DBB96506 /* SettingsView.swift */,
+				24B6F6C46C888A069F3AC95B /* Sources */,
 			);
 			sourceTree = "<group>";
 		};
@@ -160,6 +165,14 @@
 				95232A9DB62B0BB9658BF01E /* ProfileServiceProtocol.swift */,
 			);
 			path = Service;
+			sourceTree = "<group>";
+		};
+		24B6F6C46C888A069F3AC95B /* Sources */ = {
+			isa = PBXGroup;
+			children = (
+				A35D1F82BC42E04822438623 /* SenpaiJepangApp */,
+			);
+			name = Sources;
 			sourceTree = "<group>";
 		};
 		259A7CB93FF0DA731BC412DC /* Service */ = {
@@ -302,6 +315,14 @@
 			path = Data;
 			sourceTree = "<group>";
 		};
+		6EC2A840C1E8D9CA8808063B /* ViewModel */ = {
+			isa = PBXGroup;
+			children = (
+				6C3B379CFC9231F243F01371 /* RegistrationViewModel.swift */,
+			);
+			name = ViewModel;
+			sourceTree = "<group>";
+		};
 		72BE13973ABB697085654930 /* Service */ = {
 			isa = PBXGroup;
 			children = (
@@ -421,6 +442,14 @@
 			path = Presentation;
 			sourceTree = "<group>";
 		};
+		A35D1F82BC42E04822438623 /* SenpaiJepangApp */ = {
+			isa = PBXGroup;
+			children = (
+				B10A089CA7C2859EE618A155 /* Features */,
+			);
+			name = SenpaiJepangApp;
+			sourceTree = "<group>";
+		};
 		A5E70F0983CF9BB20EBCAB2B /* Domain */ = {
 			isa = PBXGroup;
 			children = (
@@ -435,6 +464,22 @@
 				CD5B8B405DCCDEB915AAA125 /* ProfileView.swift */,
 			);
 			path = View;
+			sourceTree = "<group>";
+		};
+		AE56A21AC7C397A7D35CB24C /* View */ = {
+			isa = PBXGroup;
+			children = (
+				FD473D6E67E741CA9168A88C /* RegistrationView.swift */,
+			);
+			name = View;
+			sourceTree = "<group>";
+		};
+		B10A089CA7C2859EE618A155 /* Features */ = {
+			isa = PBXGroup;
+			children = (
+				F12323A10D83FB6619A49296 /* Auth */,
+			);
+			name = Features;
 			sourceTree = "<group>";
 		};
 		B19027862F86AF6A38199F82 /* Profile */ = {
@@ -454,6 +499,15 @@
 				1BC367A357F346A44C8162BC /* ViewModel */,
 			);
 			path = Presentation;
+			sourceTree = "<group>";
+		};
+		BB8F6C3CE9C13E29A12E59C2 /* Presentation */ = {
+			isa = PBXGroup;
+			children = (
+				AE56A21AC7C397A7D35CB24C /* View */,
+				6EC2A840C1E8D9CA8808063B /* ViewModel */,
+			);
+			name = Presentation;
 			sourceTree = "<group>";
 		};
 		C3B233931BC9630D3ED8BF92 /* ViewModel */ = {
@@ -554,6 +608,14 @@
 				9C09A8EC4474DAF942CBA34E /* Presentation */,
 			);
 			path = Jobs;
+			sourceTree = "<group>";
+		};
+		F12323A10D83FB6619A49296 /* Auth */ = {
+			isa = PBXGroup;
+			children = (
+				BB8F6C3CE9C13E29A12E59C2 /* Presentation */,
+			);
+			name = Auth;
 			sourceTree = "<group>";
 		};
 		F7E31FDE09D396C22F2CE6B3 /* Presentation */ = {
@@ -674,6 +736,8 @@
 				13D7D66B9EE4A2546450B3DB /* TimelineStepRow.swift in Sources */,
 				019B45B9434D247AC030EF22 /* LanguageManager.swift in Sources */,
 				65C39093A457D1BD84912C0C /* SettingsView.swift in Sources */,
+				F2C7307CBC759AF6C8F752FA /* RegistrationView.swift in Sources */,
+				85F67D537C6D2E4BCEB5121E /* RegistrationViewModel.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

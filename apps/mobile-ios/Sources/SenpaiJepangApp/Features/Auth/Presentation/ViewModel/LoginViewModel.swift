@@ -53,6 +53,10 @@ final class LoginViewModel: ObservableObject, ManagedTask {
         isPasswordVisible.toggle()
     }
 
+    func navigateToRegistration() {
+        navigation.push(.registration)
+    }
+
     private func isValidEmail(_ value: String) -> Bool {
         let emailRegex = #"^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$"#
         return value.range(of: emailRegex, options: .regularExpression) != nil
