@@ -345,50 +345,58 @@ struct OnboardingView: View {
         }
     }
     
+    @State private var showAlert = false
+
     // MARK: - Bottom Action
     @ViewBuilder
     private var bottomAction: some View {
         VStack(spacing: 20) {
             // Checkbox for final step
             if viewModel.currentStep == viewModel.totalSteps - 1 {
-                Button {
+                HStack(spacing: 12) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 4)
+                            .stroke(viewModel.isAgreedToTerms ? AppTheme.accent : Color(.systemGray3), lineWidth: 2)
+                            .frame(width: 20, height: 20)
+                            .background(viewModel.isAgreedToTerms ? AppTheme.accent : .clear)
+                            .clipShape(RoundedRectangle(cornerRadius: 4))
+                        
+                        if viewModel.isAgreedToTerms {
+                            Image(systemName: "checkmark")
+                                .font(.system(size: 10, weight: .bold))
+                                .foregroundStyle(.white)
+                        }
+                    }
+                    
+                    Text("Saya mengerti dan menyetujui ")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(AppTheme.textSecondary)
+                    + Text("S&K")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(AppTheme.accent)
+                    
+                    Spacer()
+                }
+                .padding(.vertical, 8)
+                .contentShape(Rectangle())
+                .onTapGesture {
                     withAnimation {
                         viewModel.isAgreedToTerms.toggle()
                     }
-                } label: {
-                    HStack(spacing: 12) {
-                        ZStack {
-                            RoundedRectangle(cornerRadius: 4)
-                                .stroke(viewModel.isAgreedToTerms ? AppTheme.accent : Color(.systemGray3), lineWidth: 2)
-                                .frame(width: 20, height: 20)
-                                .background(viewModel.isAgreedToTerms ? AppTheme.accent : .clear)
-                                .clipShape(RoundedRectangle(cornerRadius: 4))
-                            
-                            if viewModel.isAgreedToTerms {
-                                Image(systemName: "checkmark")
-                                    .font(.system(size: 10, weight: .bold))
-                                    .foregroundStyle(.white)
-                            }
-                        }
-                        
-                        Text("Saya mengerti dan menyetujui ")
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundStyle(AppTheme.textSecondary)
-                        + Text("S&K")
-                            .font(.system(size: 14, weight: .bold))
-                            .foregroundStyle(AppTheme.accent)
-                        
-                        Spacer()
-                    }
                 }
-                .buttonStyle(.plain)
-                .padding(.bottom, 8)
             }
             
             // Main Button
             Button {
                 if viewModel.currentStep == viewModel.totalSteps - 1 {
-                    viewModel.completeOnboarding()
+                    if viewModel.isAgreedToTerms {
+                        viewModel.completeOnboarding()
+                    } else {
+                        // Show alert and shake/vibrate
+                        let generator = UINotificationFeedbackGenerator()
+                        generator.notificationOccurred(.error)
+                        showAlert = true
+                    }
                 } else {
                     viewModel.nextStep()
                 }
@@ -416,7 +424,6 @@ struct OnboardingView: View {
                 )
             }
             .buttonStyle(PressableButtonStyle())
-            .disabled(viewModel.currentStep == viewModel.totalSteps - 1 && !viewModel.isAgreedToTerms)
         }
         .padding(.horizontal, 24)
         .padding(.top, 16)
@@ -428,5 +435,10 @@ struct OnboardingView: View {
                 .frame(height: 1),
             alignment: .top
         )
+        .alert("Persetujuan Dibutuhkan", isPresented: $showAlert) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text("Harap centang persetujuan Syarat & Ketentuan untuk melanjutkan.")
+        }
     }
 }
