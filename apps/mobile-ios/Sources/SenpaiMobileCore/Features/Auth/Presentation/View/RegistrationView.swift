@@ -196,7 +196,7 @@ struct RegistrationView: View {
                     LText("Already have an account?")
                         .font(.system(size: 12))
                         .foregroundStyle(AppTheme.textSecondary)
-                    Button { } label: {
+                    Button { viewModel.goBack() } label: {
                         LText("Log in")
                             .font(.system(size: 12, weight: .bold))
                             .foregroundStyle(AppTheme.accent)

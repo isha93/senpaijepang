@@ -36,6 +36,9 @@ struct MainTabView: View {
                 FeedListView(viewModel: feedVM) {
                     selectedTab = 3
                 }
+                .navigationDestination(for: AppRoute.self) { route in
+                    routeView(route)
+                }
             }
             .background(AppTheme.backgroundPrimary)
             .tag(0)

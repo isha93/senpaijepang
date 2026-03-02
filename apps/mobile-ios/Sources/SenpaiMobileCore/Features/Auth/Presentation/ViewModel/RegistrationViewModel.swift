@@ -92,7 +92,7 @@ final class RegistrationViewModel: ObservableObject {
         errorMessage = nil
         switch currentStep {
         case .accountInfo:
-            break // Already at first step
+            navigation.pop() // Go back to Login
         case .preferences:
             withAnimation(AppTheme.animationDefault) {
                 currentStep = .accountInfo

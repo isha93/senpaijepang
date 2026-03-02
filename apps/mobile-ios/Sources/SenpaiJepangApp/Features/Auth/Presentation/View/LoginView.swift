@@ -12,15 +12,6 @@ struct LoginView: View {
         VStack(spacing: 0) {
             // Header
             ZStack {
-                HStack {
-                    Button { } label: {
-                        Image(systemName: "arrow.left")
-                            .font(.system(size: 18, weight: .medium))
-                            .foregroundStyle(AppTheme.textPrimary)
-                            .frame(width: 40, height: 40)
-                    }
-                    Spacer()
-                }
                 LText("Log In")
                     .font(.system(size: 18, weight: .bold))
                     .foregroundStyle(AppTheme.textPrimary)
