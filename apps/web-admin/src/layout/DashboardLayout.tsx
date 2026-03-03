@@ -53,6 +53,18 @@ function resolveMeta(pathname: string) {
   return pageMeta[key];
 }
 
+function resolveRoleBadge(roles: string[] | undefined) {
+  if (!Array.isArray(roles) || roles.length === 0) {
+    return 'ADMIN';
+  }
+
+  if (roles.some((role) => String(role || '').trim().toLowerCase() === 'super_admin')) {
+    return 'super_admin';
+  }
+
+  return roles[0];
+}
+
 function DesktopSidebar({ onLogout }: { onLogout: () => void }) {
   const auth = useAuth();
 
@@ -111,6 +123,7 @@ export function DashboardLayout() {
   const isDesktop = useIsDesktop();
   const location = useLocation();
   const meta = resolveMeta(location.pathname);
+  const roleBadge = resolveRoleBadge(auth.user?.roles);
 
   return (
     <div className={`admin-shell ${isDesktop ? 'desktop' : 'mobile'}`}>
@@ -126,7 +139,7 @@ export function DashboardLayout() {
             <label className="header-search">
               <input type="text" placeholder="Search commands or users" />
             </label>
-            <span className="user-chip">{auth.user?.roles?.[0] || 'ADMIN'}</span>
+            <span className="user-chip">{roleBadge}</span>
             <button onClick={auth.logout}>Logout</button>
           </div>
         </header>
