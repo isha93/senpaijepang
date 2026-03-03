@@ -141,6 +141,62 @@ export class InMemoryAuthStore {
     return Array.from(roleCodes).sort();
   }
 
+  listRoles() {
+    return Array.from(this.rolesByCode.keys()).sort();
+  }
+
+  replaceUserRoles({ userId, roleCodes }) {
+    if (!this.usersById.has(userId)) {
+      return false;
+    }
+
+    const normalizedRoleCodes = Array.from(
+      new Set(
+        (Array.isArray(roleCodes) ? roleCodes : [])
+          .map((roleCode) => String(roleCode || '').trim().toLowerCase())
+          .filter(Boolean)
+      )
+    );
+    if (normalizedRoleCodes.length === 0) {
+      return false;
+    }
+    if (normalizedRoleCodes.some((roleCode) => !this.rolesByCode.has(roleCode))) {
+      return false;
+    }
+
+    this.userRoleCodesByUserId.set(userId, new Set(normalizedRoleCodes));
+    return true;
+  }
+
+  listUsers({ q, cursor = 0, limit = 25 } = {}) {
+    const normalizedQuery = String(q || '')
+      .trim()
+      .toLowerCase();
+    const normalizedCursor = Number.isFinite(Number(cursor)) ? Math.max(0, Math.floor(Number(cursor))) : 0;
+    const normalizedLimit = Number.isFinite(Number(limit)) ? Math.max(1, Math.floor(Number(limit))) : 25;
+
+    const users = Array.from(this.usersById.values())
+      .filter((user) => {
+        if (!normalizedQuery) {
+          return true;
+        }
+        return (
+          String(user.fullName || '')
+            .toLowerCase()
+            .includes(normalizedQuery) ||
+          String(user.email || '')
+            .toLowerCase()
+            .includes(normalizedQuery)
+        );
+      })
+      .sort((left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt));
+
+    return {
+      items: users.slice(normalizedCursor, normalizedCursor + normalizedLimit),
+      total: users.length
+    };
+  }
+
   createSession({ userId, tokenHash, expiresAt }) {
     const session = {
       id: randomUUID(),

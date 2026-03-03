@@ -4,9 +4,13 @@ Date: 2026-03-02
 Owner: Product + Frontend
 
 ## 1. Scope Context
+Note:
+- Dokumen ini adalah baseline prompt desain (historical reference) untuk Stitch AI.
+- Implementasi dashboard saat ini sudah tersedia di `apps/web-admin`.
+
 Project state saat ini:
 - API runtime sudah live dan siap dipakai staging.
-- Belum ada frontend web production di repo.
+- Dashboard web admin sudah ada di repo dan bisa dideploy ke environment publik.
 - Endpoint admin yang sudah tersedia:
   - `GET/POST/PATCH/DELETE /admin/jobs`
   - `GET/POST/PATCH/DELETE /admin/feed/posts`

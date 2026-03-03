@@ -1,6 +1,6 @@
 # API Implementation Status (Runtime v0)
 
-Date: 2026-03-01
+Date: 2026-03-03
 
 ## 1. Purpose
 - Menjadi referensi kondisi API yang benar-benar sudah hidup di codebase saat ini.
@@ -64,6 +64,9 @@ Identity/KYC:
 - `POST /identity/kyc/provider-webhook` (header `x-kyc-webhook-secret`, `x-idempotency-key`, `x-kyc-webhook-signature`, `x-kyc-webhook-timestamp`)
 
 Admin:
+- `GET /admin/users` (Bearer super_admin role, fallback header `x-admin-api-key`)
+- `POST /admin/users` (Bearer super_admin role, fallback header `x-admin-api-key`)
+- `PATCH /admin/users/{userId}` (Bearer super_admin role, fallback header `x-admin-api-key`)
 - `GET /admin/jobs` (Bearer admin role, fallback header `x-admin-api-key`)
 - `POST /admin/jobs` (Bearer admin role, fallback header `x-admin-api-key`)
 - `PATCH /admin/jobs/{jobId}` (Bearer admin role, fallback header `x-admin-api-key`)
@@ -75,7 +78,7 @@ Admin:
 - `GET /admin/organizations` (Bearer admin role, fallback header `x-admin-api-key`)
 - `PATCH /admin/organizations/{orgId}/verification` (Bearer admin role, fallback header `x-admin-api-key`)
 - `POST /admin/kyc/review` (Bearer admin role, fallback header `x-admin-api-key`)
-- `GET /admin/kyc/review-queue` (Bearer admin role, fallback header `x-admin-api-key`)
+- `GET /admin/kyc/review-queue` (Bearer admin role, fallback header `x-admin-api-key`, supports `status/cursor/limit`, returns `pageInfo`)
 
 ## 5. Implemented Data Model (Migration-backed)
 - `001_auth_tables.sql`:

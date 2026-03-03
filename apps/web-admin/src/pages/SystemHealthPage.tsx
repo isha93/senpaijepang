@@ -1,9 +1,32 @@
-import { useEffect, useMemo, useState } from 'react';
-import { HealthResponse, MetricsResponse, getHealth, getMetrics } from '../lib/adminApi';
+import { FormEvent, useEffect, useMemo, useState } from 'react';
+import {
+  AdminUser,
+  HealthResponse,
+  MetricsResponse,
+  createAdminUser,
+  getAdminUsers,
+  getHealth,
+  getMetrics,
+  updateAdminUser
+} from '../lib/adminApi';
 
 type HealthState = {
   health: HealthResponse | null;
   metrics: MetricsResponse | null;
+};
+
+type CreateAdminFormState = {
+  fullName: string;
+  email: string;
+  password: string;
+  rolesText: string;
+};
+
+const DEFAULT_CREATE_ADMIN_FORM: CreateAdminFormState = {
+  fullName: '',
+  email: '',
+  password: '',
+  rolesText: 'super_admin'
 };
 
 function formatCompact(value: number) {
@@ -11,6 +34,12 @@ function formatCompact(value: number) {
     notation: 'compact',
     maximumFractionDigits: 1
   }).format(value);
+}
+
+function toErrorMessage(error: unknown, fallback: string) {
+  return typeof error === 'object' && error && 'message' in error
+    ? String((error as { message: unknown }).message)
+    : fallback;
 }
 
 function formatUptime(seconds: number) {
@@ -23,6 +52,25 @@ function formatUptime(seconds: number) {
   return `${days}d ${hours % 24}h`;
 }
 
+function parseRoleCodes(raw: string) {
+  return Array.from(
+    new Set(
+      String(raw || '')
+        .split(',')
+        .map((value) => value.trim().toLowerCase())
+        .filter(Boolean)
+    )
+  );
+}
+
+function formatDateTime(iso: string) {
+  const timestamp = Date.parse(iso);
+  if (!Number.isFinite(timestamp)) {
+    return '-';
+  }
+  return new Date(timestamp).toLocaleString('en-US');
+}
+
 export function SystemHealthPage() {
   const [state, setState] = useState<HealthState>({
     health: null,
@@ -30,8 +78,15 @@ export function SystemHealthPage() {
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [adminUsers, setAdminUsers] = useState<AdminUser[]>([]);
+  const [adminTotal, setAdminTotal] = useState(0);
+  const [loadingAdmins, setLoadingAdmins] = useState(true);
+  const [adminError, setAdminError] = useState<string | null>(null);
+  const [adminActionMessage, setAdminActionMessage] = useState<string | null>(null);
+  const [createAdminForm, setCreateAdminForm] = useState<CreateAdminFormState>(DEFAULT_CREATE_ADMIN_FORM);
+  const [isCreatingAdmin, setIsCreatingAdmin] = useState(false);
 
-  async function load() {
+  async function loadSystemHealth() {
     setLoading(true);
     setError(null);
 
@@ -42,10 +97,7 @@ export function SystemHealthPage() {
         metrics
       });
     } catch (err) {
-      const message =
-        typeof err === 'object' && err && 'message' in err
-          ? String((err as { message: unknown }).message)
-          : 'Failed to load system metrics';
+      const message = toErrorMessage(err, 'Failed to load system metrics');
       setError(message);
       setState({
         health: null,
@@ -56,8 +108,93 @@ export function SystemHealthPage() {
     }
   }
 
+  async function loadAdminAccounts() {
+    setLoadingAdmins(true);
+    setAdminError(null);
+
+    try {
+      const response = await getAdminUsers({ limit: 100 });
+      setAdminUsers(response.items);
+      setAdminTotal(response.pageInfo.total);
+    } catch (err) {
+      setAdminError(toErrorMessage(err, 'Failed to load admin accounts'));
+      setAdminUsers([]);
+      setAdminTotal(0);
+    } finally {
+      setLoadingAdmins(false);
+    }
+  }
+
+  async function refreshAll() {
+    await Promise.all([loadSystemHealth(), loadAdminAccounts()]);
+  }
+
+  async function submitCreateAdmin(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (isCreatingAdmin) {
+      return;
+    }
+
+    setIsCreatingAdmin(true);
+    setAdminActionMessage(null);
+    setAdminError(null);
+
+    try {
+      const roles = parseRoleCodes(createAdminForm.rolesText);
+      await createAdminUser({
+        fullName: createAdminForm.fullName.trim(),
+        email: createAdminForm.email.trim().toLowerCase(),
+        password: createAdminForm.password,
+        roles: roles.length > 0 ? roles : undefined
+      });
+      setCreateAdminForm(DEFAULT_CREATE_ADMIN_FORM);
+      setAdminActionMessage('Admin account created.');
+      await loadAdminAccounts();
+    } catch (err) {
+      setAdminError(toErrorMessage(err, 'Failed to create admin account'));
+    } finally {
+      setIsCreatingAdmin(false);
+    }
+  }
+
+  async function resetAdminPassword(user: AdminUser) {
+    const nextPassword = window.prompt(`Set new password for ${user.email}`);
+    if (!nextPassword) {
+      return;
+    }
+    setAdminActionMessage(null);
+    setAdminError(null);
+    try {
+      await updateAdminUser(user.id, { password: nextPassword });
+      setAdminActionMessage(`Password updated for ${user.email}.`);
+    } catch (err) {
+      setAdminError(toErrorMessage(err, 'Failed to reset password'));
+    }
+  }
+
+  async function updateAdminRoles(user: AdminUser) {
+    const input = window.prompt(`Set roles for ${user.email} (comma separated)`, user.roles.join(','));
+    if (input === null) {
+      return;
+    }
+    const roles = parseRoleCodes(input);
+    if (roles.length === 0) {
+      setAdminError('At least one role is required.');
+      return;
+    }
+    setAdminActionMessage(null);
+    setAdminError(null);
+    try {
+      await updateAdminUser(user.id, { roles });
+      setAdminActionMessage(`Roles updated for ${user.email}.`);
+      await loadAdminAccounts();
+    } catch (err) {
+      setAdminError(toErrorMessage(err, 'Failed to update roles'));
+    }
+  }
+
   useEffect(() => {
-    void load();
+    void refreshAll();
   }, []);
 
   const errorRate = useMemo(() => {
@@ -83,7 +220,7 @@ export function SystemHealthPage() {
             <h3>API Health</h3>
             <p>Runtime status from /health and /metrics</p>
           </div>
-          <button type="button" className="btn-primary" onClick={() => void load()}>
+          <button type="button" className="btn-primary" onClick={() => void refreshAll()}>
             Refresh
           </button>
         </header>
@@ -153,6 +290,112 @@ export function SystemHealthPage() {
             </table>
           </div>
         </div>
+      </section>
+
+      <section className="surface-card page-section">
+        <header>
+          <div>
+            <h3>Admin Accounts</h3>
+            <p>Create and maintain permanent dashboard admins without bootstrap env dependency.</p>
+          </div>
+          <button type="button" className="btn-secondary" onClick={() => void loadAdminAccounts()}>
+            Reload Admins
+          </button>
+        </header>
+
+        {adminError ? <p className="auth-error">{adminError}</p> : null}
+        {adminActionMessage ? <p className="inline-note">{adminActionMessage}</p> : null}
+
+        <form className="job-form" onSubmit={submitCreateAdmin}>
+          <div className="job-form-grid">
+            <label>
+              Full Name
+              <input
+                type="text"
+                value={createAdminForm.fullName}
+                onChange={(event) => setCreateAdminForm((prev) => ({ ...prev, fullName: event.target.value }))}
+                placeholder="Admin Senpai"
+                required
+              />
+            </label>
+            <label>
+              Email
+              <input
+                type="email"
+                value={createAdminForm.email}
+                onChange={(event) => setCreateAdminForm((prev) => ({ ...prev, email: event.target.value }))}
+                placeholder="admin@senpaijepang.com"
+                required
+              />
+            </label>
+            <label>
+              Password
+              <input
+                type="password"
+                value={createAdminForm.password}
+                onChange={(event) => setCreateAdminForm((prev) => ({ ...prev, password: event.target.value }))}
+                placeholder="Minimum 8 characters"
+                required
+              />
+            </label>
+            <label>
+              Roles (comma separated)
+              <input
+                type="text"
+                value={createAdminForm.rolesText}
+                onChange={(event) => setCreateAdminForm((prev) => ({ ...prev, rolesText: event.target.value }))}
+                placeholder="super_admin,sdm"
+              />
+            </label>
+          </div>
+
+          <div className="modal-actions">
+            <button type="submit" className="btn-primary" disabled={isCreatingAdmin}>
+              {isCreatingAdmin ? 'Creating...' : 'Create Admin Account'}
+            </button>
+          </div>
+        </form>
+
+        <div className="simple-table-card">
+          <div className="table-wrap">
+            <table className="simple-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Email</th>
+                  <th>Roles</th>
+                  <th>Created</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {adminUsers.map((user) => (
+                  <tr key={user.id}>
+                    <td>{user.fullName}</td>
+                    <td>{user.email}</td>
+                    <td>{user.roles.join(', ') || '-'}</td>
+                    <td>{formatDateTime(user.createdAt)}</td>
+                    <td className="action-cell">
+                      <button type="button" onClick={() => void updateAdminRoles(user)}>
+                        Set Roles
+                      </button>
+                      <button type="button" onClick={() => void resetAdminPassword(user)}>
+                        Reset Password
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+                {!loadingAdmins && adminUsers.length === 0 ? (
+                  <tr>
+                    <td colSpan={5}>No admin accounts found.</td>
+                  </tr>
+                ) : null}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <p className="muted">Total admins: {adminTotal}</p>
       </section>
     </div>
   );

@@ -154,6 +154,9 @@ Expected output akhir: `DEV_ALL_CHECK_OK`
 - `POST /identity/kyc/provider-webhook`
 
 ### Admin Review
+- `GET /admin/users`
+- `POST /admin/users`
+- `PATCH /admin/users/{userId}`
 - `GET /admin/jobs`
 - `POST /admin/jobs`
 - `PATCH /admin/jobs/{jobId}`

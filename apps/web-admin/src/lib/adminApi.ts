@@ -32,6 +32,36 @@ export type MetricsResponse = {
   routes: MetricsRoute[];
 };
 
+export type AdminUser = {
+  id: string;
+  fullName: string;
+  email: string;
+  createdAt: string;
+  roles: string[];
+};
+
+export type AdminUserListResponse = {
+  items: AdminUser[];
+  pageInfo: JobPageInfo;
+};
+
+export type AdminUserEnvelope = {
+  user: AdminUser;
+};
+
+export type AdminUserCreateInput = {
+  fullName: string;
+  email: string;
+  password: string;
+  roles?: string[];
+};
+
+export type AdminUserUpdateInput = {
+  fullName?: string;
+  password?: string;
+  roles?: string[];
+};
+
 export type KycRawStatus = 'CREATED' | 'SUBMITTED' | 'MANUAL_REVIEW' | 'VERIFIED' | 'REJECTED';
 export type KycTrustStatus = 'NOT_STARTED' | 'IN_PROGRESS' | 'MANUAL_REVIEW' | 'VERIFIED' | 'REJECTED';
 
@@ -255,6 +285,29 @@ export function getHealth() {
 
 export function getMetrics() {
   return apiRequest<MetricsResponse>('/metrics');
+}
+
+export function getAdminUsers(params: {
+  q?: string;
+  cursor?: number;
+  limit?: number;
+} = {}) {
+  const query = buildQuery(params);
+  return adminRequest<AdminUserListResponse>(`/admin/users${query}`);
+}
+
+export function createAdminUser(body: AdminUserCreateInput) {
+  return adminRequest<AdminUserEnvelope>('/admin/users', {
+    method: 'POST',
+    body
+  });
+}
+
+export function updateAdminUser(userId: string, body: AdminUserUpdateInput) {
+  return adminRequest<AdminUserEnvelope>(`/admin/users/${userId}`, {
+    method: 'PATCH',
+    body
+  });
 }
 
 export function getAdminKycReviewQueue(params: {

@@ -19,6 +19,49 @@ function hashToken(token) {
   return createHash('sha256').update(String(token)).digest('hex');
 }
 
+function normalizeCursor(cursor) {
+  if (cursor === undefined || cursor === null || String(cursor).trim() === '') {
+    return 0;
+  }
+  const normalized = Number(cursor);
+  if (!Number.isFinite(normalized) || normalized < 0) {
+    throw new ApiError(400, 'invalid_cursor', 'cursor must be a non-negative integer');
+  }
+  return Math.floor(normalized);
+}
+
+function normalizeLimit(limit) {
+  const fallback = 25;
+  if (limit === undefined || limit === null || String(limit).trim() === '') {
+    return fallback;
+  }
+  const normalized = Number(limit);
+  if (!Number.isFinite(normalized) || normalized < 1 || normalized > 100) {
+    throw new ApiError(400, 'invalid_limit', 'limit must be between 1 and 100');
+  }
+  return Math.floor(normalized);
+}
+
+function normalizeAdminRoles(roles) {
+  if (roles === undefined) {
+    return null;
+  }
+  if (!Array.isArray(roles)) {
+    throw new ApiError(400, 'invalid_roles', 'roles must be an array');
+  }
+  const normalized = Array.from(
+    new Set(
+      roles
+        .map((role) => String(role || '').trim().toLowerCase())
+        .filter(Boolean)
+    )
+  );
+  if (normalized.length === 0) {
+    throw new ApiError(400, 'invalid_roles', 'roles must include at least one role code');
+  }
+  return normalized;
+}
+
 export class AuthService {
   constructor({ store, accessTokenSecret, accessTokenTtlSec, refreshTokenTtlSec, defaultRoleCode }) {
     this.store = store;
@@ -174,6 +217,177 @@ export class AuthService {
     }
     const roles = await this.store.listUserRolesByUserId(userId);
     return Array.isArray(roles) ? roles : [];
+  }
+
+  async listAvailableRoles() {
+    if (typeof this.store.listRoles !== 'function') {
+      return ['super_admin', 'sdm', 'lpk', 'tsk', 'kaisha'];
+    }
+    const roles = await this.store.listRoles();
+    return Array.isArray(roles) ? roles : [];
+  }
+
+  async assignRoles(userId, roleCodes, { replace = false } = {}) {
+    if (replace && typeof this.store.replaceUserRoles === 'function') {
+      const updated = await this.store.replaceUserRoles({ userId, roleCodes });
+      if (!updated) {
+        throw new ApiError(500, 'role_assignment_failed', 'unable to update user roles');
+      }
+      return;
+    }
+
+    for (const roleCode of roleCodes) {
+      const assigned = await this.store.ensureUserRole({ userId, roleCode });
+      if (!assigned) {
+        throw new ApiError(500, 'role_assignment_failed', `unable to assign role '${roleCode}'`);
+      }
+    }
+  }
+
+  async listAdminUsers({ q, cursor, limit } = {}) {
+    if (typeof this.store.listUsers !== 'function') {
+      throw new ApiError(500, 'unsupported_store', 'auth store does not support admin user listing');
+    }
+
+    const normalizedCursor = normalizeCursor(cursor);
+    const normalizedLimit = normalizeLimit(limit);
+    const normalizedQuery = String(q || '').trim();
+
+    const page = await this.store.listUsers({
+      q: normalizedQuery || undefined,
+      cursor: normalizedCursor,
+      limit: normalizedLimit
+    });
+
+    const itemsRaw = Array.isArray(page) ? page : Array.isArray(page?.items) ? page.items : [];
+    const total = Array.isArray(page)
+      ? itemsRaw.length
+      : Number.isFinite(Number(page?.total))
+        ? Math.max(0, Math.floor(Number(page.total)))
+        : itemsRaw.length;
+
+    const items = await Promise.all(itemsRaw.map((user) => this.publicUser(user)));
+    return {
+      items,
+      pageInfo: {
+        cursor: String(normalizedCursor),
+        nextCursor:
+          normalizedCursor + items.length < total ? String(normalizedCursor + items.length) : null,
+        limit: normalizedLimit,
+        total
+      }
+    };
+  }
+
+  async createAdminUser({ fullName, email, password, roles }) {
+    const normalizedName = String(fullName || '').trim();
+    const normalizedEmail = String(email || '').trim().toLowerCase();
+    const normalizedPassword = String(password || '');
+
+    if (normalizedName.length < 2) {
+      throw new ApiError(400, 'invalid_name', 'fullName must be at least 2 characters');
+    }
+    if (!isValidEmail(normalizedEmail)) {
+      throw new ApiError(400, 'invalid_email', 'email is invalid');
+    }
+    if (normalizedPassword.length < 8) {
+      throw new ApiError(400, 'invalid_password', 'password must be at least 8 characters');
+    }
+
+    const requestedRoles = normalizeAdminRoles(roles) || ['super_admin'];
+    const availableRoles = await this.listAvailableRoles();
+    const unknownRoles = requestedRoles.filter((roleCode) => !availableRoles.includes(roleCode));
+    if (unknownRoles.length > 0) {
+      throw new ApiError(
+        400,
+        'invalid_roles',
+        `unknown role codes: ${unknownRoles.join(', ')}`
+      );
+    }
+
+    const user = await this.store.createUser({
+      fullName: normalizedName,
+      email: normalizedEmail,
+      passwordHash: hashPassword(normalizedPassword)
+    });
+    if (!user) {
+      throw new ApiError(409, 'email_exists', 'email already registered');
+    }
+
+    await this.assignRoles(user.id, requestedRoles, { replace: true });
+    return {
+      user: await this.publicUser(user)
+    };
+  }
+
+  async updateAdminUser({ userId, fullName, password, roles }) {
+    const normalizedUserId = String(userId || '').trim();
+    if (!normalizedUserId) {
+      throw new ApiError(400, 'invalid_user_id', 'userId is required');
+    }
+
+    const targetUser = await this.store.findUserById(normalizedUserId);
+    if (!targetUser) {
+      throw new ApiError(404, 'user_not_found', 'user not found');
+    }
+
+    const shouldUpdateName = fullName !== undefined;
+    const shouldUpdatePassword = password !== undefined;
+    const normalizedRoles = normalizeAdminRoles(roles);
+    const shouldUpdateRoles = normalizedRoles !== null;
+    if (!shouldUpdateName && !shouldUpdatePassword && !shouldUpdateRoles) {
+      throw new ApiError(
+        400,
+        'invalid_request',
+        'at least one of fullName, password, or roles is required'
+      );
+    }
+
+    if (shouldUpdateName) {
+      const normalizedName = String(fullName || '').trim();
+      if (normalizedName.length < 2) {
+        throw new ApiError(400, 'invalid_name', 'fullName must be at least 2 characters');
+      }
+      const updated = await this.store.updateUserProfile({
+        userId: normalizedUserId,
+        fullName: normalizedName
+      });
+      if (!updated) {
+        throw new ApiError(404, 'user_not_found', 'user not found');
+      }
+    }
+
+    if (shouldUpdatePassword) {
+      const normalizedPassword = String(password || '');
+      if (normalizedPassword.length < 8) {
+        throw new ApiError(400, 'invalid_password', 'password must be at least 8 characters');
+      }
+      const updated = await this.store.updateUserPasswordHash({
+        userId: normalizedUserId,
+        passwordHash: hashPassword(normalizedPassword)
+      });
+      if (!updated) {
+        throw new ApiError(404, 'user_not_found', 'user not found');
+      }
+    }
+
+    if (shouldUpdateRoles) {
+      const availableRoles = await this.listAvailableRoles();
+      const unknownRoles = normalizedRoles.filter((roleCode) => !availableRoles.includes(roleCode));
+      if (unknownRoles.length > 0) {
+        throw new ApiError(
+          400,
+          'invalid_roles',
+          `unknown role codes: ${unknownRoles.join(', ')}`
+        );
+      }
+      await this.assignRoles(normalizedUserId, normalizedRoles, { replace: true });
+    }
+
+    const refreshedUser = await this.store.findUserById(normalizedUserId);
+    return {
+      user: await this.publicUser(refreshedUser)
+    };
   }
 }
 

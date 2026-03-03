@@ -256,6 +256,96 @@ test('admin organizations list and verification update works with api key', asyn
   );
 });
 
+test('admin users management works with api key and bearer super_admin role', async () => {
+  const authStore = new InMemoryAuthStore();
+  const authService = createAuthService({ store: authStore });
+
+  await withServer(
+    async (baseUrl) => {
+      const missingKey = await requestJson(baseUrl, '/admin/users');
+      assert.equal(missingKey.res.status, 401);
+      assert.equal(missingKey.json.error.code, 'missing_admin_api_key');
+
+      const createAdminUser = await requestJson(baseUrl, '/admin/users', {
+        method: 'POST',
+        adminApiKey: TEST_ADMIN_API_KEY,
+        body: {
+          fullName: 'Permanent Admin',
+          email: 'permanent-admin@example.com',
+          password: 'AdminPass123',
+          roles: ['super_admin', 'sdm']
+        }
+      });
+      assert.equal(createAdminUser.res.status, 201);
+      assert.equal(createAdminUser.json.user.email, 'permanent-admin@example.com');
+      assert.deepEqual(createAdminUser.json.user.roles, ['sdm', 'super_admin']);
+      const permanentAdminId = createAdminUser.json.user.id;
+
+      const listAdminUsers = await requestJson(baseUrl, '/admin/users?q=permanent&limit=20', {
+        adminApiKey: TEST_ADMIN_API_KEY
+      });
+      assert.equal(listAdminUsers.res.status, 200);
+      assert.equal(listAdminUsers.json.pageInfo.cursor, '0');
+      assert.equal(listAdminUsers.json.pageInfo.limit, 20);
+      assert.ok(listAdminUsers.json.pageInfo.total >= 1);
+      assert.ok(listAdminUsers.json.items.some((item) => item.id === permanentAdminId));
+
+      const patchAdminUser = await requestJson(baseUrl, `/admin/users/${permanentAdminId}`, {
+        method: 'PATCH',
+        adminApiKey: TEST_ADMIN_API_KEY,
+        body: {
+          roles: ['super_admin'],
+          password: 'AdminPass999'
+        }
+      });
+      assert.equal(patchAdminUser.res.status, 200);
+      assert.deepEqual(patchAdminUser.json.user.roles, ['super_admin']);
+
+      const loginWithNewPassword = await requestJson(baseUrl, '/auth/login', {
+        method: 'POST',
+        body: {
+          identifier: 'permanent-admin@example.com',
+          password: 'AdminPass999'
+        }
+      });
+      assert.equal(loginWithNewPassword.res.status, 200);
+      assert.equal(loginWithNewPassword.json.user.email, 'permanent-admin@example.com');
+
+      const regularAdminRegister = await requestJson(baseUrl, '/auth/register', {
+        method: 'POST',
+        body: {
+          fullName: 'Regular Admin Candidate',
+          email: 'regular-admin-candidate@example.com',
+          password: 'pass1234'
+        }
+      });
+      assert.equal(regularAdminRegister.res.status, 201);
+
+      const deniedBearer = await requestJson(baseUrl, '/admin/users', {
+        accessToken: regularAdminRegister.json.accessToken
+      });
+      assert.equal(deniedBearer.res.status, 403);
+      assert.equal(deniedBearer.json.error.code, 'insufficient_admin_role');
+
+      const promoted = await authStore.ensureUserRole({
+        userId: regularAdminRegister.json.user.id,
+        roleCode: 'super_admin'
+      });
+      assert.equal(promoted, true);
+
+      const allowedBearer = await requestJson(baseUrl, '/admin/users?limit=20', {
+        accessToken: regularAdminRegister.json.accessToken
+      });
+      assert.equal(allowedBearer.res.status, 200);
+      assert.ok(allowedBearer.json.items.some((item) => item.email === 'permanent-admin@example.com'));
+    },
+    {
+      adminApiKey: TEST_ADMIN_API_KEY,
+      authService
+    }
+  );
+});
+
 test('admin business endpoints also work with bearer super_admin role', async () => {
   const authStore = new InMemoryAuthStore();
   const authService = createAuthService({ store: authStore });

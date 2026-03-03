@@ -1,6 +1,6 @@
 # MVP API Non-Tech Guide v1
 
-Date: 2026-03-01
+Date: 2026-03-03
 Audience: PM, Ops, Compliance, Stakeholder non-engineering
 
 ## 1. Dokumen Ini Untuk Apa?
@@ -39,10 +39,11 @@ flowchart TD
 - Admin bisa kelola jobs/feed serta verifikasi organisasi.
 
 ## 5. Batasan MVP Saat Ini
-- Belum ada UI production untuk user/admin di repo ini.
+- Belum ada UI production untuk user-facing app (SDM/TSK/LPK) di repo ini.
+- Internal Admin Web dashboard sudah tersedia di repo (`apps/web-admin`) dan sudah bisa di-deploy.
 - Integrasi vendor KYC belum sampai orkestrasi penuh per provider (retry/reconciliation detail).
 - Shared key admin masih tersedia sebagai fallback bootstrap, walau model role-token sudah aktif.
-- Belum ada staging publik permanen untuk integration test lintas tim.
+- Staging API/dashboard sudah bisa dibuka publik, tetapi governance environment lintas tim masih perlu dirapikan (akses, rotasi secret, dan SOP release).
 
 ## 6. Definisi “Siap Demo Internal”
 Sistem dianggap siap demo internal jika:

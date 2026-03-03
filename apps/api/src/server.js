@@ -148,6 +148,11 @@ function matchAdminOrganizationVerificationRoute(pathname) {
   return match ? match[1] : null;
 }
 
+function matchAdminUserRoute(pathname) {
+  const match = String(pathname || '').match(/^\/admin\/users\/([^/]+)$/);
+  return match ? match[1] : null;
+}
+
 async function readJsonBody(req) {
   return new Promise((resolve, reject) => {
     let raw = '';
@@ -280,6 +285,26 @@ async function authenticateAdminRequest(req, res, authService, adminApiKey, admi
   }
 
   return { mode: 'api_key', user: null };
+}
+
+function requireSuperAdminForAdminUserManagement(res, adminAuth) {
+  if (!adminAuth || adminAuth.mode !== 'bearer') {
+    return true;
+  }
+  const hasSuperAdminRole = (adminAuth.user?.roles || []).some(
+    (roleCode) => String(roleCode || '').trim().toLowerCase() === 'super_admin'
+  );
+  if (hasSuperAdminRole) {
+    return true;
+  }
+
+  sendJson(res, 403, {
+    error: {
+      code: 'insufficient_admin_role',
+      message: 'super_admin role is required for admin user management'
+    }
+  });
+  return false;
 }
 
 async function handleRequest(
@@ -759,6 +784,65 @@ async function handleRequest(
     const result = await jobsService.unsaveJob({
       userId: user.id,
       jobId: savedJobId
+    });
+    sendJson(res, 200, result);
+    return;
+  }
+
+  if (req.method === 'GET' && pathname === '/admin/users') {
+    const adminAuth = await authenticateAdminRequest(req, res, authService, adminApiKey, adminRoleCodes);
+    if (!adminAuth) {
+      return;
+    }
+    if (!requireSuperAdminForAdminUserManagement(res, adminAuth)) {
+      return;
+    }
+
+    const result = await authService.listAdminUsers({
+      q: url.searchParams.get('q') || undefined,
+      cursor: url.searchParams.get('cursor') || undefined,
+      limit: url.searchParams.get('limit') || undefined
+    });
+    sendJson(res, 200, result);
+    return;
+  }
+
+  if (req.method === 'POST' && pathname === '/admin/users') {
+    const adminAuth = await authenticateAdminRequest(req, res, authService, adminApiKey, adminRoleCodes);
+    if (!adminAuth) {
+      return;
+    }
+    if (!requireSuperAdminForAdminUserManagement(res, adminAuth)) {
+      return;
+    }
+
+    const body = await readJsonBody(req);
+    const result = await authService.createAdminUser({
+      fullName: body.fullName,
+      email: body.email,
+      password: body.password,
+      roles: body.roles
+    });
+    sendJson(res, 201, result);
+    return;
+  }
+
+  const adminUserId = req.method === 'PATCH' ? matchAdminUserRoute(pathname) : null;
+  if (req.method === 'PATCH' && adminUserId) {
+    const adminAuth = await authenticateAdminRequest(req, res, authService, adminApiKey, adminRoleCodes);
+    if (!adminAuth) {
+      return;
+    }
+    if (!requireSuperAdminForAdminUserManagement(res, adminAuth)) {
+      return;
+    }
+
+    const body = await readJsonBody(req);
+    const result = await authService.updateAdminUser({
+      userId: adminUserId,
+      fullName: body.fullName,
+      password: body.password,
+      roles: body.roles
     });
     sendJson(res, 200, result);
     return;

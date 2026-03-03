@@ -1214,6 +1214,115 @@ paths:
         '503':
           $ref: '#/components/responses/ApiError'
 
+  /admin/users:
+    get:
+      tags: [Admin]
+      summary: List admin accounts
+      security:
+        - bearerAuth: []
+        - adminApiKeyAuth: []
+      parameters:
+        - in: query
+          name: q
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: cursor
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+        - in: query
+          name: limit
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminUserListResponse'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/ApiError'
+        '403':
+          $ref: '#/components/responses/ApiError'
+        '503':
+          $ref: '#/components/responses/ApiError'
+    post:
+      tags: [Admin]
+      summary: Create admin account
+      security:
+        - bearerAuth: []
+        - adminApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminUserCreateRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminUserEnvelope'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/ApiError'
+        '403':
+          $ref: '#/components/responses/ApiError'
+        '409':
+          $ref: '#/components/responses/ApiError'
+        '503':
+          $ref: '#/components/responses/ApiError'
+
+  /admin/users/{userId}:
+    patch:
+      tags: [Admin]
+      summary: Update admin account profile, password, or roles
+      security:
+        - bearerAuth: []
+        - adminApiKeyAuth: []
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminUserUpdateRequest'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminUserEnvelope'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/ApiError'
+        '403':
+          $ref: '#/components/responses/ApiError'
+        '404':
+          $ref: '#/components/responses/ApiError'
+        '503':
+          $ref: '#/components/responses/ApiError'
+
   /admin/organizations/{orgId}/verification:
     patch:
       tags: [Admin]
@@ -1297,6 +1406,12 @@ paths:
           schema:
             type: string
             enum: [DEFAULT, ALL, SUBMITTED, MANUAL_REVIEW, VERIFIED, REJECTED, CREATED]
+        - in: query
+          name: cursor
+          required: false
+          schema:
+            type: integer
+            minimum: 0
         - in: query
           name: limit
           required: false
@@ -1581,6 +1696,74 @@ components:
         status:
           $ref: '#/components/schemas/OrganizationVerificationStatus'
         reasonCodes:
+          type: array
+          items:
+            type: string
+
+    AdminUser:
+      type: object
+      required: [id, fullName, email, createdAt, roles]
+      properties:
+        id:
+          type: string
+          format: uuid
+        fullName:
+          type: string
+        email:
+          type: string
+          format: email
+        createdAt:
+          type: string
+          format: date-time
+        roles:
+          type: array
+          items:
+            type: string
+
+    AdminUserEnvelope:
+      type: object
+      required: [user]
+      properties:
+        user:
+          $ref: '#/components/schemas/AdminUser'
+
+    AdminUserListResponse:
+      type: object
+      required: [items, pageInfo]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdminUser'
+        pageInfo:
+          $ref: '#/components/schemas/JobPageInfo'
+
+    AdminUserCreateRequest:
+      type: object
+      required: [fullName, email, password]
+      properties:
+        fullName:
+          type: string
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+        roles:
+          type: array
+          items:
+            type: string
+
+    AdminUserUpdateRequest:
+      type: object
+      properties:
+        fullName:
+          type: string
+        password:
+          type: string
+          minLength: 8
+        roles:
           type: array
           items:
             type: string
@@ -2607,7 +2790,7 @@ components:
 
     AdminKycReviewQueueResponse:
       type: object
-      required: [count, filters, items]
+      required: [count, filters, pageInfo, items]
       properties:
         count:
           type: integer
@@ -2619,6 +2802,8 @@ components:
               type: array
               items:
                 $ref: '#/components/schemas/KycRawStatus'
+        pageInfo:
+          $ref: '#/components/schemas/JobPageInfo'
         items:
           type: array
           items:

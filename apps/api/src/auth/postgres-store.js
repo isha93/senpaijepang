@@ -214,6 +214,103 @@ export class PostgresAuthStore {
     return result.rows.map((row) => row.code);
   }
 
+  async listRoles() {
+    const result = await this.pool.query(
+      `
+        SELECT code
+        FROM roles
+        ORDER BY code ASC
+      `
+    );
+    return result.rows.map((row) => row.code);
+  }
+
+  async replaceUserRoles({ userId, roleCodes }) {
+    const normalizedRoleCodes = Array.from(
+      new Set(
+        (Array.isArray(roleCodes) ? roleCodes : [])
+          .map((roleCode) => String(roleCode || '').trim().toLowerCase())
+          .filter(Boolean)
+      )
+    );
+    if (normalizedRoleCodes.length === 0) {
+      return false;
+    }
+
+    const client = await this.pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      const userResult = await client.query('SELECT id FROM users WHERE id = $1 LIMIT 1', [userId]);
+      if (!userResult.rows[0]) {
+        await client.query('ROLLBACK');
+        return false;
+      }
+
+      const roleResult = await client.query('SELECT id, code FROM roles WHERE code = ANY($1::text[])', [
+        normalizedRoleCodes
+      ]);
+      if (roleResult.rows.length !== normalizedRoleCodes.length) {
+        await client.query('ROLLBACK');
+        return false;
+      }
+
+      await client.query('DELETE FROM user_roles WHERE user_id = $1', [userId]);
+      for (const role of roleResult.rows) {
+        await client.query(
+          `
+            INSERT INTO user_roles (id, user_id, role_id)
+            VALUES ($1, $2, $3)
+          `,
+          [randomUUID(), userId, role.id]
+        );
+      }
+
+      await client.query('COMMIT');
+      return true;
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
+  async listUsers({ q, cursor = 0, limit = 25 } = {}) {
+    const normalizedCursor = Number.isFinite(Number(cursor)) ? Math.max(0, Math.floor(Number(cursor))) : 0;
+    const normalizedLimit = Number.isFinite(Number(limit)) ? Math.max(1, Math.floor(Number(limit))) : 25;
+    const normalizedQuery = String(q || '').trim();
+    const hasQuery = normalizedQuery.length > 0;
+    const queryValue = hasQuery ? `%${normalizedQuery}%` : null;
+
+    const [listResult, countResult] = await Promise.all([
+      this.pool.query(
+        `
+          SELECT id, full_name, email, password_hash, avatar_url, created_at, updated_at
+          FROM users
+          WHERE ($1::text IS NULL OR full_name ILIKE $1 OR email ILIKE $1)
+          ORDER BY created_at DESC
+          LIMIT $2
+          OFFSET $3
+        `,
+        [queryValue, normalizedLimit, normalizedCursor]
+      ),
+      this.pool.query(
+        `
+          SELECT COUNT(*)::int AS total
+          FROM users
+          WHERE ($1::text IS NULL OR full_name ILIKE $1 OR email ILIKE $1)
+        `,
+        [queryValue]
+      )
+    ]);
+
+    return {
+      items: listResult.rows.map((row) => mapUserRow(row)),
+      total: Number(countResult.rows[0]?.total || 0)
+    };
+  }
+
   async createSession({ userId, tokenHash, expiresAt }) {
     const result = await this.pool.query(
       `
