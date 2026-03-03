@@ -1,6 +1,5 @@
 import { FormEvent, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { apiBaseUrl } from '../lib/api';
 import { useAuth } from './AuthContext';
 
 export function LoginPage() {
@@ -45,10 +44,7 @@ export function LoginPage() {
           <div className="auth-accent" />
           <div className="auth-body">
             <h1>Welcome Back</h1>
-            <p className="auth-subtitle">
-              Sign in to access the Operations Console
-              {apiBaseUrl ? ` (${apiBaseUrl})` : ''}
-            </p>
+            <p className="auth-subtitle">Sign in to continue</p>
 
             <form onSubmit={onSubmit} className="auth-form">
               <label>
@@ -99,19 +95,6 @@ export function LoginPage() {
       </div>
 
       <footer className="auth-page-footer">© 2026 SenpaiJepang Inc. Internal use only.</footer>
-
-      <aside className="auth-toaster">
-        <strong>Session Expired</strong>
-        <p>Your security token has expired. Please re-authenticate to continue.</p>
-        <div className="auth-toaster-actions">
-          <button type="button" className="danger">
-            Re-authenticate
-          </button>
-          <button type="button" className="muted">
-            Dismiss
-          </button>
-        </div>
-      </aside>
     </div>
   );
 }

@@ -285,53 +285,6 @@ textarea {
   box-shadow: 0 0 0 6px rgba(52, 199, 89, 0.2);
 }
 
-.auth-toaster {
-  position: fixed;
-  right: 22px;
-  bottom: 22px;
-  width: min(420px, calc(100% - 22px));
-  border-left: 3px solid var(--danger);
-  border-radius: 12px;
-  border-top-left-radius: 0;
-  border-bottom-left-radius: 0;
-  background: linear-gradient(90deg, rgba(20, 42, 28, 0.95), rgba(16, 35, 24, 0.88));
-  box-shadow: 0 12px 38px rgba(0, 0, 0, 0.35);
-  padding: 14px 16px;
-}
-
-.auth-toaster strong {
-  display: block;
-  color: #ffd0cc;
-  font-size: 14px;
-}
-
-.auth-toaster p {
-  margin: 6px 0 10px;
-  color: #9eb2a6;
-  font-size: 13px;
-}
-
-.auth-toaster-actions {
-  display: flex;
-  gap: 14px;
-}
-
-.auth-toaster-actions button {
-  border: none;
-  background: transparent;
-  padding: 0;
-  font-size: 13px;
-  font-weight: 700;
-}
-
-.auth-toaster-actions .danger {
-  color: var(--danger);
-}
-
-.auth-toaster-actions .muted {
-  color: #96aaa0;
-}
-
 .auth-page-footer {
   position: fixed;
   left: 0;
@@ -1859,12 +1812,6 @@ textarea {
 
   .auth-body h1 {
     font-size: 32px;
-  }
-
-  .auth-toaster {
-    right: 12px;
-    left: 12px;
-    width: auto;
   }
 
   .job-form-grid {
