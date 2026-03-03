@@ -9,6 +9,7 @@ final class FeedListViewModel: ObservableObject, ManagedTask {
     @Published var searchText: String
     @Published var selectedCategory: String
     @Published var profileCompletion: Int
+    @Published var hasLoadedProfile: Bool
 
     let categories = ["All", "Visa Info", "Safety", "Job Market", "Living Guide", "Community"]
 
@@ -50,6 +51,7 @@ final class FeedListViewModel: ObservableObject, ManagedTask {
         self.searchText = ""
         self.selectedCategory = "All"
         self.profileCompletion = 0
+        self.hasLoadedProfile = false
     }
 
     func loadFeed() async {
@@ -70,6 +72,7 @@ final class FeedListViewModel: ObservableObject, ManagedTask {
         if let profile {
             profileCompletion = profile.completionPercentage
         }
+        hasLoadedProfile = true
     }
 
     func navigateToNotifications() {

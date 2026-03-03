@@ -20,7 +20,7 @@ struct FeedListView: View {
                     .padding(.top, AppTheme.spacingM)
 
                 // Gamification Banner
-                if viewModel.profileCompletion < 100 {
+                if viewModel.hasLoadedProfile && viewModel.profileCompletion < 100 {
                     gamificationBanner
                         .padding(.horizontal, AppTheme.spacingL)
                         .padding(.top, AppTheme.spacingM)
