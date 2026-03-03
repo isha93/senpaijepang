@@ -359,6 +359,41 @@ export class InMemoryAuthStore {
       .filter(Boolean);
   }
 
+  listKycStatusEvents({ cursor = 0, limit = 25, actorId, from, to, toStatus } = {}) {
+    const normalizedCursor = Number.isFinite(Number(cursor)) ? Math.max(0, Math.floor(Number(cursor))) : 0;
+    const normalizedLimit = Number.isFinite(Number(limit)) ? Math.max(1, Math.floor(Number(limit))) : 25;
+    const normalizedActorId = String(actorId || '').trim();
+    const fromTime = from ? Date.parse(String(from)) : NaN;
+    const toTime = to ? Date.parse(String(to)) : NaN;
+    const normalizedToStatus = String(toStatus || '')
+      .trim()
+      .toUpperCase();
+
+    const events = Array.from(this.kycStatusEventsById.values())
+      .filter((event) => {
+        if (normalizedActorId && String(event.actorId || '').trim() !== normalizedActorId) {
+          return false;
+        }
+        const createdAtTime = Date.parse(event.createdAt);
+        if (Number.isFinite(fromTime) && createdAtTime < fromTime) {
+          return false;
+        }
+        if (Number.isFinite(toTime) && createdAtTime > toTime) {
+          return false;
+        }
+        if (normalizedToStatus && event.toStatus !== normalizedToStatus) {
+          return false;
+        }
+        return true;
+      })
+      .sort((left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt));
+
+    return {
+      items: events.slice(normalizedCursor, normalizedCursor + normalizedLimit),
+      total: events.length
+    };
+  }
+
   listKycSessionsByStatuses({ statuses, cursor = 0, limit }) {
     const allowed = new Set((statuses || []).filter(Boolean));
     const sessions = Array.from(this.kycSessionsById.values())

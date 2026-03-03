@@ -316,6 +316,18 @@ function normalizeReviewedBy(reviewedBy) {
   return normalized;
 }
 
+function normalizeOptionalDateTime(value, fieldName) {
+  if (value === undefined || value === null || String(value).trim() === '') {
+    return null;
+  }
+  const normalized = String(value).trim();
+  const timestamp = Date.parse(normalized);
+  if (!Number.isFinite(timestamp)) {
+    throw new KycApiError(400, 'invalid_date_filter', `${fieldName} must be valid ISO date-time`);
+  }
+  return new Date(timestamp).toISOString();
+}
+
 export class KycService {
   constructor({
     store,
@@ -857,6 +869,98 @@ export class KycService {
         total
       },
       items
+    };
+  }
+
+  async listAdminActivityEvents({ cursor, limit, actorId, from, to, toStatus } = {}) {
+    const normalizedCursor = normalizeQueueCursor(cursor);
+    const normalizedLimit = normalizeQueueLimit(limit);
+    const normalizedActorId = String(actorId || '').trim() || undefined;
+    const normalizedFrom = normalizeOptionalDateTime(from, 'from') || undefined;
+    const normalizedTo = normalizeOptionalDateTime(to, 'to') || undefined;
+    const normalizedToStatus = toStatus
+      ? String(toStatus)
+          .trim()
+          .toUpperCase()
+      : undefined;
+    if (normalizedToStatus && !KYC_RAW_STATUSES.has(normalizedToStatus)) {
+      throw new KycApiError(400, 'invalid_status_filter', `toStatus must be one of ${Array.from(KYC_RAW_STATUSES).join(', ')}`);
+    }
+
+    let eventPage;
+    if (typeof this.store.listKycStatusEvents === 'function') {
+      eventPage = await this.store.listKycStatusEvents({
+        cursor: normalizedCursor,
+        limit: normalizedLimit,
+        actorId: normalizedActorId,
+        from: normalizedFrom,
+        to: normalizedTo,
+        toStatus: normalizedToStatus
+      });
+    } else {
+      const sessionsPage = await this.store.listKycSessionsByStatuses({
+        statuses: [],
+        cursor: 0,
+        limit: 10000
+      });
+      const sessions = Array.isArray(sessionsPage) ? sessionsPage : sessionsPage.items || [];
+      const grouped = await Promise.all(sessions.map((session) => this.store.listKycStatusEventsBySessionId(session.id)));
+      const flattened = grouped
+        .flat()
+        .filter((event) => {
+          if (normalizedActorId && String(event.actorId || '').trim() !== normalizedActorId) {
+            return false;
+          }
+          const createdAtTime = Date.parse(event.createdAt);
+          if (normalizedFrom && createdAtTime < Date.parse(normalizedFrom)) {
+            return false;
+          }
+          if (normalizedTo && createdAtTime > Date.parse(normalizedTo)) {
+            return false;
+          }
+          if (normalizedToStatus && event.toStatus !== normalizedToStatus) {
+            return false;
+          }
+          return true;
+        })
+        .sort((left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt));
+      eventPage = {
+        items: flattened.slice(normalizedCursor, normalizedCursor + normalizedLimit),
+        total: flattened.length
+      };
+    }
+
+    const rawItems = Array.isArray(eventPage) ? eventPage : eventPage.items || [];
+    const total = Array.isArray(eventPage)
+      ? rawItems.length
+      : Number.isFinite(Number(eventPage.total))
+        ? Math.max(0, Math.floor(Number(eventPage.total)))
+        : rawItems.length;
+
+    return {
+      items: rawItems.map((event) => ({
+        id: event.id,
+        type: 'KYC',
+        action: 'KYC_STATUS_TRANSITION',
+        entityType: 'KYC_SESSION',
+        entityId: event.kycSessionId,
+        actorType: event.actorType,
+        actorId: event.actorId || null,
+        statusFrom: event.fromStatus || null,
+        statusTo: event.toStatus,
+        title: `KYC ${event.toStatus}`,
+        description:
+          event.reason ||
+          `KYC status changed from ${event.fromStatus || 'N/A'} to ${event.toStatus}`,
+        createdAt: event.createdAt
+      })),
+      pageInfo: {
+        cursor: String(normalizedCursor),
+        nextCursor:
+          normalizedCursor + rawItems.length < total ? String(normalizedCursor + rawItems.length) : null,
+        limit: normalizedLimit,
+        total
+      }
     };
   }
 

@@ -473,6 +473,50 @@ test('admin application lifecycle updates are visible to user application endpoi
       });
       assert.equal(userJourneyAfterInterview.res.status, 200);
       assert.equal(userJourneyAfterInterview.json.journey.at(-1).status, 'INTERVIEW');
+
+      const missingKeyOverview = await requestJson(baseUrl, '/admin/overview/summary');
+      assert.equal(missingKeyOverview.res.status, 401);
+      assert.equal(missingKeyOverview.json.error.code, 'missing_admin_api_key');
+
+      const overviewSummary = await requestJson(baseUrl, '/admin/overview/summary', {
+        adminApiKey: TEST_ADMIN_API_KEY
+      });
+      assert.equal(overviewSummary.res.status, 200);
+      assert.ok(Number.isInteger(overviewSummary.json.pendingKyc));
+      assert.ok(Number.isInteger(overviewSummary.json.activeApplications));
+      assert.ok(Number.isInteger(overviewSummary.json.inReviewApplications));
+      assert.ok(Number.isInteger(overviewSummary.json.interviewApplications));
+      assert.equal(overviewSummary.json.activeApplications >= 1, true);
+      assert.equal(overviewSummary.json.interviewApplications >= 1, true);
+      assert.ok(typeof overviewSummary.json.lastUpdatedAt === 'string');
+
+      const activityApplications = await requestJson(
+        baseUrl,
+        '/admin/activity-events?type=APPLICATION&limit=20',
+        {
+          adminApiKey: TEST_ADMIN_API_KEY
+        }
+      );
+      assert.equal(activityApplications.res.status, 200);
+      assert.equal(activityApplications.json.filters.type, 'APPLICATION');
+      assert.ok(activityApplications.json.items.some((item) => item.entityId === applicationId));
+
+      const activityWithCursor = await requestJson(
+        baseUrl,
+        '/admin/activity-events?type=APPLICATION&cursor=30&limit=25',
+        {
+          adminApiKey: TEST_ADMIN_API_KEY
+        }
+      );
+      assert.equal(activityWithCursor.res.status, 200);
+      assert.equal(activityWithCursor.json.pageInfo.cursor, '30');
+      assert.equal(activityWithCursor.json.pageInfo.limit, 25);
+
+      const invalidActivityType = await requestJson(baseUrl, '/admin/activity-events?type=INVALID', {
+        adminApiKey: TEST_ADMIN_API_KEY
+      });
+      assert.equal(invalidActivityType.res.status, 400);
+      assert.equal(invalidActivityType.json.error.code, 'invalid_activity_type');
     },
     {
       adminApiKey: TEST_ADMIN_API_KEY,

@@ -584,6 +584,73 @@ export class PostgresAuthStore {
     return result.rows.map((row) => mapKycStatusEventRow(row));
   }
 
+  async listKycStatusEvents({ cursor = 0, limit = 25, actorId, from, to, toStatus } = {}) {
+    const normalizedCursor = Number.isFinite(Number(cursor)) ? Math.max(0, Math.floor(Number(cursor))) : 0;
+    const normalizedLimit = Number.isFinite(Number(limit)) ? Math.max(1, Math.floor(Number(limit))) : 25;
+    const normalizedActorId = String(actorId || '').trim();
+    const normalizedFrom = String(from || '').trim();
+    const normalizedTo = String(to || '').trim();
+    const normalizedToStatus = String(toStatus || '')
+      .trim()
+      .toUpperCase();
+
+    const whereParts = [];
+    const params = [];
+    if (normalizedActorId) {
+      params.push(normalizedActorId);
+      whereParts.push(`actor_id = $${params.length}`);
+    }
+    if (normalizedFrom) {
+      params.push(normalizedFrom);
+      whereParts.push(`created_at >= $${params.length}::timestamptz`);
+    }
+    if (normalizedTo) {
+      params.push(normalizedTo);
+      whereParts.push(`created_at <= $${params.length}::timestamptz`);
+    }
+    if (normalizedToStatus) {
+      params.push(normalizedToStatus);
+      whereParts.push(`to_status = $${params.length}`);
+    }
+    const whereClause = whereParts.length > 0 ? `WHERE ${whereParts.join(' AND ')}` : '';
+
+    const countResult = await this.pool.query(
+      `
+        SELECT COUNT(*)::int AS total
+        FROM kyc_status_events
+        ${whereClause}
+      `,
+      params
+    );
+    const total = Number(countResult.rows[0]?.total || 0);
+
+    const listParams = [...params, normalizedLimit, normalizedCursor];
+    const result = await this.pool.query(
+      `
+        SELECT
+          id,
+          kyc_session_id,
+          from_status,
+          to_status,
+          actor_type,
+          actor_id,
+          reason,
+          created_at
+        FROM kyc_status_events
+        ${whereClause}
+        ORDER BY created_at DESC
+        LIMIT $${params.length + 1}
+        OFFSET $${params.length + 2}
+      `,
+      listParams
+    );
+
+    return {
+      items: result.rows.map((row) => mapKycStatusEventRow(row)),
+      total
+    };
+  }
+
   async listKycSessionsByStatuses({ statuses, cursor = 0, limit }) {
     const normalizedStatuses = Array.isArray(statuses) ? statuses.filter(Boolean) : [];
     const normalizedCursor = Number.isFinite(Number(cursor)) ? Math.max(0, Math.floor(Number(cursor))) : 0;

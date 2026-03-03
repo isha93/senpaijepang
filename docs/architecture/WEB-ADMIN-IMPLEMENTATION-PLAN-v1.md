@@ -1,8 +1,8 @@
 # Web Admin Implementation Plan v1 (React Responsive)
 
-Date: 2026-03-02
+Date: 2026-03-03
 Owner: Web Dashboard Track
-Status: MVP Implemented, Iteration Active
+Status: MVP Implemented, Iteration Active (Overview dynamic integrated)
 
 ## 1. Design Asset Scan Result
 Source folder scanned:
@@ -90,6 +90,8 @@ Auth:
 Overview/System:
 - `GET /health`
 - `GET /metrics`
+- `GET /admin/overview/summary`
+- `GET /admin/activity-events`
 
 KYC review:
 - `GET /admin/kyc/review-queue`
@@ -163,10 +165,10 @@ Phase 5 - Hardening + QA (Day 7-8)
 - Public preview panel works for jobs/feed query/filter QA.
 
 ## 9. Immediate Next Action
-Start implementation from Phase 0:
-- scaffold `apps/web-admin`
-- setup route skeleton and responsive shell
-- wire login + `/auth/me` check
+Lanjut ke Iteration berikutnya setelah overview dinamis:
+- implement detail endpoint compliance (`/admin/audit/events`, signed preview URL KYC doc) saat API siap
+- sinkronkan panel timeline agar dukung filter interaktif (`type`, date range, actor)
+- lanjutkan mobile-web UX polish untuk list/detail table-card parity
 
 ## 10. API Dependency Companion
 Untuk endpoint tambahan yang dibutuhkan iterasi dashboard berikutnya, refer ke:

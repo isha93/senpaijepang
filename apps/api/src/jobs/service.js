@@ -256,6 +256,18 @@ function normalizeOptionalUpdatedBy(updatedBy) {
   return normalized;
 }
 
+function normalizeOptionalDateTime(value, fieldName) {
+  if (value === undefined || value === null || String(value).trim() === '') {
+    return null;
+  }
+  const normalized = String(value).trim();
+  const timestamp = Date.parse(normalized);
+  if (!Number.isFinite(timestamp)) {
+    throw new JobsApiError(400, 'invalid_date_filter', `${fieldName} must be valid ISO date-time`);
+  }
+  return new Date(timestamp).toISOString();
+}
+
 function ensureTransitionAllowed(fromStatus, toStatus) {
   if (fromStatus === toStatus) {
     return false;
@@ -1015,6 +1027,83 @@ export class JobsService {
       application: toApplicationSummary(application, job),
       applicant,
       journeyEvent
+    };
+  }
+
+  async listAdminActivityEvents({ cursor, limit, actorId, from, to, toStatus } = {}) {
+    const normalizedCursor = normalizeCursor(cursor);
+    const normalizedLimit = normalizeLimit(limit);
+    const normalizedActorId = String(actorId || '').trim() || null;
+    const normalizedFrom = normalizeOptionalDateTime(from, 'from');
+    const normalizedTo = normalizeOptionalDateTime(to, 'to');
+    const normalizedToStatus = toStatus
+      ? String(toStatus)
+          .trim()
+          .toUpperCase()
+      : null;
+    if (normalizedToStatus && !APPLICATION_STATUSES.has(normalizedToStatus)) {
+      throw new JobsApiError(
+        400,
+        'invalid_application_status',
+        `status must be one of ${Array.from(APPLICATION_STATUSES).join(', ')}`
+      );
+    }
+
+    const flattened = [];
+    for (const application of this.applicationsById.values()) {
+      if (normalizedActorId && application.userId !== normalizedActorId) {
+        continue;
+      }
+      const applicant = await this.getApplicantById(application.userId);
+      const job = this.getJobByIdOrThrow(application.jobId);
+      for (let index = 0; index < application.journey.length; index += 1) {
+        const event = application.journey[index];
+        const previous = index > 0 ? application.journey[index - 1] : null;
+        if (normalizedToStatus && event.status !== normalizedToStatus) {
+          continue;
+        }
+        const createdAtTime = Date.parse(event.createdAt);
+        if (normalizedFrom && createdAtTime < Date.parse(normalizedFrom)) {
+          continue;
+        }
+        if (normalizedTo && createdAtTime > Date.parse(normalizedTo)) {
+          continue;
+        }
+        flattened.push({
+          id: event.id,
+          type: 'APPLICATION',
+          action: 'APPLICATION_STATUS_TRANSITION',
+          entityType: 'JOB_APPLICATION',
+          entityId: application.id,
+          actorType: event.status === 'SUBMITTED' ? 'USER' : 'ADMIN',
+          actorId: application.userId,
+          statusFrom: previous ? previous.status : null,
+          statusTo: event.status,
+          title: event.title,
+          description: event.description,
+          createdAt: event.createdAt,
+          applicant,
+          job: {
+            id: job.id,
+            title: job.title
+          }
+        });
+      }
+    }
+
+    flattened.sort((left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt));
+    const paged = flattened.slice(normalizedCursor, normalizedCursor + normalizedLimit);
+    const nextOffset = normalizedCursor + paged.length;
+    const nextCursor = nextOffset < flattened.length ? String(nextOffset) : null;
+
+    return {
+      items: paged,
+      pageInfo: {
+        cursor: String(normalizedCursor),
+        nextCursor,
+        limit: normalizedLimit,
+        total: flattened.length
+      }
     };
   }
 

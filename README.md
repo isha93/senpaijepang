@@ -157,6 +157,8 @@ Expected output akhir: `DEV_ALL_CHECK_OK`
 - `GET /admin/users`
 - `POST /admin/users`
 - `PATCH /admin/users/{userId}`
+- `GET /admin/overview/summary`
+- `GET /admin/activity-events`
 - `GET /admin/applications`
 - `GET /admin/applications/{applicationId}`
 - `GET /admin/applications/{applicationId}/journey`

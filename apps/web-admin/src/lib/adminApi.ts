@@ -32,6 +32,62 @@ export type MetricsResponse = {
   routes: MetricsRoute[];
 };
 
+export type AdminOverviewSummaryResponse = {
+  pendingKyc: number;
+  manualReviewKyc: number;
+  verifiedToday: number;
+  rejectedToday: number;
+  pendingOrganizationVerification: number;
+  activeJobs: number;
+  publishedFeedPosts: number;
+  activeApplications: number;
+  submittedApplications: number;
+  inReviewApplications: number;
+  interviewApplications: number;
+  offeredApplications: number;
+  hiredApplications: number;
+  rejectedApplications: number;
+  lastUpdatedAt: string;
+};
+
+export type AdminActivityType = 'KYC' | 'APPLICATION' | 'JOB' | 'FEED' | 'ORG' | 'AUTH';
+
+export type AdminActivityEvent = {
+  id: string;
+  type: AdminActivityType;
+  action: string;
+  entityType: string;
+  entityId: string;
+  actorType: string | null;
+  actorId: string | null;
+  statusFrom: string | null;
+  statusTo: string | null;
+  title: string;
+  description: string;
+  createdAt: string;
+  applicant?: {
+    id: string;
+    fullName: string | null;
+    email: string | null;
+  };
+  job?: {
+    id: string;
+    title: string;
+  };
+};
+
+export type AdminActivityEventListResponse = {
+  count: number;
+  filters: {
+    type: 'ALL' | AdminActivityType;
+    actorId: string | null;
+    from: string | null;
+    to: string | null;
+  };
+  pageInfo: JobPageInfo;
+  items: AdminActivityEvent[];
+};
+
 export type AdminUser = {
   id: string;
   fullName: string;
@@ -354,6 +410,22 @@ export function getHealth() {
 
 export function getMetrics() {
   return apiRequest<MetricsResponse>('/metrics');
+}
+
+export function getAdminOverviewSummary() {
+  return adminRequest<AdminOverviewSummaryResponse>('/admin/overview/summary');
+}
+
+export function getAdminActivityEvents(params: {
+  type?: 'ALL' | AdminActivityType;
+  actorId?: string;
+  from?: string;
+  to?: string;
+  cursor?: number;
+  limit?: number;
+} = {}) {
+  const query = buildQuery(params);
+  return adminRequest<AdminActivityEventListResponse>(`/admin/activity-events${query}`);
 }
 
 export function getAdminUsers(params: {

@@ -13,7 +13,7 @@ Date: 2026-03-03
 
 ## 3. Current Delivery Mode
 - Active mode: **API-first completed, iOS integration enabled (incremental)**.
-- Frontend web user/admin tidak menjadi bagian delivery repo saat ini.
+- Internal web admin dashboard (`apps/web-admin`) sudah menjadi bagian delivery dan memakai endpoint runtime utama.
 - Validasi fungsional dilakukan lewat endpoint API + test/smoke + consumer integration checks.
 
 ## 4. Implemented Endpoints
@@ -67,6 +67,8 @@ Admin:
 - `GET /admin/users` (Bearer super_admin role, fallback header `x-admin-api-key`)
 - `POST /admin/users` (Bearer super_admin role, fallback header `x-admin-api-key`)
 - `PATCH /admin/users/{userId}` (Bearer super_admin role, fallback header `x-admin-api-key`)
+- `GET /admin/overview/summary` (Bearer admin role, fallback header `x-admin-api-key`)
+- `GET /admin/activity-events` (Bearer admin role, fallback header `x-admin-api-key`, supports `type/actorId/from/to/cursor/limit`)
 - `GET /admin/applications` (Bearer admin role, fallback header `x-admin-api-key`, supports `status/q/jobId/orgId/cursor/limit`)
 - `GET /admin/applications/{applicationId}` (Bearer admin role, fallback header `x-admin-api-key`)
 - `GET /admin/applications/{applicationId}/journey` (Bearer admin role, fallback header `x-admin-api-key`)
@@ -205,7 +207,7 @@ Referensi hosting options:
 - Runtime canonical paths masih unversioned; prefix `/v1` saat ini alias kompatibilitas (belum v1-only).
 - Vendor-specific webhook orchestration (retry semantics, event schema mapping per provider) belum diimplementasikan.
 - Job catalog, feed content, saved jobs/posts, dan job applications sudah dipersist ke Postgres saat mode `AUTH_STORE=postgres`.
-- Journey/event status aplikasi kandidat sekarang sudah bisa diupdate dari endpoint admin applications, namun dashboard timeline lintas domain terpadu masih iterasi berikutnya.
+- `GET /admin/activity-events` saat ini mengagregasi event `KYC` + `APPLICATION`; source untuk `JOB/FEED/ORG/AUTH` masih iterasi berikutnya.
 
 ## 13. Change Control
 - Setiap perubahan endpoint runtime wajib update `openapi-runtime-v0.yaml` dan file ini di commit yang sama.

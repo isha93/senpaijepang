@@ -1323,6 +1323,87 @@ paths:
         '503':
           $ref: '#/components/responses/ApiError'
 
+  /admin/overview/summary:
+    get:
+      tags: [Admin]
+      summary: Get admin dashboard overview summary
+      security:
+        - bearerAuth: []
+        - adminApiKeyAuth: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminOverviewSummaryResponse'
+        '401':
+          $ref: '#/components/responses/ApiError'
+        '403':
+          $ref: '#/components/responses/ApiError'
+        '503':
+          $ref: '#/components/responses/ApiError'
+
+  /admin/activity-events:
+    get:
+      tags: [Admin]
+      summary: List admin activity timeline events
+      security:
+        - bearerAuth: []
+        - adminApiKeyAuth: []
+      parameters:
+        - in: query
+          name: type
+          required: false
+          schema:
+            type: string
+            enum: [ALL, KYC, APPLICATION, JOB, FEED, ORG, AUTH]
+        - in: query
+          name: actorId
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: from
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - in: query
+          name: to
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - in: query
+          name: cursor
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+        - in: query
+          name: limit
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminActivityEventListResponse'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/ApiError'
+        '403':
+          $ref: '#/components/responses/ApiError'
+        '503':
+          $ref: '#/components/responses/ApiError'
+
   /admin/applications:
     get:
       tags: [Admin]
@@ -2247,6 +2328,173 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ApplicationJourneyEvent'
+
+    AdminOverviewSummaryResponse:
+      type: object
+      required:
+        - pendingKyc
+        - manualReviewKyc
+        - verifiedToday
+        - rejectedToday
+        - pendingOrganizationVerification
+        - activeJobs
+        - publishedFeedPosts
+        - activeApplications
+        - submittedApplications
+        - inReviewApplications
+        - interviewApplications
+        - offeredApplications
+        - hiredApplications
+        - rejectedApplications
+        - lastUpdatedAt
+      properties:
+        pendingKyc:
+          type: integer
+        manualReviewKyc:
+          type: integer
+        verifiedToday:
+          type: integer
+        rejectedToday:
+          type: integer
+        pendingOrganizationVerification:
+          type: integer
+        activeJobs:
+          type: integer
+        publishedFeedPosts:
+          type: integer
+        activeApplications:
+          type: integer
+        submittedApplications:
+          type: integer
+        inReviewApplications:
+          type: integer
+        interviewApplications:
+          type: integer
+        offeredApplications:
+          type: integer
+        hiredApplications:
+          type: integer
+        rejectedApplications:
+          type: integer
+        lastUpdatedAt:
+          type: string
+          format: date-time
+
+    AdminActivityType:
+      type: string
+      enum: [KYC, APPLICATION, JOB, FEED, ORG, AUTH]
+
+    AdminActivityApplicant:
+      type: object
+      required: [id]
+      properties:
+        id:
+          type: string
+          format: uuid
+        fullName:
+          type: string
+          nullable: true
+        email:
+          type: string
+          nullable: true
+
+    AdminActivityJob:
+      type: object
+      required: [id, title]
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+
+    AdminActivityEvent:
+      type: object
+      required:
+        - id
+        - type
+        - action
+        - entityType
+        - entityId
+        - actorType
+        - actorId
+        - statusFrom
+        - statusTo
+        - title
+        - description
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          $ref: '#/components/schemas/AdminActivityType'
+        action:
+          type: string
+        entityType:
+          type: string
+        entityId:
+          type: string
+        actorType:
+          type: string
+          nullable: true
+        actorId:
+          type: string
+          nullable: true
+        statusFrom:
+          type: string
+          nullable: true
+        statusTo:
+          type: string
+          nullable: true
+        title:
+          type: string
+        description:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        applicant:
+          allOf:
+            - $ref: '#/components/schemas/AdminActivityApplicant'
+          nullable: true
+        job:
+          allOf:
+            - $ref: '#/components/schemas/AdminActivityJob'
+          nullable: true
+
+    AdminActivityEventFilters:
+      type: object
+      required: [type, actorId, from, to]
+      properties:
+        type:
+          type: string
+          enum: [ALL, KYC, APPLICATION, JOB, FEED, ORG, AUTH]
+        actorId:
+          type: string
+          nullable: true
+        from:
+          type: string
+          format: date-time
+          nullable: true
+        to:
+          type: string
+          format: date-time
+          nullable: true
+
+    AdminActivityEventListResponse:
+      type: object
+      required: [count, filters, pageInfo, items]
+      properties:
+        count:
+          type: integer
+        filters:
+          $ref: '#/components/schemas/AdminActivityEventFilters'
+        pageInfo:
+          $ref: '#/components/schemas/JobPageInfo'
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdminActivityEvent'
 
     AdminApplicationApplicant:
       type: object

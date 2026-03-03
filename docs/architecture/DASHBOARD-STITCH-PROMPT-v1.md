@@ -18,6 +18,12 @@ Project state saat ini:
   - `PATCH /admin/organizations/{orgId}/verification`
   - `GET /admin/kyc/review-queue`
   - `POST /admin/kyc/review`
+  - `GET /admin/overview/summary`
+  - `GET /admin/activity-events` (current sources: `KYC`, `APPLICATION`)
+  - `GET /admin/applications`
+  - `GET /admin/applications/{applicationId}`
+  - `GET /admin/applications/{applicationId}/journey`
+  - `PATCH /admin/applications/{applicationId}/status`
 - Auth tersedia:
   - `POST /auth/login`
   - `POST /auth/refresh`
@@ -57,8 +63,8 @@ Tambahan yang direkomendasikan untuk dashboard (read-only QA panel):
 
 Batasan runtime saat ini (supaya prompt tidak over-scope):
 - Belum ada admin endpoint untuk melihat seluruh user saved jobs/saved posts.
-- Belum ada admin endpoint untuk global applications moderation/journey monitoring lintas user.
-- Kalau mau fitur itu di dashboard, perlu tambah endpoint admin baru dulu.
+- `/admin/activity-events` belum menggabungkan source `JOB/FEED/ORG/AUTH` (baru `KYC` + `APPLICATION`).
+- Kalau butuh timeline lintas semua domain, perlu tambah source activity per domain di backend.
 
 ## 2. Copy-Paste Prompt For Stitch AI
 Use this prompt directly in Stitch AI:

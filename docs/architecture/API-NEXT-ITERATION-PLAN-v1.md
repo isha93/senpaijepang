@@ -2,7 +2,7 @@
 
 Date: 2026-03-03
 Owner: API + Web Admin
-Status: In Progress
+Status: In Progress (Iteration A completed)
 
 ## 1. Objective
 Menambahkan endpoint yang belum ada agar dashboard admin bisa naik dari CRUD dasar ke operasi harian yang lengkap (monitoring, moderation, audit, dan quality check).
@@ -23,35 +23,13 @@ Referensi:
 
 ## 3. Gaps To Close
 Yang belum tersedia dan dibutuhkan dashboard iterasi berikutnya:
-- Overview summary sekali call (KPI dashboard).
-- Activity timeline lintas domain untuk ops.
 - User investigation endpoints untuk support/compliance.
 - Secure preview URL untuk dokumen KYC.
 - Queryable audit event endpoint untuk traceability.
 
 ## 4. Endpoint Backlog (Proposed)
 Priority P0 (remaining):
-1. `GET /admin/overview/summary`
-- Purpose: KPI ringkas untuk landing dashboard.
-- Response minimum:
-  - `pendingKyc`
-  - `manualReviewKyc`
-  - `verifiedToday`
-  - `rejectedToday`
-  - `pendingOrganizationVerification`
-  - `activeJobs`
-  - `publishedFeedPosts`
-  - `lastUpdatedAt`
-
-2. `GET /admin/activity-events`
-- Purpose: activity timeline lintas KYC/jobs/feed/organization.
-- Query:
-  - `cursor`, `limit`
-  - `type` (`KYC`, `JOB`, `FEED`, `ORG`, `AUTH`)
-  - `actorId` (optional)
-  - `from`, `to` (date-time filter)
-
-3. `POST /admin/kyc/documents/{documentId}/preview-url`
+1. `POST /admin/kyc/documents/{documentId}/preview-url`
 - Purpose: signed short-lived preview URL untuk dokumen KYC.
 - Body/Query:
   - `expiresSec` (optional, capped)
@@ -59,7 +37,7 @@ Priority P0 (remaining):
   - `url`
   - `expiresAt`
 
-4. `GET /admin/audit/events`
+2. `GET /admin/audit/events`
 - Purpose: audit log queryable untuk compliance.
 - Query:
   - `cursor`, `limit`
@@ -80,10 +58,12 @@ Priority P1 (setelah P0 stabil):
 - publish/unpublish/schedule for jobs/posts
 
 Completed this iteration (2026-03-03):
-1. `GET /admin/applications`
-2. `GET /admin/applications/{applicationId}`
-3. `GET /admin/applications/{applicationId}/journey`
-4. `PATCH /admin/applications/{applicationId}/status`
+1. `GET /admin/overview/summary`
+2. `GET /admin/activity-events`
+3. `GET /admin/applications`
+4. `GET /admin/applications/{applicationId}`
+5. `GET /admin/applications/{applicationId}/journey`
+6. `PATCH /admin/applications/{applicationId}/status`
 
 ## 5. Data Model Additions (Proposed)
 Tambahan schema di `openapi-runtime-v0.yaml`:
@@ -110,8 +90,8 @@ Tambahan schema di `openapi-runtime-v0.yaml`:
 
 ## 7. Implementation Sequence
 Iteration A (fast unblock dashboard):
-1. `GET /admin/overview/summary`
-2. `GET /admin/activity-events`
+1. `GET /admin/overview/summary` (done)
+2. `GET /admin/activity-events` (done; current sources: `KYC` + `APPLICATION`)
 3. `GET /admin/applications` (done)
 
 Iteration B (detail + actions):

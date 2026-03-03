@@ -25,7 +25,7 @@ For quick local login/testing, backend can auto-create:
 
 ## API-backed screens
 
-- `/overview` -> `/health`, `/metrics`, `/admin/kyc/review-queue`
+- `/overview` -> `/health`, `/metrics`, `/admin/overview/summary`, `/admin/activity-events`
 - `/kyc-review` -> `/admin/kyc/review-queue`, `/admin/kyc/review`
 - `/applications` -> `/admin/applications`, `PATCH /admin/applications/{applicationId}/status`
 - `/feed` -> `/admin/feed/posts`, `/feed/posts`

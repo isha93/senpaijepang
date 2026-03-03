@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
-  AdminKycReviewQueueResponse,
+  AdminActivityEventListResponse,
+  AdminOverviewSummaryResponse,
   HealthResponse,
   MetricsResponse,
-  getAdminKycReviewQueue,
+  getAdminActivityEvents,
+  getAdminOverviewSummary,
   getHealth,
   getMetrics
 } from '../lib/adminApi';
@@ -11,7 +13,8 @@ import {
 type OverviewState = {
   health: HealthResponse | null;
   metrics: MetricsResponse | null;
-  queue: AdminKycReviewQueueResponse | null;
+  summary: AdminOverviewSummaryResponse | null;
+  activity: AdminActivityEventListResponse | null;
 };
 
 function formatRelative(iso: string | null | undefined) {
@@ -33,11 +36,39 @@ function formatCompact(value: number) {
   }).format(value);
 }
 
+function resolveActivityTone(statusTo: string | null) {
+  if (!statusTo) {
+    return 'info';
+  }
+  if (statusTo === 'REJECTED') {
+    return 'danger';
+  }
+  if (statusTo === 'MANUAL_REVIEW' || statusTo === 'IN_REVIEW' || statusTo === 'INTERVIEW') {
+    return 'warn';
+  }
+  if (statusTo === 'VERIFIED' || statusTo === 'HIRED') {
+    return '';
+  }
+  return 'info';
+}
+
+function resolveActivityActor(item: {
+  type: string;
+  applicant?: { fullName: string | null; email: string | null };
+  actorId?: string | null;
+}) {
+  if (item.type === 'APPLICATION') {
+    return item.applicant?.fullName || item.applicant?.email || item.actorId || 'Applicant';
+  }
+  return item.actorId || 'System';
+}
+
 export function OverviewPage() {
   const [state, setState] = useState<OverviewState>({
     health: null,
     metrics: null,
-    queue: null
+    summary: null,
+    activity: null
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -49,10 +80,11 @@ export function OverviewPage() {
       setLoading(true);
       setError(null);
       try {
-        const [health, metrics, queue] = await Promise.all([
+        const [health, metrics, summary, activity] = await Promise.all([
           getHealth(),
           getMetrics(),
-          getAdminKycReviewQueue({ status: 'ALL', limit: 100 })
+          getAdminOverviewSummary(),
+          getAdminActivityEvents({ type: 'ALL', limit: 50 })
         ]);
 
         if (!active) {
@@ -62,7 +94,8 @@ export function OverviewPage() {
         setState({
           health,
           metrics,
-          queue
+          summary,
+          activity
         });
       } catch (err) {
         if (!active) {
@@ -89,62 +122,22 @@ export function OverviewPage() {
   }, []);
 
   const statusCounts = useMemo(() => {
-    const initial = {
-      pending: 0,
-      manualReview: 0,
-      verified: 0,
-      rejected: 0
+    return {
+      pending: Number(state.summary?.pendingKyc || 0),
+      manualReview: Number(state.summary?.manualReviewKyc || 0),
+      verified: Number(state.summary?.verifiedToday || 0),
+      rejected: Number(state.summary?.rejectedToday || 0)
     };
-
-    for (const item of state.queue?.items || []) {
-      if (item.session.status === 'SUBMITTED') {
-        initial.pending += 1;
-      }
-      if (item.session.status === 'MANUAL_REVIEW') {
-        initial.manualReview += 1;
-      }
-      if (item.session.status === 'VERIFIED') {
-        initial.verified += 1;
-      }
-      if (item.session.status === 'REJECTED') {
-        initial.rejected += 1;
-      }
-    }
-
-    return initial;
-  }, [state.queue]);
+  }, [state.summary]);
 
   const activities = useMemo(() => {
-    const items = [...(state.queue?.items || [])]
-      .filter((item) => item.lastEvent)
-      .sort((a, b) => {
-        const left = new Date(a.lastEvent?.createdAt || a.session.updatedAt).getTime();
-        const right = new Date(b.lastEvent?.createdAt || b.session.updatedAt).getTime();
-        return right - left;
-      })
-      .slice(0, 4)
-      .map((item) => {
-        const lastEvent = item.lastEvent;
-        const status = lastEvent?.toStatus || item.session.status;
-        const actor = item.user?.fullName || item.user?.email || `Session ${item.session.id.slice(0, 8)}`;
-
-        return {
-          id: item.session.id,
-          actor,
-          time: formatRelative(lastEvent?.createdAt || item.session.updatedAt),
-          detail:
-            lastEvent?.reason ||
-            `KYC status transitioned to ${status} (${item.riskFlags.length ? item.riskFlags.join(', ') : 'no risk flags'}).`,
-          tone:
-            status === 'REJECTED'
-              ? 'danger'
-              : status === 'MANUAL_REVIEW'
-                ? 'warn'
-                : status === 'VERIFIED'
-                  ? ''
-                  : 'info'
-        };
-      });
+    const items = (state.activity?.items || []).slice(0, 6).map((item) => ({
+      id: item.id,
+      actor: resolveActivityActor(item),
+      time: formatRelative(item.createdAt),
+      detail: item.description,
+      tone: resolveActivityTone(item.statusTo)
+    }));
 
     if (items.length > 0) {
       return items;
@@ -159,7 +152,7 @@ export function OverviewPage() {
         tone: 'info'
       }
     ];
-  }, [loading, state.queue]);
+  }, [loading, state.activity]);
 
   const avgLatency = useMemo(() => {
     if (!state.metrics || state.metrics.routes.length === 0) {
@@ -198,7 +191,7 @@ export function OverviewPage() {
         <article className="kpi-card warning">
           <p>Pending KYC</p>
           <strong>{loading ? '...' : String(statusCounts.pending)}</strong>
-          <span>{state.queue ? `${state.queue.count} in queue` : 'loading'}</span>
+          <span>status SUBMITTED</span>
         </article>
         <article className="kpi-card">
           <p>Manual Review</p>
@@ -206,14 +199,14 @@ export function OverviewPage() {
           <span>status MANUAL_REVIEW</span>
         </article>
         <article className="kpi-card success">
-          <p>Verified</p>
+          <p>Verified Today</p>
           <strong>{loading ? '...' : String(statusCounts.verified)}</strong>
-          <span>status VERIFIED</span>
+          <span>today (UTC)</span>
         </article>
         <article className="kpi-card danger">
-          <p>Rejected</p>
+          <p>Rejected Today</p>
           <strong>{loading ? '...' : String(statusCounts.rejected)}</strong>
-          <span>status REJECTED</span>
+          <span>today (UTC)</span>
         </article>
       </div>
 
@@ -269,6 +262,13 @@ export function OverviewPage() {
               <div className="metric-line-head">
                 <span>Total Requests</span>
                 <strong>{state.metrics ? formatCompact(state.metrics.totalRequests) : '...'}</strong>
+              </div>
+            </div>
+
+            <div className="metric-line">
+              <div className="metric-line-head">
+                <span>Applications</span>
+                <strong>{state.summary ? formatCompact(state.summary.activeApplications) : '...'}</strong>
               </div>
             </div>
 

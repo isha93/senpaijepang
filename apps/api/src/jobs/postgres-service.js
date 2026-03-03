@@ -138,6 +138,18 @@ function normalizeOptionalUpdatedBy(updatedBy) {
   return normalized;
 }
 
+function normalizeOptionalDateTime(value, fieldName) {
+  if (value === undefined || value === null || String(value).trim() === '') {
+    return null;
+  }
+  const normalized = String(value).trim();
+  const timestamp = Date.parse(normalized);
+  if (!Number.isFinite(timestamp)) {
+    throw new JobsApiError(400, 'invalid_date_filter', `${fieldName} must be valid ISO date-time`);
+  }
+  return new Date(timestamp).toISOString();
+}
+
 function normalizeJobId(jobId) {
   const normalized = String(jobId || '').trim();
   if (!normalized) {
@@ -1160,6 +1172,121 @@ export class PostgresJobsService {
         journeyEvent
       };
     });
+  }
+
+  async listAdminActivityEvents({ cursor, limit, actorId, from, to, toStatus } = {}) {
+    const normalizedCursor = normalizeCursor(cursor);
+    const normalizedLimit = normalizeLimit(limit);
+    const normalizedActorId = String(actorId || '').trim();
+    const normalizedFrom = normalizeOptionalDateTime(from, 'from');
+    const normalizedTo = normalizeOptionalDateTime(to, 'to');
+    const normalizedToStatus = toStatus
+      ? String(toStatus)
+          .trim()
+          .toUpperCase()
+      : '';
+    if (normalizedToStatus && !APPLICATION_STATUSES.has(normalizedToStatus)) {
+      throw new JobsApiError(
+        400,
+        'invalid_application_status',
+        `status must be one of ${Array.from(APPLICATION_STATUSES).join(', ')}`
+      );
+    }
+
+    const whereParts = [];
+    const params = [];
+    if (normalizedActorId) {
+      params.push(normalizedActorId);
+      whereParts.push(`a.user_id = $${params.length}`);
+    }
+    if (normalizedFrom) {
+      params.push(normalizedFrom);
+      whereParts.push(`je.created_at >= $${params.length}::timestamptz`);
+    }
+    if (normalizedTo) {
+      params.push(normalizedTo);
+      whereParts.push(`je.created_at <= $${params.length}::timestamptz`);
+    }
+    if (normalizedToStatus) {
+      params.push(normalizedToStatus);
+      whereParts.push(`je.status = $${params.length}`);
+    }
+    const whereClause = whereParts.length > 0 ? `WHERE ${whereParts.join(' AND ')}` : '';
+
+    const countResult = await this.pool.query(
+      `
+        SELECT COUNT(*)::int AS total
+        FROM job_application_journey_events je
+        JOIN job_applications a ON a.id = je.application_id
+        ${whereClause}
+      `,
+      params
+    );
+    const total = Number(countResult.rows[0]?.total || 0);
+
+    const listParams = [...params, normalizedLimit, normalizedCursor];
+    const result = await this.pool.query(
+      `
+        SELECT
+          je.id,
+          je.application_id,
+          je.status,
+          je.title,
+          je.description,
+          je.created_at,
+          a.user_id,
+          a.job_id,
+          LAG(je.status) OVER (
+            PARTITION BY je.application_id
+            ORDER BY je.created_at ASC
+          ) AS from_status,
+          u.full_name AS applicant_full_name,
+          u.email AS applicant_email,
+          j.title AS job_title
+        FROM job_application_journey_events je
+        JOIN job_applications a ON a.id = je.application_id
+        JOIN users u ON u.id = a.user_id
+        JOIN jobs j ON j.id = a.job_id
+        ${whereClause}
+        ORDER BY je.created_at DESC
+        LIMIT $${params.length + 1}
+        OFFSET $${params.length + 2}
+      `,
+      listParams
+    );
+
+    return {
+      items: result.rows.map((row) => ({
+        id: row.id,
+        type: 'APPLICATION',
+        action: 'APPLICATION_STATUS_TRANSITION',
+        entityType: 'JOB_APPLICATION',
+        entityId: row.application_id,
+        actorType: row.status === 'SUBMITTED' ? 'USER' : 'ADMIN',
+        actorId: row.user_id,
+        statusFrom: row.from_status || null,
+        statusTo: row.status,
+        title: row.title,
+        description: row.description,
+        createdAt: new Date(row.created_at).toISOString(),
+        applicant: {
+          id: row.user_id,
+          fullName: row.applicant_full_name,
+          email: row.applicant_email
+        },
+        job: {
+          id: row.job_id,
+          title: row.job_title
+        }
+      })),
+      pageInfo: {
+        cursor: String(normalizedCursor),
+        nextCursor:
+          normalizedCursor + result.rows.length < total ? String(normalizedCursor + result.rows.length) : null,
+        limit: normalizedLimit,
+        total
+      }
+    };
   }
 
   async listAdminJobs({ q, cursor, limit }) {

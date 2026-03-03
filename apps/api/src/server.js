@@ -10,6 +10,7 @@ import {
   createOrganizationsService,
   isOrganizationsApiError
 } from './organizations/service.js';
+import { createAdminOpsService, isAdminOpsApiError } from './admin/ops-service.js';
 import { createLogger } from './observability/logger.js';
 import { InMemoryApiMetrics } from './observability/metrics.js';
 
@@ -331,6 +332,7 @@ async function handleRequest(
   feedService,
   profileService,
   organizationsService,
+  adminOpsService,
   adminApiKey,
   adminRoleCodes,
   metrics
@@ -822,6 +824,35 @@ async function handleRequest(
     return;
   }
 
+  if (req.method === 'GET' && pathname === '/admin/overview/summary') {
+    const adminAuth = await authenticateAdminRequest(req, res, authService, adminApiKey, adminRoleCodes);
+    if (!adminAuth) {
+      return;
+    }
+
+    const result = await adminOpsService.getOverviewSummary();
+    sendJson(res, 200, result);
+    return;
+  }
+
+  if (req.method === 'GET' && pathname === '/admin/activity-events') {
+    const adminAuth = await authenticateAdminRequest(req, res, authService, adminApiKey, adminRoleCodes);
+    if (!adminAuth) {
+      return;
+    }
+
+    const result = await adminOpsService.listActivityEvents({
+      type: url.searchParams.get('type') || undefined,
+      actorId: url.searchParams.get('actorId') || undefined,
+      from: url.searchParams.get('from') || undefined,
+      to: url.searchParams.get('to') || undefined,
+      cursor: url.searchParams.get('cursor') || undefined,
+      limit: url.searchParams.get('limit') || undefined
+    });
+    sendJson(res, 200, result);
+    return;
+  }
+
   if (req.method === 'POST' && pathname === '/admin/users') {
     const adminAuth = await authenticateAdminRequest(req, res, authService, adminApiKey, adminRoleCodes);
     if (!adminAuth) {
@@ -1126,6 +1157,7 @@ export function createServer({
   feedService,
   profileService,
   organizationsService,
+  adminOpsService,
   adminApiKey,
   adminRoleCodes
 } = {}) {
@@ -1136,6 +1168,14 @@ export function createServer({
   const resolvedProfileService = profileService || createProfileService({ store: resolvedAuthService.store });
   const resolvedOrganizationsService =
     organizationsService || createOrganizationsService({ store: resolvedAuthService.store });
+  const resolvedAdminOpsService =
+    adminOpsService ||
+    createAdminOpsService({
+      kycService: resolvedKycService,
+      jobsService: resolvedJobsService,
+      feedService: resolvedFeedService,
+      organizationsService: resolvedOrganizationsService
+    });
   const resolvedAdminApiKey =
     adminApiKey !== undefined ? String(adminApiKey).trim() : String(process.env.ADMIN_API_KEY || '').trim();
   const resolvedAdminRoleCodes =
@@ -1192,6 +1232,7 @@ export function createServer({
       resolvedFeedService,
       resolvedProfileService,
       resolvedOrganizationsService,
+      resolvedAdminOpsService,
       resolvedAdminApiKey,
       resolvedAdminRoleCodes,
       metrics
@@ -1202,7 +1243,8 @@ export function createServer({
         isJobsApiError(error) ||
         isFeedApiError(error) ||
         isProfileApiError(error) ||
-        isOrganizationsApiError(error)
+        isOrganizationsApiError(error) ||
+        isAdminOpsApiError(error)
       ) {
         sendJson(res, error.status, {
           error: {
