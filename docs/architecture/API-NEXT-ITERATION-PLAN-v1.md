@@ -1,8 +1,8 @@
 # API Next Iteration Plan v1 (Dashboard Enablement)
 
-Date: 2026-03-02
+Date: 2026-03-03
 Owner: API + Web Admin
-Status: Planned
+Status: In Progress
 
 ## 1. Objective
 Menambahkan endpoint yang belum ada agar dashboard admin bisa naik dari CRUD dasar ke operasi harian yang lengkap (monitoring, moderation, audit, dan quality check).
@@ -13,6 +13,7 @@ Sudah tersedia di runtime:
 - Admin feed posts CRUD
 - Admin organizations verification update
 - Admin KYC review queue + decision
+- Admin applications list/detail/journey + status transition update
 - Auth login/refresh/me
 - Health + metrics
 
@@ -24,13 +25,12 @@ Referensi:
 Yang belum tersedia dan dibutuhkan dashboard iterasi berikutnya:
 - Overview summary sekali call (KPI dashboard).
 - Activity timeline lintas domain untuk ops.
-- Admin monitoring untuk applications/journey lintas user.
 - User investigation endpoints untuk support/compliance.
 - Secure preview URL untuk dokumen KYC.
 - Queryable audit event endpoint untuk traceability.
 
 ## 4. Endpoint Backlog (Proposed)
-Priority P0 (implement dulu):
+Priority P0 (remaining):
 1. `GET /admin/overview/summary`
 - Purpose: KPI ringkas untuk landing dashboard.
 - Response minimum:
@@ -51,28 +51,7 @@ Priority P0 (implement dulu):
   - `actorId` (optional)
   - `from`, `to` (date-time filter)
 
-3. `GET /admin/applications`
-- Purpose: list application global (bukan hanya `/users/me/applications`).
-- Query:
-  - `cursor`, `limit`
-  - `status`
-  - `q` (name/email/job title)
-  - `jobId`, `orgId`
-
-4. `GET /admin/applications/{applicationId}`
-- Purpose: detail application untuk investigasi.
-
-5. `GET /admin/applications/{applicationId}/journey`
-- Purpose: timeline event application untuk reviewer.
-
-6. `PATCH /admin/applications/{applicationId}/status`
-- Purpose: update status operasional application.
-- Body minimum:
-  - `status` (`IN_REVIEW`, `INTERVIEW`, `OFFERED`, `HIRED`, `REJECTED`)
-  - `reason` (optional)
-  - `updatedBy` (optional, default from auth subject)
-
-7. `POST /admin/kyc/documents/{documentId}/preview-url`
+3. `POST /admin/kyc/documents/{documentId}/preview-url`
 - Purpose: signed short-lived preview URL untuk dokumen KYC.
 - Body/Query:
   - `expiresSec` (optional, capped)
@@ -80,7 +59,7 @@ Priority P0 (implement dulu):
   - `url`
   - `expiresAt`
 
-8. `GET /admin/audit/events`
+4. `GET /admin/audit/events`
 - Purpose: audit log queryable untuk compliance.
 - Query:
   - `cursor`, `limit`
@@ -99,6 +78,12 @@ Priority P1 (setelah P0 stabil):
 - `POST /admin/feed/posts/bulk`
 6. Content lifecycle endpoints:
 - publish/unpublish/schedule for jobs/posts
+
+Completed this iteration (2026-03-03):
+1. `GET /admin/applications`
+2. `GET /admin/applications/{applicationId}`
+3. `GET /admin/applications/{applicationId}/journey`
+4. `PATCH /admin/applications/{applicationId}/status`
 
 ## 5. Data Model Additions (Proposed)
 Tambahan schema di `openapi-runtime-v0.yaml`:
@@ -127,12 +112,12 @@ Tambahan schema di `openapi-runtime-v0.yaml`:
 Iteration A (fast unblock dashboard):
 1. `GET /admin/overview/summary`
 2. `GET /admin/activity-events`
-3. `GET /admin/applications`
+3. `GET /admin/applications` (done)
 
 Iteration B (detail + actions):
-1. `GET /admin/applications/{applicationId}`
-2. `GET /admin/applications/{applicationId}/journey`
-3. `PATCH /admin/applications/{applicationId}/status`
+1. `GET /admin/applications/{applicationId}` (done)
+2. `GET /admin/applications/{applicationId}/journey` (done)
+3. `PATCH /admin/applications/{applicationId}/status` (done)
 
 Iteration C (compliance hardening):
 1. `POST /admin/kyc/documents/{documentId}/preview-url`

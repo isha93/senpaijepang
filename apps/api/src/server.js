@@ -153,6 +153,21 @@ function matchAdminUserRoute(pathname) {
   return match ? match[1] : null;
 }
 
+function matchAdminApplicationRoute(pathname) {
+  const match = String(pathname || '').match(/^\/admin\/applications\/([^/]+)$/);
+  return match ? match[1] : null;
+}
+
+function matchAdminApplicationJourneyRoute(pathname) {
+  const match = String(pathname || '').match(/^\/admin\/applications\/([^/]+)\/journey$/);
+  return match ? match[1] : null;
+}
+
+function matchAdminApplicationStatusRoute(pathname) {
+  const match = String(pathname || '').match(/^\/admin\/applications\/([^/]+)\/status$/);
+  return match ? match[1] : null;
+}
+
 async function readJsonBody(req) {
   return new Promise((resolve, reject) => {
     let raw = '';
@@ -848,6 +863,70 @@ async function handleRequest(
     return;
   }
 
+  if (req.method === 'GET' && pathname === '/admin/applications') {
+    const adminAuth = await authenticateAdminRequest(req, res, authService, adminApiKey, adminRoleCodes);
+    if (!adminAuth) {
+      return;
+    }
+
+    const result = await jobsService.listAdminApplications({
+      q: url.searchParams.get('q') || undefined,
+      status: url.searchParams.get('status') || undefined,
+      jobId: url.searchParams.get('jobId') || undefined,
+      orgId: url.searchParams.get('orgId') || undefined,
+      cursor: url.searchParams.get('cursor') || undefined,
+      limit: url.searchParams.get('limit') || undefined
+    });
+    sendJson(res, 200, result);
+    return;
+  }
+
+  const adminApplicationJourneyId = req.method === 'GET' ? matchAdminApplicationJourneyRoute(pathname) : null;
+  if (req.method === 'GET' && adminApplicationJourneyId) {
+    const adminAuth = await authenticateAdminRequest(req, res, authService, adminApiKey, adminRoleCodes);
+    if (!adminAuth) {
+      return;
+    }
+
+    const result = await jobsService.getAdminApplicationJourney({
+      applicationId: adminApplicationJourneyId
+    });
+    sendJson(res, 200, result);
+    return;
+  }
+
+  const adminApplicationStatusId = req.method === 'PATCH' ? matchAdminApplicationStatusRoute(pathname) : null;
+  if (req.method === 'PATCH' && adminApplicationStatusId) {
+    const adminAuth = await authenticateAdminRequest(req, res, authService, adminApiKey, adminRoleCodes);
+    if (!adminAuth) {
+      return;
+    }
+
+    const body = await readJsonBody(req);
+    const result = await jobsService.updateAdminApplicationStatus({
+      applicationId: adminApplicationStatusId,
+      status: body.status,
+      reason: body.reason,
+      updatedBy: body.updatedBy || adminAuth.user?.email || null
+    });
+    sendJson(res, 200, result);
+    return;
+  }
+
+  const adminApplicationId = req.method === 'GET' ? matchAdminApplicationRoute(pathname) : null;
+  if (req.method === 'GET' && adminApplicationId) {
+    const adminAuth = await authenticateAdminRequest(req, res, authService, adminApiKey, adminRoleCodes);
+    if (!adminAuth) {
+      return;
+    }
+
+    const result = await jobsService.getAdminApplication({
+      applicationId: adminApplicationId
+    });
+    sendJson(res, 200, result);
+    return;
+  }
+
   if (req.method === 'GET' && pathname === '/admin/jobs') {
     const adminAuth = await authenticateAdminRequest(req, res, authService, adminApiKey, adminRoleCodes);
     if (!adminAuth) {
@@ -1052,7 +1131,7 @@ export function createServer({
 } = {}) {
   const resolvedAuthService = authService || createAuthService({ store: new InMemoryAuthStore() });
   const resolvedKycService = kycService || createKycService({ store: resolvedAuthService.store });
-  const resolvedJobsService = jobsService || createJobsService();
+  const resolvedJobsService = jobsService || createJobsService({ userDirectory: resolvedAuthService.store });
   const resolvedFeedService = feedService || createFeedService();
   const resolvedProfileService = profileService || createProfileService({ store: resolvedAuthService.store });
   const resolvedOrganizationsService =

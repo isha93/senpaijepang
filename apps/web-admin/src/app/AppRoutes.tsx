@@ -8,6 +8,7 @@ import { JobsAdminPage } from '../pages/JobsAdminPage';
 import { FeedAdminPage } from '../pages/FeedAdminPage';
 import { OrganizationsAdminPage } from '../pages/OrganizationsAdminPage';
 import { SystemHealthPage } from '../pages/SystemHealthPage';
+import { ApplicationsAdminPage } from '../pages/ApplicationsAdminPage';
 
 export function AppRoutes() {
   return (
@@ -24,6 +25,7 @@ export function AppRoutes() {
         <Route index element={<Navigate to="/overview" replace />} />
         <Route path="overview" element={<OverviewPage />} />
         <Route path="kyc-review" element={<KycReviewPage />} />
+        <Route path="applications" element={<ApplicationsAdminPage />} />
         <Route path="jobs" element={<JobsAdminPage />} />
         <Route path="feed" element={<FeedAdminPage />} />
         <Route path="organizations" element={<OrganizationsAdminPage />} />

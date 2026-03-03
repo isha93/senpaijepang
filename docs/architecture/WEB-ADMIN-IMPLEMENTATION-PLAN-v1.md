@@ -95,6 +95,12 @@ KYC review:
 - `GET /admin/kyc/review-queue`
 - `POST /admin/kyc/review`
 
+Applications admin:
+- `GET /admin/applications`
+- `GET /admin/applications/{applicationId}`
+- `GET /admin/applications/{applicationId}/journey`
+- `PATCH /admin/applications/{applicationId}/status`
+
 Jobs admin:
 - `GET /admin/jobs`
 - `POST /admin/jobs`

@@ -1323,6 +1323,167 @@ paths:
         '503':
           $ref: '#/components/responses/ApiError'
 
+  /admin/applications:
+    get:
+      tags: [Admin]
+      summary: List job applications for admin operations
+      security:
+        - bearerAuth: []
+        - adminApiKeyAuth: []
+      parameters:
+        - in: query
+          name: q
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: status
+          required: false
+          schema:
+            $ref: '#/components/schemas/ApplicationStatus'
+        - in: query
+          name: jobId
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: orgId
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: cursor
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+        - in: query
+          name: limit
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminApplicationListResponse'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/ApiError'
+        '403':
+          $ref: '#/components/responses/ApiError'
+        '503':
+          $ref: '#/components/responses/ApiError'
+
+  /admin/applications/{applicationId}:
+    get:
+      tags: [Admin]
+      summary: Get admin view of an application
+      security:
+        - bearerAuth: []
+        - adminApiKeyAuth: []
+      parameters:
+        - in: path
+          name: applicationId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminApplicationDetailResponse'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/ApiError'
+        '403':
+          $ref: '#/components/responses/ApiError'
+        '404':
+          $ref: '#/components/responses/ApiError'
+        '503':
+          $ref: '#/components/responses/ApiError'
+
+  /admin/applications/{applicationId}/journey:
+    get:
+      tags: [Admin]
+      summary: Get admin journey timeline of an application
+      security:
+        - bearerAuth: []
+        - adminApiKeyAuth: []
+      parameters:
+        - in: path
+          name: applicationId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminApplicationJourneyResponse'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/ApiError'
+        '403':
+          $ref: '#/components/responses/ApiError'
+        '404':
+          $ref: '#/components/responses/ApiError'
+        '503':
+          $ref: '#/components/responses/ApiError'
+
+  /admin/applications/{applicationId}/status:
+    patch:
+      tags: [Admin]
+      summary: Update application status from admin workflow
+      security:
+        - bearerAuth: []
+        - adminApiKeyAuth: []
+      parameters:
+        - in: path
+          name: applicationId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminApplicationStatusUpdateRequest'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminApplicationStatusUpdateResponse'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/ApiError'
+        '403':
+          $ref: '#/components/responses/ApiError'
+        '404':
+          $ref: '#/components/responses/ApiError'
+        '409':
+          $ref: '#/components/responses/ApiError'
+        '503':
+          $ref: '#/components/responses/ApiError'
+
   /admin/organizations/{orgId}/verification:
     patch:
       tags: [Admin]
@@ -2086,6 +2247,98 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ApplicationJourneyEvent'
+
+    AdminApplicationApplicant:
+      type: object
+      required: [id]
+      properties:
+        id:
+          type: string
+          format: uuid
+        fullName:
+          type: string
+          nullable: true
+        email:
+          type: string
+          nullable: true
+
+    AdminApplicationItem:
+      type: object
+      required: [application, applicant]
+      properties:
+        application:
+          $ref: '#/components/schemas/JobApplicationSummary'
+        applicant:
+          $ref: '#/components/schemas/AdminApplicationApplicant'
+        lastEvent:
+          allOf:
+            - $ref: '#/components/schemas/ApplicationJourneyEvent'
+          nullable: true
+
+    AdminApplicationListResponse:
+      type: object
+      required: [items, pageInfo]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdminApplicationItem'
+        pageInfo:
+          $ref: '#/components/schemas/JobPageInfo'
+
+    AdminApplicationDetailResponse:
+      type: object
+      required: [application, applicant]
+      properties:
+        application:
+          $ref: '#/components/schemas/JobApplicationSummary'
+        applicant:
+          $ref: '#/components/schemas/AdminApplicationApplicant'
+        lastEvent:
+          allOf:
+            - $ref: '#/components/schemas/ApplicationJourneyEvent'
+          nullable: true
+
+    AdminApplicationJourneyResponse:
+      type: object
+      required: [application, applicant, journey]
+      properties:
+        application:
+          $ref: '#/components/schemas/JobApplicationSummary'
+        applicant:
+          $ref: '#/components/schemas/AdminApplicationApplicant'
+        journey:
+          type: array
+          items:
+            $ref: '#/components/schemas/ApplicationJourneyEvent'
+
+    AdminApplicationStatusUpdateRequest:
+      type: object
+      required: [status]
+      properties:
+        status:
+          $ref: '#/components/schemas/ApplicationStatus'
+        reason:
+          type: string
+          maxLength: 500
+        updatedBy:
+          type: string
+          maxLength: 180
+
+    AdminApplicationStatusUpdateResponse:
+      type: object
+      required: [updated, application, applicant]
+      properties:
+        updated:
+          type: boolean
+        application:
+          $ref: '#/components/schemas/JobApplicationSummary'
+        applicant:
+          $ref: '#/components/schemas/AdminApplicationApplicant'
+        journeyEvent:
+          allOf:
+            - $ref: '#/components/schemas/ApplicationJourneyEvent'
+          nullable: true
 
     FeedViewerState:
       type: object

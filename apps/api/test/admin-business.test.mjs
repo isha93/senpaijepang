@@ -346,6 +346,141 @@ test('admin users management works with api key and bearer super_admin role', as
   );
 });
 
+test('admin application lifecycle updates are visible to user application endpoints', async () => {
+  const authStore = new InMemoryAuthStore();
+  const authService = createAuthService({ store: authStore });
+
+  await withServer(
+    async (baseUrl) => {
+      const candidateRegister = await requestJson(baseUrl, '/auth/register', {
+        method: 'POST',
+        body: {
+          fullName: 'Candidate Lifecycle',
+          email: 'candidate-lifecycle@example.com',
+          password: 'pass1234'
+        }
+      });
+      assert.equal(candidateRegister.res.status, 201);
+      const candidateToken = candidateRegister.json.accessToken;
+
+      const apply = await requestJson(baseUrl, '/jobs/job_tokyo_senior_welder_001/applications', {
+        method: 'POST',
+        accessToken: candidateToken,
+        body: {
+          note: 'Ready for lifecycle test'
+        }
+      });
+      assert.equal(apply.res.status, 201);
+      const applicationId = apply.json.application.id;
+      assert.equal(apply.json.application.status, 'SUBMITTED');
+
+      const adminList = await requestJson(
+        baseUrl,
+        '/admin/applications?status=SUBMITTED&q=candidate-lifecycle@example.com&limit=20',
+        {
+          adminApiKey: TEST_ADMIN_API_KEY
+        }
+      );
+      assert.equal(adminList.res.status, 200);
+      assert.ok(adminList.json.items.some((item) => item.application.id === applicationId));
+
+      const adminJourneyBefore = await requestJson(baseUrl, `/admin/applications/${applicationId}/journey`, {
+        adminApiKey: TEST_ADMIN_API_KEY
+      });
+      assert.equal(adminJourneyBefore.res.status, 200);
+      assert.equal(adminJourneyBefore.json.journey.length, 1);
+      assert.equal(adminJourneyBefore.json.journey[0].status, 'SUBMITTED');
+
+      const moveToReview = await requestJson(baseUrl, `/admin/applications/${applicationId}/status`, {
+        method: 'PATCH',
+        adminApiKey: TEST_ADMIN_API_KEY,
+        body: {
+          status: 'IN_REVIEW',
+          reason: 'Initial screening complete',
+          updatedBy: 'ops@senpaijepang.com'
+        }
+      });
+      assert.equal(moveToReview.res.status, 200);
+      assert.equal(moveToReview.json.updated, true);
+      assert.equal(moveToReview.json.application.status, 'IN_REVIEW');
+      assert.equal(moveToReview.json.journeyEvent.status, 'IN_REVIEW');
+
+      const userListAfterReview = await requestJson(baseUrl, '/users/me/applications?status=IN_REVIEW', {
+        accessToken: candidateToken
+      });
+      assert.equal(userListAfterReview.res.status, 200);
+      assert.equal(userListAfterReview.json.items.length, 1);
+      assert.equal(userListAfterReview.json.items[0].id, applicationId);
+      assert.equal(userListAfterReview.json.items[0].status, 'IN_REVIEW');
+
+      const userJourneyAfterReview = await requestJson(baseUrl, `/users/me/applications/${applicationId}/journey`, {
+        accessToken: candidateToken
+      });
+      assert.equal(userJourneyAfterReview.res.status, 200);
+      assert.equal(userJourneyAfterReview.json.journey.at(-1).status, 'IN_REVIEW');
+      assert.match(userJourneyAfterReview.json.journey.at(-1).description, /Initial screening complete/);
+
+      const invalidRollback = await requestJson(baseUrl, `/admin/applications/${applicationId}/status`, {
+        method: 'PATCH',
+        adminApiKey: TEST_ADMIN_API_KEY,
+        body: {
+          status: 'SUBMITTED'
+        }
+      });
+      assert.equal(invalidRollback.res.status, 409);
+      assert.equal(invalidRollback.json.error.code, 'invalid_application_transition');
+
+      const regularBearer = await requestJson(baseUrl, '/auth/register', {
+        method: 'POST',
+        body: {
+          fullName: 'Regular Ops',
+          email: 'regular-ops@example.com',
+          password: 'pass1234'
+        }
+      });
+      assert.equal(regularBearer.res.status, 201);
+
+      const deniedBearerPatch = await requestJson(baseUrl, `/admin/applications/${applicationId}/status`, {
+        method: 'PATCH',
+        accessToken: regularBearer.json.accessToken,
+        body: {
+          status: 'INTERVIEW'
+        }
+      });
+      assert.equal(deniedBearerPatch.res.status, 403);
+      assert.equal(deniedBearerPatch.json.error.code, 'insufficient_admin_role');
+
+      const promoted = await authStore.ensureUserRole({
+        userId: regularBearer.json.user.id,
+        roleCode: 'super_admin'
+      });
+      assert.equal(promoted, true);
+
+      const allowedBearerPatch = await requestJson(baseUrl, `/admin/applications/${applicationId}/status`, {
+        method: 'PATCH',
+        accessToken: regularBearer.json.accessToken,
+        body: {
+          status: 'INTERVIEW',
+          reason: 'Interview slot assigned'
+        }
+      });
+      assert.equal(allowedBearerPatch.res.status, 200);
+      assert.equal(allowedBearerPatch.json.application.status, 'INTERVIEW');
+      assert.equal(allowedBearerPatch.json.updated, true);
+
+      const userJourneyAfterInterview = await requestJson(baseUrl, `/users/me/applications/${applicationId}/journey`, {
+        accessToken: candidateToken
+      });
+      assert.equal(userJourneyAfterInterview.res.status, 200);
+      assert.equal(userJourneyAfterInterview.json.journey.at(-1).status, 'INTERVIEW');
+    },
+    {
+      adminApiKey: TEST_ADMIN_API_KEY,
+      authService
+    }
+  );
+});
+
 test('admin business endpoints also work with bearer super_admin role', async () => {
   const authStore = new InMemoryAuthStore();
   const authService = createAuthService({ store: authStore });

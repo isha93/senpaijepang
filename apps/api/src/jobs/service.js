@@ -12,6 +12,22 @@ const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 50;
 const EMPLOYMENT_TYPES = new Set(['FULL_TIME', 'PART_TIME', 'CONTRACT']);
 const APPLICATION_STATUSES = new Set(['SUBMITTED', 'IN_REVIEW', 'INTERVIEW', 'OFFERED', 'HIRED', 'REJECTED']);
+const APPLICATION_STATUS_TRANSITIONS = {
+  SUBMITTED: new Set(['IN_REVIEW', 'INTERVIEW', 'OFFERED', 'HIRED', 'REJECTED']),
+  IN_REVIEW: new Set(['INTERVIEW', 'OFFERED', 'HIRED', 'REJECTED']),
+  INTERVIEW: new Set(['OFFERED', 'HIRED', 'REJECTED']),
+  OFFERED: new Set(['HIRED', 'REJECTED']),
+  HIRED: new Set(),
+  REJECTED: new Set()
+};
+const APPLICATION_STATUS_EVENT_TITLES = {
+  SUBMITTED: 'Application submitted',
+  IN_REVIEW: 'Application in review',
+  INTERVIEW: 'Interview stage',
+  OFFERED: 'Offer stage',
+  HIRED: 'Candidate hired',
+  REJECTED: 'Application rejected'
+};
 const MAX_TITLE_LENGTH = 160;
 const MAX_DESCRIPTION_LENGTH = 5000;
 const MAX_REQUIREMENTS = 20;
@@ -210,6 +226,63 @@ function normalizeApplicationNote(note) {
     throw new JobsApiError(400, 'invalid_note', 'note must be <= 1000 characters');
   }
   return normalized;
+}
+
+function normalizeOptionalReason(reason) {
+  if (reason === undefined || reason === null) {
+    return null;
+  }
+  const normalized = String(reason).trim();
+  if (!normalized) {
+    return null;
+  }
+  if (normalized.length > 500) {
+    throw new JobsApiError(400, 'invalid_reason', 'reason must be <= 500 characters');
+  }
+  return normalized;
+}
+
+function normalizeOptionalUpdatedBy(updatedBy) {
+  if (updatedBy === undefined || updatedBy === null) {
+    return null;
+  }
+  const normalized = String(updatedBy).trim();
+  if (!normalized) {
+    return null;
+  }
+  if (normalized.length > 180) {
+    throw new JobsApiError(400, 'invalid_updated_by', 'updatedBy must be <= 180 characters');
+  }
+  return normalized;
+}
+
+function ensureTransitionAllowed(fromStatus, toStatus) {
+  if (fromStatus === toStatus) {
+    return false;
+  }
+  const allowed = APPLICATION_STATUS_TRANSITIONS[fromStatus] || new Set();
+  if (!allowed.has(toStatus)) {
+    throw new JobsApiError(
+      409,
+      'invalid_application_transition',
+      `cannot transition application from ${fromStatus} to ${toStatus}`
+    );
+  }
+  return true;
+}
+
+function buildStatusJourneyEvent({ status, reason, updatedBy, createdAt }) {
+  const title = APPLICATION_STATUS_EVENT_TITLES[status] || `Application status ${status}`;
+  const reasonSuffix = reason ? ` Reason: ${reason}` : '';
+  const actor = updatedBy ? ` by ${updatedBy}` : '';
+  const description = `Application status updated to ${status}${actor}.${reasonSuffix}`.trim();
+  return {
+    id: randomUUID(),
+    status,
+    title,
+    description,
+    createdAt
+  };
 }
 
 function normalizeRequiredTitle(title) {
@@ -518,13 +591,14 @@ function toAdminJob(job) {
 }
 
 export class JobsService {
-  constructor({ jobs = JOB_SEED_DATA } = {}) {
+  constructor({ jobs = JOB_SEED_DATA, userDirectory = null } = {}) {
     this.jobs = Array.from(jobs);
     this.jobById = new Map(this.jobs.map((job) => [job.id, job]));
     this.savedByUserId = new Map();
     this.applicationsById = new Map();
     this.applicationIdsByUserId = new Map();
     this.applicationIdByUserJob = new Map();
+    this.userDirectory = userDirectory;
   }
 
   getSavedMapForUser(userId) {
@@ -545,6 +619,33 @@ export class JobsService {
       this.applicationIdsByUserId.set(userId, []);
     }
     return this.applicationIdsByUserId.get(userId);
+  }
+
+  async getApplicantById(userId) {
+    const normalizedUserId = String(userId || '').trim();
+    if (!normalizedUserId) {
+      return null;
+    }
+    if (!this.userDirectory || typeof this.userDirectory.findUserById !== 'function') {
+      return {
+        id: normalizedUserId,
+        fullName: null,
+        email: null
+      };
+    }
+    const user = await this.userDirectory.findUserById(normalizedUserId);
+    if (!user) {
+      return {
+        id: normalizedUserId,
+        fullName: null,
+        email: null
+      };
+    }
+    return {
+      id: user.id,
+      fullName: user.fullName,
+      email: user.email
+    };
   }
 
   getJobByIdOrThrow(jobId) {
@@ -771,6 +872,149 @@ export class JobsService {
     return {
       application: toApplicationSummary(application, job),
       journey: Array.from(application.journey)
+    };
+  }
+
+  async listAdminApplications({ cursor, limit, status, q, jobId, orgId }) {
+    const normalizedCursor = normalizeCursor(cursor);
+    const normalizedLimit = normalizeLimit(limit);
+    const normalizedStatus = normalizeApplicationStatus(status);
+    const normalizedQuery = normalizeSearchQuery(q);
+    const normalizedJobId = jobId === undefined ? null : String(jobId || '').trim();
+    const normalizedOrgId = orgId === undefined ? null : String(orgId || '').trim();
+    if (normalizedJobId === '') {
+      throw new JobsApiError(400, 'invalid_job_id', 'jobId must not be empty');
+    }
+    if (normalizedOrgId === '') {
+      throw new JobsApiError(400, 'invalid_org_id', 'orgId must not be empty');
+    }
+
+    const enriched = await Promise.all(
+      Array.from(this.applicationsById.values()).map(async (application) => {
+        const job = this.getJobByIdOrThrow(application.jobId);
+        const applicant = await this.getApplicantById(application.userId);
+        return {
+          application,
+          job,
+          applicant,
+          lastEvent: application.journey[application.journey.length - 1] || null
+        };
+      })
+    );
+
+    const filtered = enriched
+      .filter((item) => (normalizedStatus ? item.application.status === normalizedStatus : true))
+      .filter((item) => (normalizedJobId ? item.application.jobId === normalizedJobId : true))
+      .filter((item) => (normalizedOrgId ? item.job.employer.id === normalizedOrgId : true))
+      .filter((item) => {
+        if (!normalizedQuery) {
+          return true;
+        }
+        const haystack = [
+          item.job.title,
+          item.job.employer.name,
+          item.applicant?.fullName || '',
+          item.applicant?.email || ''
+        ]
+          .join(' ')
+          .toLowerCase();
+        return haystack.includes(normalizedQuery);
+      })
+      .sort((left, right) => Date.parse(right.application.updatedAt) - Date.parse(left.application.updatedAt));
+
+    const paged = filtered.slice(normalizedCursor, normalizedCursor + normalizedLimit);
+    const nextOffset = normalizedCursor + paged.length;
+    const nextCursor = nextOffset < filtered.length ? String(nextOffset) : null;
+
+    return {
+      items: paged.map((item) => ({
+        application: toApplicationSummary(item.application, item.job),
+        applicant: item.applicant,
+        lastEvent: item.lastEvent
+      })),
+      pageInfo: {
+        cursor: String(normalizedCursor),
+        nextCursor,
+        limit: normalizedLimit,
+        total: filtered.length
+      }
+    };
+  }
+
+  async getAdminApplication({ applicationId }) {
+    const normalizedApplicationId = String(applicationId || '').trim();
+    if (!normalizedApplicationId) {
+      throw new JobsApiError(400, 'invalid_application_id', 'applicationId is required');
+    }
+    const application = this.applicationsById.get(normalizedApplicationId);
+    if (!application) {
+      throw new JobsApiError(404, 'application_not_found', 'application not found');
+    }
+    const job = this.getJobByIdOrThrow(application.jobId);
+    const applicant = await this.getApplicantById(application.userId);
+    return {
+      application: toApplicationSummary(application, job),
+      applicant,
+      lastEvent: application.journey[application.journey.length - 1] || null
+    };
+  }
+
+  async getAdminApplicationJourney({ applicationId }) {
+    const normalizedApplicationId = String(applicationId || '').trim();
+    if (!normalizedApplicationId) {
+      throw new JobsApiError(400, 'invalid_application_id', 'applicationId is required');
+    }
+    const application = this.applicationsById.get(normalizedApplicationId);
+    if (!application) {
+      throw new JobsApiError(404, 'application_not_found', 'application not found');
+    }
+    const job = this.getJobByIdOrThrow(application.jobId);
+    const applicant = await this.getApplicantById(application.userId);
+    return {
+      application: toApplicationSummary(application, job),
+      applicant,
+      journey: Array.from(application.journey)
+    };
+  }
+
+  async updateAdminApplicationStatus({ applicationId, status, reason, updatedBy }) {
+    const normalizedApplicationId = String(applicationId || '').trim();
+    if (!normalizedApplicationId) {
+      throw new JobsApiError(400, 'invalid_application_id', 'applicationId is required');
+    }
+    const normalizedStatus = normalizeApplicationStatus(status);
+    if (!normalizedStatus) {
+      throw new JobsApiError(400, 'invalid_application_status', 'status is required');
+    }
+    const normalizedReason = normalizeOptionalReason(reason);
+    const normalizedUpdatedBy = normalizeOptionalUpdatedBy(updatedBy);
+
+    const application = this.applicationsById.get(normalizedApplicationId);
+    if (!application) {
+      throw new JobsApiError(404, 'application_not_found', 'application not found');
+    }
+    const changed = ensureTransitionAllowed(application.status, normalizedStatus);
+    let journeyEvent = null;
+    if (changed) {
+      const now = new Date().toISOString();
+      application.status = normalizedStatus;
+      application.updatedAt = now;
+      journeyEvent = buildStatusJourneyEvent({
+        status: normalizedStatus,
+        reason: normalizedReason,
+        updatedBy: normalizedUpdatedBy,
+        createdAt: now
+      });
+      application.journey.push(journeyEvent);
+    }
+
+    const job = this.getJobByIdOrThrow(application.jobId);
+    const applicant = await this.getApplicantById(application.userId);
+    return {
+      updated: changed,
+      application: toApplicationSummary(application, job),
+      applicant,
+      journeyEvent
     };
   }
 

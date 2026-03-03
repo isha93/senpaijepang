@@ -104,6 +104,41 @@ async function main() {
   assert(applicationJourney.res.status === 200, `journey status ${applicationJourney.res.status}`);
   assert(Array.isArray(applicationJourney.json?.journey), 'application journey should be array');
 
+  step('GET /admin/applications');
+  const adminApplications = await request('/admin/applications?status=SUBMITTED&limit=10');
+  assert(adminApplications.res.status === 200, `admin applications status ${adminApplications.res.status}`);
+  assert(
+    adminApplications.json?.items?.some((item) => item.application?.id === applicationId),
+    'admin applications should include newly created application'
+  );
+
+  step('PATCH /admin/applications/{applicationId}/status');
+  const adminUpdateApplication = await request(`/admin/applications/${applicationId}/status`, {
+    method: 'PATCH',
+    body: {
+      status: 'IN_REVIEW',
+      reason: 'smoke_transition'
+    }
+  });
+  assert(
+    adminUpdateApplication.res.status === 200,
+    `admin applications status update status ${adminUpdateApplication.res.status}`
+  );
+  assert(adminUpdateApplication.json?.application?.status === 'IN_REVIEW', 'application status should be IN_REVIEW');
+
+  step('GET /users/me/applications?status=IN_REVIEW');
+  const userApplicationsAfterAdminUpdate = await request('/users/me/applications?status=IN_REVIEW', {
+    token: accessToken
+  });
+  assert(
+    userApplicationsAfterAdminUpdate.res.status === 200,
+    `user applications after admin update status ${userApplicationsAfterAdminUpdate.res.status}`
+  );
+  assert(
+    userApplicationsAfterAdminUpdate.json?.items?.some((item) => item.id === applicationId),
+    'user applications should reflect admin status update'
+  );
+
   step('GET /feed/posts');
   const feed = await request('/feed/posts?limit=2', { token: accessToken });
   assert(feed.res.status === 200, `feed status ${feed.res.status}`);

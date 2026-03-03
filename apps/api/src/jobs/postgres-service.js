@@ -5,6 +5,22 @@ const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 50;
 const EMPLOYMENT_TYPES = new Set(['FULL_TIME', 'PART_TIME', 'CONTRACT']);
 const APPLICATION_STATUSES = new Set(['SUBMITTED', 'IN_REVIEW', 'INTERVIEW', 'OFFERED', 'HIRED', 'REJECTED']);
+const APPLICATION_STATUS_TRANSITIONS = {
+  SUBMITTED: new Set(['IN_REVIEW', 'INTERVIEW', 'OFFERED', 'HIRED', 'REJECTED']),
+  IN_REVIEW: new Set(['INTERVIEW', 'OFFERED', 'HIRED', 'REJECTED']),
+  INTERVIEW: new Set(['OFFERED', 'HIRED', 'REJECTED']),
+  OFFERED: new Set(['HIRED', 'REJECTED']),
+  HIRED: new Set(),
+  REJECTED: new Set()
+};
+const APPLICATION_STATUS_EVENT_TITLES = {
+  SUBMITTED: 'Application submitted',
+  IN_REVIEW: 'Application in review',
+  INTERVIEW: 'Interview stage',
+  OFFERED: 'Offer stage',
+  HIRED: 'Candidate hired',
+  REJECTED: 'Application rejected'
+};
 
 function normalizeLimit(limit) {
   if (limit === undefined || limit === null || String(limit).trim() === '') {
@@ -94,6 +110,34 @@ function normalizeApplicationNote(note) {
   return normalized;
 }
 
+function normalizeOptionalReason(reason) {
+  if (reason === undefined || reason === null) {
+    return null;
+  }
+  const normalized = String(reason).trim();
+  if (!normalized) {
+    return null;
+  }
+  if (normalized.length > 500) {
+    throw new JobsApiError(400, 'invalid_reason', 'reason must be <= 500 characters');
+  }
+  return normalized;
+}
+
+function normalizeOptionalUpdatedBy(updatedBy) {
+  if (updatedBy === undefined || updatedBy === null) {
+    return null;
+  }
+  const normalized = String(updatedBy).trim();
+  if (!normalized) {
+    return null;
+  }
+  if (normalized.length > 180) {
+    throw new JobsApiError(400, 'invalid_updated_by', 'updatedBy must be <= 180 characters');
+  }
+  return normalized;
+}
+
 function normalizeJobId(jobId) {
   const normalized = String(jobId || '').trim();
   if (!normalized) {
@@ -108,6 +152,35 @@ function normalizeApplicationId(applicationId) {
     throw new JobsApiError(400, 'invalid_application_id', 'applicationId is required');
   }
   return normalized;
+}
+
+function ensureTransitionAllowed(fromStatus, toStatus) {
+  if (fromStatus === toStatus) {
+    return false;
+  }
+  const allowed = APPLICATION_STATUS_TRANSITIONS[fromStatus] || new Set();
+  if (!allowed.has(toStatus)) {
+    throw new JobsApiError(
+      409,
+      'invalid_application_transition',
+      `cannot transition application from ${fromStatus} to ${toStatus}`
+    );
+  }
+  return true;
+}
+
+function buildStatusJourneyEvent({ status, reason, updatedBy, createdAt }) {
+  const title = APPLICATION_STATUS_EVENT_TITLES[status] || `Application status ${status}`;
+  const reasonSuffix = reason ? ` Reason: ${reason}` : '';
+  const actor = updatedBy ? ` by ${updatedBy}` : '';
+  const description = `Application status updated to ${status}${actor}.${reasonSuffix}`.trim();
+  return {
+    id: randomUUID(),
+    status,
+    title,
+    description,
+    createdAt
+  };
 }
 
 function mapJobRow(row) {
@@ -145,6 +218,15 @@ function mapJourneyRow(row) {
     title: row.title,
     description: row.description,
     createdAt: new Date(row.created_at).toISOString()
+  };
+}
+
+function mapApplicantRow(row) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    fullName: row.full_name,
+    email: row.email
   };
 }
 
@@ -742,6 +824,342 @@ export class PostgresJobsService {
       application: toApplicationSummary(application, job),
       journey: journeyResult.rows.map((row) => mapJourneyRow(row))
     };
+  }
+
+  async getApplicantById(userId, { queryable = this.pool } = {}) {
+    const result = await queryable.query(
+      `
+        SELECT id, full_name, email
+        FROM users
+        WHERE id = $1
+        LIMIT 1
+      `,
+      [userId]
+    );
+    return mapApplicantRow(result.rows[0]);
+  }
+
+  async listAdminApplications({ cursor, limit, status, q, jobId, orgId }) {
+    const normalizedCursor = normalizeCursor(cursor);
+    const normalizedLimit = normalizeLimit(limit);
+    const normalizedStatus = normalizeApplicationStatus(status);
+    const normalizedQuery = normalizeSearchQuery(q);
+    const normalizedJobId = jobId === undefined ? null : String(jobId || '').trim();
+    const normalizedOrgId = orgId === undefined ? null : String(orgId || '').trim();
+    if (normalizedJobId === '') {
+      throw new JobsApiError(400, 'invalid_job_id', 'jobId must not be empty');
+    }
+    if (normalizedOrgId === '') {
+      throw new JobsApiError(400, 'invalid_org_id', 'orgId must not be empty');
+    }
+
+    const whereParts = [];
+    const params = [];
+    if (normalizedStatus) {
+      params.push(normalizedStatus);
+      whereParts.push(`a.status = $${params.length}`);
+    }
+    if (normalizedJobId) {
+      params.push(normalizedJobId);
+      whereParts.push(`a.job_id = $${params.length}`);
+    }
+    if (normalizedOrgId) {
+      params.push(normalizedOrgId);
+      whereParts.push(`COALESCE(j.employer_json->>'id', '') = $${params.length}`);
+    }
+    if (normalizedQuery) {
+      params.push(`%${normalizedQuery}%`);
+      whereParts.push(
+        `
+          LOWER(
+            CONCAT_WS(
+              ' ',
+              u.full_name,
+              u.email,
+              j.title,
+              COALESCE(j.employer_json->>'name', '')
+            )
+          ) LIKE $${params.length}
+        `
+      );
+    }
+
+    const whereClause = whereParts.length > 0 ? `WHERE ${whereParts.join(' AND ')}` : '';
+
+    const countResult = await this.pool.query(
+      `
+        SELECT COUNT(*)::int AS count
+        FROM job_applications a
+        JOIN jobs j ON j.id = a.job_id
+        JOIN users u ON u.id = a.user_id
+        ${whereClause}
+      `,
+      params
+    );
+    const total = Number(countResult.rows[0]?.count || 0);
+
+    const listParams = [...params, normalizedLimit, normalizedCursor];
+    const listResult = await this.pool.query(
+      `
+        SELECT
+          a.id AS application_id,
+          a.user_id,
+          a.job_id AS application_job_id,
+          a.status AS application_status,
+          a.note AS application_note,
+          a.created_at AS application_created_at,
+          a.updated_at AS application_updated_at,
+          j.id AS job_id,
+          j.title AS job_title,
+          j.employment_type AS job_employment_type,
+          j.visa_sponsorship AS job_visa_sponsorship,
+          j.description AS job_description,
+          j.requirements_json AS job_requirements_json,
+          j.location_json AS job_location_json,
+          j.employer_json AS job_employer_json,
+          u.id AS applicant_id,
+          u.full_name AS applicant_full_name,
+          u.email AS applicant_email,
+          je.id AS last_event_id,
+          je.status AS last_event_status,
+          je.title AS last_event_title,
+          je.description AS last_event_description,
+          je.created_at AS last_event_created_at
+        FROM job_applications a
+        JOIN jobs j ON j.id = a.job_id
+        JOIN users u ON u.id = a.user_id
+        LEFT JOIN LATERAL (
+          SELECT id, status, title, description, created_at
+          FROM job_application_journey_events
+          WHERE application_id = a.id
+          ORDER BY created_at DESC
+          LIMIT 1
+        ) je ON TRUE
+        ${whereClause}
+        ORDER BY a.updated_at DESC
+        LIMIT $${params.length + 1}
+        OFFSET $${params.length + 2}
+      `,
+      listParams
+    );
+
+    const items = listResult.rows.map((row) => {
+      const application = mapApplicationRow({
+        id: row.application_id,
+        user_id: row.user_id,
+        job_id: row.application_job_id,
+        status: row.application_status,
+        note: row.application_note,
+        created_at: row.application_created_at,
+        updated_at: row.application_updated_at
+      });
+      const job = mapJobRow({
+        id: row.job_id,
+        title: row.job_title,
+        employment_type: row.job_employment_type,
+        visa_sponsorship: row.job_visa_sponsorship,
+        description: row.job_description,
+        requirements_json: row.job_requirements_json,
+        location_json: row.job_location_json,
+        employer_json: row.job_employer_json
+      });
+      const applicant = {
+        id: row.applicant_id,
+        fullName: row.applicant_full_name,
+        email: row.applicant_email
+      };
+      const lastEvent = row.last_event_id
+        ? mapJourneyRow({
+            id: row.last_event_id,
+            status: row.last_event_status,
+            title: row.last_event_title,
+            description: row.last_event_description,
+            created_at: row.last_event_created_at
+          })
+        : null;
+      return {
+        application: toApplicationSummary(application, job),
+        applicant,
+        lastEvent
+      };
+    });
+
+    const nextOffset = normalizedCursor + items.length;
+    const nextCursor = nextOffset < total ? String(nextOffset) : null;
+
+    return {
+      items,
+      pageInfo: {
+        cursor: String(normalizedCursor),
+        nextCursor,
+        limit: normalizedLimit,
+        total
+      }
+    };
+  }
+
+  async getAdminApplication({ applicationId }) {
+    const normalizedApplicationId = normalizeApplicationId(applicationId);
+    const result = await this.pool.query(
+      `
+        SELECT id, user_id, job_id, status, note, created_at, updated_at
+        FROM job_applications
+        WHERE id = $1
+        LIMIT 1
+      `,
+      [normalizedApplicationId]
+    );
+    const application = mapApplicationRow(result.rows[0]);
+    if (!application) {
+      throw new JobsApiError(404, 'application_not_found', 'application not found');
+    }
+
+    const [job, applicant, lastEventResult] = await Promise.all([
+      this.getJobByIdOrThrow(application.jobId),
+      this.getApplicantById(application.userId),
+      this.pool.query(
+        `
+          SELECT id, status, title, description, created_at
+          FROM job_application_journey_events
+          WHERE application_id = $1
+          ORDER BY created_at DESC
+          LIMIT 1
+        `,
+        [application.id]
+      )
+    ]);
+
+    return {
+      application: toApplicationSummary(application, job),
+      applicant,
+      lastEvent: mapJourneyRow(lastEventResult.rows[0])
+    };
+  }
+
+  async getAdminApplicationJourney({ applicationId }) {
+    const normalizedApplicationId = normalizeApplicationId(applicationId);
+    const result = await this.pool.query(
+      `
+        SELECT id, user_id, job_id, status, note, created_at, updated_at
+        FROM job_applications
+        WHERE id = $1
+        LIMIT 1
+      `,
+      [normalizedApplicationId]
+    );
+    const application = mapApplicationRow(result.rows[0]);
+    if (!application) {
+      throw new JobsApiError(404, 'application_not_found', 'application not found');
+    }
+
+    const [job, applicant, journeyResult] = await Promise.all([
+      this.getJobByIdOrThrow(application.jobId),
+      this.getApplicantById(application.userId),
+      this.pool.query(
+        `
+          SELECT id, status, title, description, created_at
+          FROM job_application_journey_events
+          WHERE application_id = $1
+          ORDER BY created_at ASC
+        `,
+        [application.id]
+      )
+    ]);
+
+    return {
+      application: toApplicationSummary(application, job),
+      applicant,
+      journey: journeyResult.rows.map((row) => mapJourneyRow(row))
+    };
+  }
+
+  async updateAdminApplicationStatus({ applicationId, status, reason, updatedBy }) {
+    const normalizedApplicationId = normalizeApplicationId(applicationId);
+    const normalizedStatus = normalizeApplicationStatus(status);
+    if (!normalizedStatus) {
+      throw new JobsApiError(400, 'invalid_application_status', 'status is required');
+    }
+    const normalizedReason = normalizeOptionalReason(reason);
+    const normalizedUpdatedBy = normalizeOptionalUpdatedBy(updatedBy);
+
+    return withTransaction(this.pool, async (client) => {
+      const applicationResult = await client.query(
+        `
+          SELECT id, user_id, job_id, status, note, created_at, updated_at
+          FROM job_applications
+          WHERE id = $1
+          LIMIT 1
+          FOR UPDATE
+        `,
+        [normalizedApplicationId]
+      );
+      const application = mapApplicationRow(applicationResult.rows[0]);
+      if (!application) {
+        throw new JobsApiError(404, 'application_not_found', 'application not found');
+      }
+
+      const changed = ensureTransitionAllowed(application.status, normalizedStatus);
+      let journeyEvent = null;
+
+      if (changed) {
+        const now = new Date().toISOString();
+        const updatedApplicationResult = await client.query(
+          `
+            UPDATE job_applications
+            SET status = $2, updated_at = $3::timestamptz
+            WHERE id = $1
+            RETURNING id, user_id, job_id, status, note, created_at, updated_at
+          `,
+          [application.id, normalizedStatus, now]
+        );
+        const updatedApplication = mapApplicationRow(updatedApplicationResult.rows[0]);
+        if (!updatedApplication) {
+          throw new JobsApiError(404, 'application_not_found', 'application not found');
+        }
+        application.status = updatedApplication.status;
+        application.updatedAt = updatedApplication.updatedAt;
+
+        journeyEvent = buildStatusJourneyEvent({
+          status: normalizedStatus,
+          reason: normalizedReason,
+          updatedBy: normalizedUpdatedBy,
+          createdAt: now
+        });
+        await client.query(
+          `
+            INSERT INTO job_application_journey_events (
+              id,
+              application_id,
+              status,
+              title,
+              description,
+              created_at
+            )
+            VALUES ($1, $2, $3, $4, $5, $6::timestamptz)
+          `,
+          [
+            journeyEvent.id,
+            application.id,
+            journeyEvent.status,
+            journeyEvent.title,
+            journeyEvent.description,
+            journeyEvent.createdAt
+          ]
+        );
+      }
+
+      const [job, applicant] = await Promise.all([
+        this.getJobByIdOrThrow(application.jobId, { queryable: client }),
+        this.getApplicantById(application.userId, { queryable: client })
+      ]);
+
+      return {
+        updated: changed,
+        application: toApplicationSummary(application, job),
+        applicant,
+        journeyEvent
+      };
+    });
   }
 
   async listAdminJobs({ q, cursor, limit }) {

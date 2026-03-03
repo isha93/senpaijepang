@@ -27,6 +27,7 @@ For quick local login/testing, backend can auto-create:
 
 - `/overview` -> `/health`, `/metrics`, `/admin/kyc/review-queue`
 - `/kyc-review` -> `/admin/kyc/review-queue`, `/admin/kyc/review`
+- `/applications` -> `/admin/applications`, `PATCH /admin/applications/{applicationId}/status`
 - `/feed` -> `/admin/feed/posts`, `/feed/posts`
 - `/jobs` -> `/admin/jobs`
 - `/organizations` -> `/admin/organizations`, `PATCH /admin/organizations/{orgId}/verification`

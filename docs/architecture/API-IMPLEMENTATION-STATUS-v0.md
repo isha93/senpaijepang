@@ -67,6 +67,10 @@ Admin:
 - `GET /admin/users` (Bearer super_admin role, fallback header `x-admin-api-key`)
 - `POST /admin/users` (Bearer super_admin role, fallback header `x-admin-api-key`)
 - `PATCH /admin/users/{userId}` (Bearer super_admin role, fallback header `x-admin-api-key`)
+- `GET /admin/applications` (Bearer admin role, fallback header `x-admin-api-key`, supports `status/q/jobId/orgId/cursor/limit`)
+- `GET /admin/applications/{applicationId}` (Bearer admin role, fallback header `x-admin-api-key`)
+- `GET /admin/applications/{applicationId}/journey` (Bearer admin role, fallback header `x-admin-api-key`)
+- `PATCH /admin/applications/{applicationId}/status` (Bearer admin role, fallback header `x-admin-api-key`, status transition guarded)
 - `GET /admin/jobs` (Bearer admin role, fallback header `x-admin-api-key`)
 - `POST /admin/jobs` (Bearer admin role, fallback header `x-admin-api-key`)
 - `PATCH /admin/jobs/{jobId}` (Bearer admin role, fallback header `x-admin-api-key`)
@@ -201,7 +205,7 @@ Referensi hosting options:
 - Runtime canonical paths masih unversioned; prefix `/v1` saat ini alias kompatibilitas (belum v1-only).
 - Vendor-specific webhook orchestration (retry semantics, event schema mapping per provider) belum diimplementasikan.
 - Job catalog, feed content, saved jobs/posts, dan job applications sudah dipersist ke Postgres saat mode `AUTH_STORE=postgres`.
-- Journey/event status aplikasi kandidat dari sisi admin workflow terpisah dari endpoint KYC review queue, belum ada unified ops console.
+- Journey/event status aplikasi kandidat sekarang sudah bisa diupdate dari endpoint admin applications, namun dashboard timeline lintas domain terpadu masih iterasi berikutnya.
 
 ## 13. Change Control
 - Setiap perubahan endpoint runtime wajib update `openapi-runtime-v0.yaml` dan file ini di commit yang sama.

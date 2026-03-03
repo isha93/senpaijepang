@@ -12,6 +12,7 @@ type NavItem = {
 const navItems: NavItem[] = [
   { path: '/overview', label: 'Dashboard', shortLabel: 'Dash', icon: 'DB' },
   { path: '/kyc-review', label: 'KYC Queue', shortLabel: 'KYC', icon: 'KQ' },
+  { path: '/applications', label: 'Applications', shortLabel: 'Apps', icon: 'AP' },
   { path: '/jobs', label: 'Jobs', shortLabel: 'Jobs', icon: 'JB' },
   { path: '/feed', label: 'Feed Management', shortLabel: 'Feed', icon: 'FD' },
   { path: '/organizations', label: 'Organizations', shortLabel: 'Orgs', icon: 'OG' },
@@ -26,6 +27,10 @@ const pageMeta: Record<string, { title: string; subtitle: string }> = {
   '/kyc-review': {
     title: 'KYC Review Queue',
     subtitle: 'Moderation and trust decisions'
+  },
+  '/applications': {
+    title: 'Applications',
+    subtitle: 'Candidate pipeline and status lifecycle'
   },
   '/jobs': {
     title: 'Jobs Management',

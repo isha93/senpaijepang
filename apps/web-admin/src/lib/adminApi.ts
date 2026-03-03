@@ -219,6 +219,75 @@ export type AdminJobDeleteResponse = {
   jobId: string;
 };
 
+export type ApplicationStatus = 'SUBMITTED' | 'IN_REVIEW' | 'INTERVIEW' | 'OFFERED' | 'HIRED' | 'REJECTED';
+
+export type JobApplicationSummary = {
+  id: string;
+  jobId: string;
+  status: ApplicationStatus;
+  note: string | null;
+  createdAt: string;
+  updatedAt: string;
+  job: {
+    id: string;
+    title: string;
+    employmentType: AdminJob['employmentType'];
+    visaSponsorship: boolean;
+    location: {
+      countryCode: string;
+      city: string;
+      displayLabel: string;
+    };
+    employer: JobEmployer;
+  };
+};
+
+export type ApplicationJourneyEvent = {
+  id: string;
+  status: ApplicationStatus;
+  title: string;
+  description: string;
+  createdAt: string;
+};
+
+export type AdminApplicationApplicant = {
+  id: string;
+  fullName: string | null;
+  email: string | null;
+};
+
+export type AdminApplicationItem = {
+  application: JobApplicationSummary;
+  applicant: AdminApplicationApplicant;
+  lastEvent: ApplicationJourneyEvent | null;
+};
+
+export type AdminApplicationListResponse = {
+  items: AdminApplicationItem[];
+  pageInfo: JobPageInfo;
+};
+
+export type AdminApplicationDetailResponse = AdminApplicationItem;
+
+export type AdminApplicationJourneyResponse = {
+  application: JobApplicationSummary;
+  applicant: AdminApplicationApplicant;
+  journey: ApplicationJourneyEvent[];
+};
+
+export type AdminApplicationStatusUpdateInput = {
+  status: ApplicationStatus;
+  reason?: string;
+  updatedBy?: string;
+};
+
+export type AdminApplicationStatusUpdateResponse = {
+  updated: boolean;
+  application: JobApplicationSummary;
+  applicant: AdminApplicationApplicant;
+  journeyEvent: ApplicationJourneyEvent | null;
+};
+
 export type OrganizationVerificationStatus = 'PENDING' | 'VERIFIED' | 'MISMATCH' | 'NOT_FOUND' | 'REJECTED';
 
 export type OrganizationVerification = {
@@ -327,6 +396,33 @@ export function submitAdminKycReview(body: {
 }) {
   return adminRequest<KycSessionEnvelope>('/admin/kyc/review', {
     method: 'POST',
+    body
+  });
+}
+
+export function getAdminApplications(params: {
+  q?: string;
+  status?: ApplicationStatus;
+  jobId?: string;
+  orgId?: string;
+  cursor?: number;
+  limit?: number;
+} = {}) {
+  const query = buildQuery(params);
+  return adminRequest<AdminApplicationListResponse>(`/admin/applications${query}`);
+}
+
+export function getAdminApplication(applicationId: string) {
+  return adminRequest<AdminApplicationDetailResponse>(`/admin/applications/${applicationId}`);
+}
+
+export function getAdminApplicationJourney(applicationId: string) {
+  return adminRequest<AdminApplicationJourneyResponse>(`/admin/applications/${applicationId}/journey`);
+}
+
+export function updateAdminApplicationStatus(applicationId: string, body: AdminApplicationStatusUpdateInput) {
+  return adminRequest<AdminApplicationStatusUpdateResponse>(`/admin/applications/${applicationId}/status`, {
+    method: 'PATCH',
     body
   });
 }
