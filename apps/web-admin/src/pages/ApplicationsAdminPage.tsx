@@ -44,6 +44,7 @@ export function ApplicationsAdminPage() {
   const [actionMessage, setActionMessage] = useState<string | null>(null);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [viewingJourneyId, setViewingJourneyId] = useState<string | null>(null);
+  const [statusDraftById, setStatusDraftById] = useState<Record<string, ApplicationStatus>>({});
   const [currentCursor, setCurrentCursor] = useState(0);
   const [nextCursor, setNextCursor] = useState<number | null>(null);
   const [cursorHistory, setCursorHistory] = useState<number[]>([]);
@@ -60,6 +61,13 @@ export function ApplicationsAdminPage() {
         limit: PAGE_SIZE
       });
       setRows(result.items);
+      setStatusDraftById((prev) => {
+        const next: Record<string, ApplicationStatus> = {};
+        for (const entry of result.items) {
+          next[entry.application.id] = prev[entry.application.id] || entry.application.status;
+        }
+        return next;
+      });
       setTotal(result.pageInfo.total);
       const resolvedCursor = parseCursorValue(result.pageInfo.cursor) ?? cursor;
       setCurrentCursor(resolvedCursor);
@@ -106,19 +114,7 @@ export function ApplicationsAdminPage() {
       return;
     }
 
-    const statusInput = window.prompt(
-      `Set status for ${resolveApplicantLabel(item)} (${item.application.job.title})`,
-      item.application.status
-    );
-    if (statusInput === null) {
-      return;
-    }
-
-    const nextStatus = String(statusInput || '').trim().toUpperCase();
-    if (!STATUS_OPTIONS.includes(nextStatus as ApplicationStatus)) {
-      setError(`Invalid status. Allowed: ${STATUS_OPTIONS.join(', ')}`);
-      return;
-    }
+    const nextStatus = statusDraftById[item.application.id] || item.application.status;
 
     const reasonInput = window.prompt('Reason (optional)', item.lastEvent?.description || '');
 
@@ -128,7 +124,7 @@ export function ApplicationsAdminPage() {
 
     try {
       const response = await updateAdminApplicationStatus(item.application.id, {
-        status: nextStatus as ApplicationStatus,
+        status: nextStatus,
         reason: reasonInput ? reasonInput.trim() : undefined
       });
 
@@ -255,6 +251,22 @@ export function ApplicationsAdminPage() {
                   <td>{item.lastEvent?.title || '-'}</td>
                   <td>{formatDateTime(item.application.updatedAt)}</td>
                   <td className="action-cell">
+                    <select
+                      value={statusDraftById[item.application.id] || item.application.status}
+                      onChange={(event) =>
+                        setStatusDraftById((prev) => ({
+                          ...prev,
+                          [item.application.id]: event.target.value as ApplicationStatus
+                        }))
+                      }
+                      disabled={updatingId === item.application.id}
+                    >
+                      {STATUS_OPTIONS.map((status) => (
+                        <option key={status} value={status}>
+                          {status}
+                        </option>
+                      ))}
+                    </select>
                     <button
                       type="button"
                       onClick={() => void handleUpdateStatus(item)}
