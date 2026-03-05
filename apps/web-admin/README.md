@@ -14,8 +14,9 @@ npm run dev:web-admin
 - `VITE_API_BASE_URL` (optional)
   - Empty value means same-origin requests.
   - Example: `https://senpai-api-app-production.up.railway.app`
-- `VITE_ADMIN_API_KEY` (optional but recommended for bootstrap mode)
+- `VITE_ADMIN_API_KEY` (optional fallback only)
   - Sent as `x-admin-api-key` to `/admin/*` endpoints.
+  - Primary mode is Bearer token admin login (`/auth/login`), key dipakai hanya untuk bootstrap/compatibility.
   - Keep this only in trusted internal admin environment.
 
 For quick local login/testing, backend can auto-create:
@@ -34,3 +35,9 @@ For quick local login/testing, backend can auto-create:
 - `/system` -> `/health`, `/metrics`, `/admin/users`, `PATCH /admin/users/{userId}`
 
 KYC review queue supports cursor pagination via `cursor` + `limit` query params and returns `pageInfo`.
+
+## Contract Note
+
+- Gunakan runtime contract: `docs/architecture/openapi-runtime-v0.yaml`.
+- Prefix `/v1/*` tetap didukung sebagai alias kompatibilitas.
+- Endpoint target future seperti `/v1/admin/cases` tidak dipakai oleh dashboard runtime saat ini.

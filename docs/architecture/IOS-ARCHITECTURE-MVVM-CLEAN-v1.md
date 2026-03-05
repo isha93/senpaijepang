@@ -235,25 +235,21 @@ Policy:
 1. Build and release pakai Xcode stable terbaru.
 2. Deployment target iOS pakai model `N-2` dari major iOS terbaru.
 
-Reference lock (checked on 2026-02-28):
-- Xcode stable line: `26.3`
-- iOS SDK line: `26.x`
-- Deployment policy target: `iOS 24.x` (N-2)
-- Source:
-  - `https://developer.apple.com/support/xcode`
-  - `https://developer.apple.com/news/releases/`
+Reference lock (checked on 2026-03-05):
+- Gunakan Xcode stable terbaru yang tersedia di tim/CI.
+- Pin deployment target mengikuti policy produk saat release mobile dikunci.
+- Baseline implementasi repo saat ini tetap kompatibel: `iOS 17 + macOS 15` untuk menjaga local/CI portability.
 
 Implementasi di repo saat ini:
-- iOS scaffold package dikompilasi dengan baseline kompatibel (`iOS 17 + macOS 15`) untuk menjaga local/CI portability.
+- iOS scaffold package dikompilasi dengan baseline kompatibel (`iOS 17 + macOS 15`).
 - Saat app Xcode target final dibuat, deployment target dinaikkan mengikuti policy `N-2`.
 
 ## 12. CI/CD Baseline
 
 CI iOS:
-- Workflow: `.github/workflows/ios-ci.yml`
+- Workflow: `.github/workflows/ios-smoke.yml`
 - Runner: `macos-latest`
-- Xcode: `latest-stable` via `maxim-lobanov/setup-xcode@v1`
-- Check utama: `swift test --package-path apps/mobile-ios`
+- Check utama: `npm run test:ios -w @senpaijepang/mobile-ios` (simulator smoke build via `xcodebuild`)
 
 CD iOS (next phase):
 - Build archive + TestFlight release disiapkan setelah project app Xcode final (target, bundle id, signing, and provisioning) sudah dikunci.

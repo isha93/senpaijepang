@@ -59,6 +59,17 @@ stateDiagram-v2
 - Kontrak runtime aktif: `docs/architecture/openapi-runtime-v0.yaml`.
 - Checklist readiness terbaru: `docs/architecture/EXECUTION-LOCK-API-FIRST-v1.md`.
 
+## Preview iOS (Draft Saat Ini)
+Berikut visual flow utama app iOS biar stakeholder non-tech bisa langsung kebayang produk akhirnya:
+
+| Jobs List | Job Detail | Application Journey |
+|---|---|---|
+| ![Jobs List](docs/assets/ios/jobs-list.png) | ![Job Detail](docs/assets/ios/job-detail.png) | ![Application Journey](docs/assets/ios/application-journey.png) |
+
+| Profile + KYC | Feed |
+|---|---|
+| ![Profile KYC](docs/assets/ios/profile-kyc.png) | ![Feed](docs/assets/ios/feed.png) |
+
 ## Hosting MVP (Next Step)
 - Bisa lanjut deploy staging untuk konsumsi iOS integration test.
 - Rekomendasi opsi hosting + rollout plan ada di:
@@ -105,7 +116,7 @@ Expected output akhir: `DEV_ALL_CHECK_OK`
 | `npm run stop:all` | Matikan service hasil `dev:all` |
 | `npm run migrate:api` | Jalankan migration database |
 | `npm run test` | Jalankan test |
-| `npm run test:ios -w @senpaijepang/mobile-ios` | Jalankan unit test scaffold iOS |
+| `npm run test:ios -w @senpaijepang/mobile-ios` | Jalankan iOS simulator smoke build (macOS/Xcode) |
 | `npm run ci` | Gate utama lint + typecheck + test + security checks |
 | `npm run smoke:local` | Simulasi smoke test lokal end-to-end |
 
@@ -180,7 +191,7 @@ Expected output akhir: `DEV_ALL_CHECK_OK`
 - `API_PORT=4000`
 - `AUTH_STORE=memory|postgres`
 - `DATABASE_URL=postgresql://...` (wajib kalau `AUTH_STORE=postgres`)
-- `ADMIN_API_KEY=...` (wajib untuk endpoint `/admin/*`)
+- `ADMIN_API_KEY=...` (opsional fallback bootstrap; mode utama admin adalah Bearer token role-based)
 - `ADMIN_ROLE_CODES=super_admin` (opsional, default role admin yang diizinkan)
 - `BOOTSTRAP_ADMIN_EMAIL=admin@senpaijepang.com` (opsional, aktifkan auto-create admin saat startup)
 - `BOOTSTRAP_ADMIN_PASSWORD=...` (wajib jika `BOOTSTRAP_ADMIN_EMAIL` diisi)
@@ -192,6 +203,11 @@ Expected output akhir: `DEV_ALL_CHECK_OK`
 - `KYC_PROVIDER_WEBHOOK_MAX_SKEW_SEC=300`
 
 Detail lengkap: `.env.example`
+
+## Catatan Kontrak Route (Penting untuk QA)
+- Baseline runtime production/staging saat ini: `docs/architecture/openapi-runtime-v0.yaml`.
+- Prefix `/v1/*` adalah alias kompatibilitas route runtime.
+- `docs/architecture/openapi-v1.yaml` adalah target contract future state, bukan baseline smoke saat ini.
 
 ## Mulai Baca Dokumen Dari Sini
 - [Execution Lock: API RC -> iOS Integration -> Staging](docs/architecture/EXECUTION-LOCK-API-FIRST-v1.md)
@@ -205,6 +221,10 @@ Detail lengkap: `.env.example`
 - [Hosting Options MVP](docs/architecture/HOSTING-OPTIONS-MVP-v1.md)
 - [Dashboard Stitch Prompt](docs/architecture/DASHBOARD-STITCH-PROMPT-v1.md)
 - [Web Admin Implementation Plan](docs/architecture/WEB-ADMIN-IMPLEMENTATION-PLAN-v1.md)
+- [QA Test Cases API Runtime](docs/qa/BE-TEST-CASES.md)
+- [QA Test Cases Web Admin](docs/qa/WEB-ADMIN-TEST-CASES.md)
+- [QA Test Cases iOS](docs/qa/IOS-TEST-CASES.md)
+- [QA Smoke Run Production 2026-03-05](docs/qa/BE-TEST-RUN-PROD-2026-03-05.md)
 - [Sprint Plan Lama (Archived)](docs/architecture/MVP-SPRINT-PLAN-v1.md)
 
 ## Istilah Singkat Biar Nyambung

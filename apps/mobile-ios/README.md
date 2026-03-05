@@ -38,6 +38,16 @@
 
 **SenpaiJepang** is a native iOS application that helps job seekers discover, apply for, and track employment opportunities in Japan. The app provides a seamless experience for browsing job listings, managing application journeys, building professional profiles, and engaging with community feeds.
 
+### App Screenshots (Current Draft)
+
+| Jobs List | Job Detail | Application Journey |
+|---|---|---|
+| ![Jobs List](../../docs/assets/ios/jobs-list.png) | ![Job Detail](../../docs/assets/ios/job-detail.png) | ![Application Journey](../../docs/assets/ios/application-journey.png) |
+
+| Profile + KYC | Feed |
+|---|---|
+| ![Profile KYC](../../docs/assets/ios/profile-kyc.png) | ![Feed](../../docs/assets/ios/feed.png) |
+
 ### Key Features
 
 | Feature | Description |
@@ -360,15 +370,14 @@ xcodegen generate --spec project.yml
 
 ## ✅ Testing
 
-### Run Unit Tests
+### Run iOS Smoke Build (Recommended)
 
 ```bash
-# Via Swift Package Manager
-swift test --package-path .
-
 # Via monorepo workspace
 npm run test:ios -w @senpaijepang/mobile-ios
 ```
+
+Script `test:ios` menjalankan `xcodebuild` simulator smoke build dan otomatis skip di non-macOS.
 
 ### Test Coverage
 
@@ -394,6 +403,8 @@ graph TD
 > ⚠️ **Known Limitation:** `swift test` may fail on macOS due to iOS-only
 > `ToolbarItemPlacement` values (`.topBarLeading`, `.topBarTrailing`).
 > For stable validation, use Xcode Simulator builds.
+>
+> Karena itu pipeline repo memakai simulator smoke build (`xcodebuild`) sebagai gate utama iOS.
 
 ---
 
@@ -405,7 +416,7 @@ graph TD
 graph LR
     PR["Pull Request"] --> CI["GitHub Actions"]
     CI --> XCODE["Setup Xcode<br/><sub>latest-stable</sub>"]
-    XCODE --> TEST["swift test"]
+    XCODE --> TEST["xcodebuild simulator smoke"]
     TEST --> PASS{"✅ Pass?"}
     PASS -->|Yes| MERGE["Ready to Merge"]
     PASS -->|No| FIX["🔴 Fix Required"]
@@ -420,9 +431,9 @@ graph LR
 
 | Config | Value |
 |--------|-------|
-| Workflow | `.github/workflows/ios-ci.yml` |
+| Workflow | `.github/workflows/ios-smoke.yml` |
 | Runner | `macos-latest` |
-| Xcode | `latest-stable` (via `maxim-lobanov/setup-xcode`) |
+| Command | `npm run test:ios -w @senpaijepang/mobile-ios` |
 
 ### Deployment (Next Phase)
 
