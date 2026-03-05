@@ -40,6 +40,28 @@ ANDROID_APP_PATH=apps/qa-automation-appium/apps/android/SenpaiJepang.apk \
 npm run test:android -w @senpaijepang/qa-automation-appium
 ```
 
+## Video Recording
+
+Video recording can be enabled during runs with `APPIUM_RECORD_VIDEO`.
+
+```bash
+# save video only for failed tests (default)
+APPIUM_RECORD_VIDEO=failed npm run test:ios
+
+# save video for all tests
+APPIUM_RECORD_VIDEO=all npm run test:ios
+```
+
+Output directory (default):
+
+- `apps/qa-automation-appium/reports/videos/<platform>/<run-id>/*.mp4`
+
+Optional custom directory:
+
+```bash
+APPIUM_RECORD_VIDEO=all APPIUM_VIDEO_DIR=/absolute/path/to/videos npm run test:ios
+```
+
 ## How to use / add tests
 1) Add accessibility IDs in app (see `docs/qa/appium/SELECTORS.md`).
 2) Create Page Objects under `tests/pageobjects/`.
