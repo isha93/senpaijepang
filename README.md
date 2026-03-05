@@ -70,6 +70,25 @@ Berikut visual flow utama app iOS biar stakeholder non-tech bisa langsung kebaya
 |---|---|
 | ![Profile KYC](docs/assets/ios/profile-kyc.png) | ![Feed](docs/assets/ios/feed.png) |
 
+## Status Integrasi Android
+- Android app native sudah dibuat di `apps/mobile-android` (Jetpack Compose).
+- Arsitektur target disamakan dengan style iOS:
+  - MVVM,
+  - clean architecture ringan tanpa use case,
+  - atomic design component,
+  - single source navigation via Navigation Manager.
+- Kontrak API acuan Android tetap runtime:
+  - `docs/architecture/openapi-runtime-v0.yaml`.
+- Dokumen implementasi bertahap Android:
+  - `docs/architecture/ANDROID-ARCHITECTURE-MVVM-CLEAN-v1.md`
+  - `docs/architecture/ANDROID-FEATURE-EXECUTION-PLAN-v1.md`
+  - `docs/qa/ANDROID-TEST-CASES.md`
+- Progress saat ini:
+  - `M0 Foundation` selesai (navigation/network/session scaffold),
+  - `F1 Auth` sudah terpasang (splash restore, login, register, logout wiring),
+  - `F2 Jobs Browse & Save` sudah terpasang (jobs list/detail/saved + save/unsave),
+  - `F3 Apply & Journey` sudah terpasang (apply, application list, journey timeline).
+
 ## Hosting MVP (Next Step)
 - Bisa lanjut deploy staging untuk konsumsi iOS integration test.
 - Rekomendasi opsi hosting + rollout plan ada di:
@@ -117,6 +136,8 @@ Expected output akhir: `DEV_ALL_CHECK_OK`
 | `npm run migrate:api` | Jalankan migration database |
 | `npm run test` | Jalankan test |
 | `npm run test:ios -w @senpaijepang/mobile-ios` | Jalankan iOS simulator smoke build (macOS/Xcode) |
+| `cd apps/mobile-android && ./gradlew testDebugUnitTest` | Jalankan Android unit test |
+| `cd apps/mobile-android && ./gradlew connectedDebugAndroidTest` | Jalankan Android instrumentation test (emulator/device) |
 | `npm run ci` | Gate utama lint + typecheck + test + security checks |
 | `npm run smoke:local` | Simulasi smoke test lokal end-to-end |
 
@@ -213,6 +234,8 @@ Detail lengkap: `.env.example`
 - [Execution Lock: API RC -> iOS Integration -> Staging](docs/architecture/EXECUTION-LOCK-API-FIRST-v1.md)
 - [Panduan Non-Tech MVP API](docs/architecture/MVP-API-NON-TECH-GUIDE-v1.md)
 - [iOS Architecture (MVVM + Clean tanpa UseCase)](docs/architecture/IOS-ARCHITECTURE-MVVM-CLEAN-v1.md)
+- [Android Architecture (MVVM + Clean tanpa UseCase)](docs/architecture/ANDROID-ARCHITECTURE-MVVM-CLEAN-v1.md)
+- [Android Feature Execution Plan](docs/architecture/ANDROID-FEATURE-EXECUTION-PLAN-v1.md)
 - [API Plan from Figma (Draft)](docs/architecture/API-PLAN-FIGMA-v1.md)
 - [API Plan from Stitch Screens](docs/architecture/API-PLAN-STITCH-SCREENS-v1.md)
 - [Breakdown Fitur MVP API](docs/architecture/MVP-API-BREAKDOWN-v1.md)
@@ -224,6 +247,7 @@ Detail lengkap: `.env.example`
 - [QA Test Cases API Runtime](docs/qa/BE-TEST-CASES.md)
 - [QA Test Cases Web Admin](docs/qa/WEB-ADMIN-TEST-CASES.md)
 - [QA Test Cases iOS](docs/qa/IOS-TEST-CASES.md)
+- [QA Test Cases Android](docs/qa/ANDROID-TEST-CASES.md)
 - [QA Smoke Run Production 2026-03-05](docs/qa/BE-TEST-RUN-PROD-2026-03-05.md)
 - [Sprint Plan Lama (Archived)](docs/architecture/MVP-SPRINT-PLAN-v1.md)
 
