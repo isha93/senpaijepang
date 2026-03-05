@@ -42,7 +42,10 @@ Status implementasi saat ini:
 - `F1` auth flow: implemented in app scaffold (splash restore, login, register, logout wiring + unit tests).
 - `F2` jobs browse & save: implemented (list/detail/saved + save/unsave wiring + unit tests).
 - `F3` apply & journey: implemented (apply action + applications list + journey timeline + unit tests).
-- Verifikasi build/test lokal: pending karena environment belum punya Java Runtime.
+- `F4` profile & verification: implemented (profile load/edit, verification checklist, final request submission + unit tests).
+- `F5` feed & saved posts: implemented (feed list + save/unsave + saved posts monitoring + unit tests).
+- `F6` KYC flow: implemented (status, session start, upload intent, document metadata, submit session, history + unit tests).
+- Verifikasi build/test lokal: passed (`testDebugUnitTest` + `lintDebug`) dengan `JAVA_HOME=/Applications/Android Studio.app/Contents/jbr/Contents/Home`.
 
 ## 4. Breakdown Feature (Execution Order)
 
@@ -118,5 +121,7 @@ Jika bandwidth kecil, cukup 1 feature per sprint.
 
 ## 9. Next Action (Immediate)
 
-Mulai dari `M0 Foundation` lalu lanjut `F1 Auth`.
-Setelah `F1` merged dan stabil, baru buka `F2`.
+Jalankan QA regression E2E untuk flow prioritas:
+- auth -> jobs -> apply -> journey
+- profile -> verification -> kyc
+- feed -> saved posts

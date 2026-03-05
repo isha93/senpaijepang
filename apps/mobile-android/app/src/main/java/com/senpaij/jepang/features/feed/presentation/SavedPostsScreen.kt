@@ -1,6 +1,5 @@
-package com.senpaij.jepang.features.jobs.presentation
+package com.senpaij.jepang.features.feed.presentation
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -18,19 +17,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.senpaij.jepang.components.atoms.PrimaryButton
-import com.senpaij.jepang.features.jobs.domain.JobSummary
+import com.senpaij.jepang.features.feed.domain.FeedPost
 
 @Composable
-fun JobsListScreen(
-    state: JobsListUiState,
+fun SavedPostsScreen(
+    state: SavedPostsUiState,
     onRefresh: () -> Unit,
-    onJobTapped: (String) -> Unit,
-    onToggleSaved: (JobSummary) -> Unit,
-    onApplicationsTapped: () -> Unit,
-    onSavedJobsTapped: () -> Unit,
-    onFeedTapped: () -> Unit,
-    onProfileTapped: () -> Unit,
-    onLogoutTapped: () -> Unit,
+    onRemoveSaved: (FeedPost) -> Unit,
+    onBack: () -> Unit,
 ) {
     Scaffold { innerPadding: PaddingValues ->
         Column(
@@ -41,7 +35,7 @@ fun JobsListScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text(
-                text = "Jobs",
+                text = "Saved Posts",
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
             )
@@ -55,42 +49,24 @@ fun JobsListScreen(
             }
 
             PrimaryButton(
-                text = if (state.isLoading) "Loading jobs..." else "Refresh Jobs",
+                text = if (state.isLoading) "Loading saved posts..." else "Refresh Saved Posts",
                 enabled = !state.isLoading,
                 onClick = onRefresh,
             )
             PrimaryButton(
-                text = "Open Saved Jobs",
-                onClick = onSavedJobsTapped,
-            )
-            PrimaryButton(
-                text = "Open Applications",
-                onClick = onApplicationsTapped,
-            )
-            PrimaryButton(
-                text = "Open Feed",
-                onClick = onFeedTapped,
-            )
-            PrimaryButton(
-                text = "Open Profile",
-                onClick = onProfileTapped,
-            )
-            PrimaryButton(
-                text = "Logout",
-                loading = state.isLoggingOut,
-                onClick = onLogoutTapped,
+                text = "Back",
+                onClick = onBack,
             )
 
             LazyColumn(
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                items(state.jobs, key = { it.id }) { job ->
-                    JobSummaryCard(
-                        job = job,
-                        isUpdating = state.updatingJobIds.contains(job.id),
-                        onOpen = { onJobTapped(job.id) },
-                        onToggleSaved = { onToggleSaved(job) },
+                items(state.posts, key = { it.id }) { post ->
+                    SavedPostCard(
+                        post = post,
+                        isUpdating = state.updatingPostIds.contains(post.id),
+                        onRemoveSaved = { onRemoveSaved(post) },
                     )
                 }
             }
@@ -99,39 +75,35 @@ fun JobsListScreen(
 }
 
 @Composable
-private fun JobSummaryCard(
-    job: JobSummary,
+private fun SavedPostCard(
+    post: FeedPost,
     isUpdating: Boolean,
-    onOpen: () -> Unit,
-    onToggleSaved: () -> Unit,
+    onRemoveSaved: () -> Unit,
 ) {
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onOpen() },
+        modifier = Modifier.fillMaxWidth(),
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Text(
-                text = job.title,
+                text = post.title,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
             )
             Text(
-                text = "${job.employer.name} - ${job.location.displayLabel}",
-                style = MaterialTheme.typography.bodyMedium,
-            )
-            Text(
-                text = "${job.employmentType} • Visa: ${if (job.visaSponsorship) "Sponsored" else "Not Sponsored"}",
+                text = "${post.category} • ${post.author}",
                 style = MaterialTheme.typography.bodySmall,
             )
-
+            Text(
+                text = post.excerpt,
+                style = MaterialTheme.typography.bodyMedium,
+            )
             PrimaryButton(
-                text = if (job.viewerState.saved) "Unsave" else "Save",
+                text = "Remove Saved",
                 loading = isUpdating,
-                onClick = onToggleSaved,
+                onClick = onRemoveSaved,
             )
         }
     }
