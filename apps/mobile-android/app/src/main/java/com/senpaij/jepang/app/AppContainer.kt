@@ -9,8 +9,14 @@ import com.senpaij.jepang.core.network.ApiClient
 import com.senpaij.jepang.core.storage.SessionStore
 import com.senpaij.jepang.features.auth.data.AuthServiceImpl
 import com.senpaij.jepang.features.auth.domain.AuthService
+import com.senpaij.jepang.features.feed.data.FeedServiceImpl
+import com.senpaij.jepang.features.feed.domain.FeedService
 import com.senpaij.jepang.features.jobs.data.JobServiceImpl
 import com.senpaij.jepang.features.jobs.domain.JobService
+import com.senpaij.jepang.features.kyc.data.KycServiceImpl
+import com.senpaij.jepang.features.kyc.domain.KycService
+import com.senpaij.jepang.features.profile.data.ProfileServiceImpl
+import com.senpaij.jepang.features.profile.domain.ProfileService
 
 class AppContainer(context: Context) {
     private val appContext = context.applicationContext
@@ -27,6 +33,9 @@ class AppContainer(context: Context) {
     )
 
     val jobService: JobService = JobServiceImpl(apiClient = apiClient)
+    val feedService: FeedService = FeedServiceImpl(apiClient = apiClient)
+    val profileService: ProfileService = ProfileServiceImpl(apiClient = apiClient)
+    val kycService: KycService = KycServiceImpl(apiClient = apiClient)
 }
 
 @Composable

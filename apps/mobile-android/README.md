@@ -5,12 +5,13 @@ Native Android app untuk SenpaiJepang, dibangun dengan `Kotlin + Jetpack Compose
 ## 1. Scope Saat Ini
 
 - Project Android sudah inisialisasi dan bisa dijadikan baseline development.
-- Fokus berikutnya: implement feature 1-1 berdasarkan plan resmi.
+- Semua phase `F1..F6` sudah terpasang di baseline Android.
+- Fokus berikutnya: QA regression E2E + hardening UX.
 
 ## 1.1 Baseline Yang Sudah Dikerjakan (M0)
 
 - Struktur package target (`app/core/components/features`) sudah dibuat.
-- NavigationManager + route graph dasar sudah terpasang (login -> jobs + placeholder routes).
+- NavigationManager + route graph dasar sudah terpasang (login -> jobs -> profile/applications/saved/journey).
 - Networking base (`Retrofit + OkHttp + AuthInterceptor`) sudah tersedia.
 - Session storage base (`DataStore`) sudah tersedia.
 - Auth service contract + implementasi data layer dasar sudah tersedia untuk lanjut ke F1.
@@ -36,6 +37,49 @@ Native Android app untuk SenpaiJepang, dibangun dengan `Kotlin + Jetpack Compose
 - Applications list screen sudah terhubung (`/users/me/applications`).
 - Application journey timeline screen sudah terhubung (`/users/me/applications/{applicationId}/journey`).
 - Unit test ViewModel untuk applications/journey flow sudah ditambahkan.
+
+## 1.5 Progress F4 Profile & Verification
+
+- Profile screen sudah terhubung ke endpoint runtime:
+  - `GET /users/me/profile`
+  - `PATCH /users/me/profile`
+  - `GET /users/me/verification-documents`
+  - `POST /users/me/verification/final-request`
+- User bisa edit `fullName` dan `avatarUrl` dari app.
+- User bisa monitoring ringkasan verifikasi + checklist dokumen.
+- User bisa submit final verification request dari app.
+- Unit test ViewModel F4 sudah ditambahkan (`ProfileViewModelTest`).
+
+## 1.6 Progress F5 Feed & Saved Posts
+
+- Feed screen sudah terhubung ke endpoint runtime:
+  - `GET /feed/posts`
+  - `GET /users/me/saved-posts`
+  - `POST /users/me/saved-posts`
+  - `DELETE /users/me/saved-posts/{postId}`
+- User bisa browse feed posts, save/unsave post dari feed list.
+- User bisa monitoring saved posts dan remove saved post.
+- Unit test ViewModel F5 sudah ditambahkan:
+  - `FeedListViewModelTest`
+  - `SavedPostsViewModelTest`
+
+## 1.7 Progress F6 KYC Flow
+
+- KYC screen sudah terhubung ke endpoint runtime:
+  - `GET /identity/kyc/status`
+  - `POST /identity/kyc/sessions`
+  - `POST /identity/kyc/upload-url`
+  - `POST /identity/kyc/documents`
+  - `POST /identity/kyc/sessions/{sessionId}/submit`
+  - `GET /identity/kyc/history`
+- User bisa jalanin flow utama:
+  - cek status,
+  - start session,
+  - request upload URL (intent),
+  - submit document metadata,
+  - submit session,
+  - monitor history event.
+- Unit test ViewModel F6 sudah ditambahkan (`KycViewModelTest`).
 
 ## 2. Architecture Lock
 
@@ -102,6 +146,12 @@ Run instrumentation tests (emulator/device):
 ./gradlew connectedDebugAndroidTest
 ```
 
+Jika macOS belum ada Java runtime global, gunakan JBR dari Android Studio:
+
+```bash
+JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home" ./gradlew testDebugUnitTest
+```
+
 ## 5. Feature Execution Order
 
 1. M0 Foundation
@@ -122,3 +172,9 @@ Feature dianggap selesai jika:
 2. Unit test dan smoke test feature pass.
 3. Tidak ada regression ke flow feature sebelumnya.
 4. Dokumen README + QA case ter-update.
+
+## 7. Current Test Snapshot
+
+- `testDebugUnitTest`: pass
+- `lintDebug`: pass
+- `connectedDebugAndroidTest`: belum bisa dijalankan tanpa emulator/device (error: `No connected devices!`)

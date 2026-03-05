@@ -68,6 +68,7 @@ fun JobsListScreen(
     onToggleSaved: (JobSummary) -> Unit,
     onApplicationsTapped: () -> Unit,
     onSavedJobsTapped: () -> Unit,
+    onFeedTapped: () -> Unit,
     onProfileTapped: () -> Unit,
     onLogoutTapped: () -> Unit,
 ) {

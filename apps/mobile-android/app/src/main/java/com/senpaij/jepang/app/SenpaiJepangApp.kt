@@ -17,6 +17,10 @@ import com.senpaij.jepang.features.auth.presentation.LoginScreen
 import com.senpaij.jepang.features.auth.presentation.LoginViewModel
 import com.senpaij.jepang.features.auth.presentation.RegisterScreen
 import com.senpaij.jepang.features.auth.presentation.RegisterViewModel
+import com.senpaij.jepang.features.feed.presentation.FeedListScreen
+import com.senpaij.jepang.features.feed.presentation.FeedListViewModel
+import com.senpaij.jepang.features.feed.presentation.SavedPostsScreen
+import com.senpaij.jepang.features.feed.presentation.SavedPostsViewModel
 import com.senpaij.jepang.features.jobs.presentation.ApplicationJourneyScreen
 import com.senpaij.jepang.features.jobs.presentation.ApplicationJourneyViewModel
 import com.senpaij.jepang.features.jobs.presentation.ApplicationsScreen
@@ -27,6 +31,10 @@ import com.senpaij.jepang.features.jobs.presentation.JobsListScreen
 import com.senpaij.jepang.features.jobs.presentation.JobsListViewModel
 import com.senpaij.jepang.features.jobs.presentation.SavedJobsScreen
 import com.senpaij.jepang.features.jobs.presentation.SavedJobsViewModel
+import com.senpaij.jepang.features.kyc.presentation.KycScreen
+import com.senpaij.jepang.features.kyc.presentation.KycViewModel
+import com.senpaij.jepang.features.profile.presentation.ProfileScreen
+import com.senpaij.jepang.features.profile.presentation.ProfileViewModel
 
 @Composable
 fun SenpaiJepangApp(appContainer: AppContainer = rememberAppContainer()) {
@@ -140,6 +148,9 @@ fun SenpaiJepangApp(appContainer: AppContainer = rememberAppContainer()) {
                 onSavedJobsTapped = {
                     navigationManager.navigate(AppRoute.SavedJobs)
                 },
+                onFeedTapped = {
+                    navigationManager.navigate(AppRoute.Feed)
+                },
                 onProfileTapped = {
                     navigationManager.navigate(AppRoute.Profile)
                 },
@@ -212,11 +223,98 @@ fun SenpaiJepangApp(appContainer: AppContainer = rememberAppContainer()) {
             )
         }
 
+        composable(route = AppRoutePattern.FEED) {
+            val viewModel: FeedListViewModel = viewModel(
+                factory = FeedListViewModel.factory(
+                    feedService = appContainer.feedService,
+                    navigationHandler = navigationManager,
+                ),
+            )
+
+            LaunchedEffect(Unit) {
+                viewModel.loadIfNeeded()
+            }
+
+            FeedListScreen(
+                state = viewModel.uiState,
+                onRefresh = viewModel::refresh,
+                onOpenSavedPosts = { navigationManager.navigate(AppRoute.SavedPosts) },
+                onToggleSaved = viewModel::onToggleSaved,
+                onBack = viewModel::onBackClicked,
+            )
+        }
+
+        composable(route = AppRoutePattern.SAVED_POSTS) {
+            val viewModel: SavedPostsViewModel = viewModel(
+                factory = SavedPostsViewModel.factory(
+                    feedService = appContainer.feedService,
+                    navigationHandler = navigationManager,
+                ),
+            )
+
+            LaunchedEffect(Unit) {
+                viewModel.loadIfNeeded()
+            }
+
+            SavedPostsScreen(
+                state = viewModel.uiState,
+                onRefresh = viewModel::refresh,
+                onRemoveSaved = viewModel::onRemoveSaved,
+                onBack = viewModel::onBackClicked,
+            )
+        }
+
         composable(route = AppRoutePattern.PROFILE) {
-            PlaceholderScreen(
-                title = "Profile",
-                subtitle = "M0 placeholder",
-                onBack = { navigationManager.back() },
+            val viewModel: ProfileViewModel = viewModel(
+                factory = ProfileViewModel.factory(
+                    profileService = appContainer.profileService,
+                    navigationHandler = navigationManager,
+                ),
+            )
+
+            LaunchedEffect(Unit) {
+                viewModel.loadIfNeeded()
+            }
+
+            ProfileScreen(
+                state = viewModel.uiState,
+                onRefresh = viewModel::refresh,
+                onFullNameChanged = viewModel::onFullNameChanged,
+                onAvatarUrlChanged = viewModel::onAvatarUrlChanged,
+                onFinalRequestNoteChanged = viewModel::onFinalRequestNoteChanged,
+                onSaveProfileClicked = viewModel::onSaveProfileClicked,
+                onSubmitFinalRequestClicked = viewModel::onSubmitFinalRequestClicked,
+                onOpenKycClicked = { navigationManager.navigate(AppRoute.Kyc) },
+                onBack = viewModel::onBackClicked,
+            )
+        }
+
+        composable(route = AppRoutePattern.KYC) {
+            val viewModel: KycViewModel = viewModel(
+                factory = KycViewModel.factory(
+                    kycService = appContainer.kycService,
+                    navigationHandler = navigationManager,
+                ),
+            )
+
+            LaunchedEffect(Unit) {
+                viewModel.loadIfNeeded()
+            }
+
+            KycScreen(
+                state = viewModel.uiState,
+                onRefresh = viewModel::refresh,
+                onStartSession = viewModel::onStartSessionClicked,
+                onDocumentTypeChanged = viewModel::onDocumentTypeChanged,
+                onFileNameChanged = viewModel::onFileNameChanged,
+                onContentTypeChanged = viewModel::onContentTypeChanged,
+                onContentLengthChanged = viewModel::onContentLengthChanged,
+                onChecksumChanged = viewModel::onChecksumChanged,
+                onRequestUploadUrl = viewModel::onRequestUploadUrlClicked,
+                onRegisterDocument = viewModel::onRegisterDocumentClicked,
+                onSubmitSession = viewModel::onSubmitSessionClicked,
+                onRefreshHistory = viewModel::onRefreshHistoryClicked,
+                onBack = viewModel::onBackClicked,
             )
         }
 

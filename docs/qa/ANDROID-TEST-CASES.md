@@ -88,6 +88,8 @@ Owner: QA + Mobile Android
 - Steps: buka profile.
 - Expected:
   - Data profile tampil lengkap.
+  - Email, completion percent, trust label, verification status tampil.
+  - Checklist verification documents tampil dari API.
 
 ### TC-PROFILE-002 Update profile
 - Steps:
@@ -102,6 +104,15 @@ Owner: QA + Mobile Android
   2. Submit final request.
 - Expected:
   - Request berhasil terkirim.
+  - State final request di overview berubah ke `REQUESTED`.
+
+### TC-PROFILE-004 Final verification idempotent
+- Steps:
+  1. Submit final verification request pertama kali.
+  2. Submit lagi request yang sama.
+- Expected:
+  - Request kedua tidak membuat duplikasi.
+  - App menampilkan status existing request secara aman.
 
 ## 5. Feed & Saved Posts
 
@@ -109,6 +120,7 @@ Owner: QA + Mobile Android
 - Steps: buka feed.
 - Expected:
   - Feed posts tampil.
+  - Metadata post (`category`, `author`, `excerpt`) tampil benar.
 
 ### TC-FEED-002 Save/unsave post
 - Steps:
@@ -117,6 +129,15 @@ Owner: QA + Mobile Android
   3. Unsave.
 - Expected:
   - State saved sinkron.
+  - Post hilang dari screen saved posts setelah unsave sukses.
+
+### TC-FEED-003 Saved posts reload
+- Steps:
+  1. Save beberapa post dari feed.
+  2. Tutup app lalu buka lagi.
+  3. Buka saved posts.
+- Expected:
+  - Saved posts tetap konsisten sesuai server state terbaru.
 
 ## 6. KYC Flow
 
@@ -133,11 +154,15 @@ Owner: QA + Mobile Android
   4. Submit session.
 - Expected:
   - Session masuk status proses review.
+  - `upload-url` mengembalikan `objectKey` yang valid.
+  - `documents` endpoint menerima metadata dengan `objectKey` tersebut.
+  - Setelah submit, status session berubah ke `SUBMITTED` (atau status review yang setara dari backend).
 
 ### TC-KYC-003 KYC history
 - Steps: buka history untuk session tertentu.
 - Expected:
   - Event history tampil berurutan.
+  - Event terbaru sinkron dengan aksi terakhir user (start/upload/submit).
 
 ## 7. Non-Functional Checks
 
