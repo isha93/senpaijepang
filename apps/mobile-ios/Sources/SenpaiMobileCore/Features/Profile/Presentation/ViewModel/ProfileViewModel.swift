@@ -27,7 +27,7 @@ final class ProfileViewModel: ObservableObject, ManagedTask {
         }) {
             profile = result
         } else {
-            profile = Self.mockProfile
+            profile = nil
         }
     }
 

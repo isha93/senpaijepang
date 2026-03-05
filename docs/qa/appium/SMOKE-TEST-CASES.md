@@ -14,3 +14,9 @@
 
 4) Profile view
 - Expect profile header visible
+
+## Next Smoke Addition (after email-verify API ready)
+5) Register + verify email
+- Fill account info + preferences
+- Verify email step shown with 6 OTP cells
+- Verify button disabled until 6 digits entered

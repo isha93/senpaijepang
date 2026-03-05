@@ -238,6 +238,7 @@ Referensi hosting options:
 - Vendor-specific webhook orchestration (retry semantics, event schema mapping per provider) belum diimplementasikan.
 - Job catalog, feed content, saved jobs/posts, dan job applications sudah dipersist ke Postgres saat mode `AUTH_STORE=postgres`.
 - `GET /admin/activity-events` saat ini mengagregasi event `KYC` + `APPLICATION`; source untuk `JOB/FEED/ORG/AUTH` masih iterasi berikutnya.
+- Email verification onboarding endpoints (`/auth/email-verification/send|verify|resend`) belum tersedia di runtime v0; iOS currently uses UI-only verification step.
 
 ## 13. Change Control
 - Setiap perubahan endpoint runtime wajib update `openapi-runtime-v0.yaml` dan file ini di commit yang sama.

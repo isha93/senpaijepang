@@ -22,6 +22,23 @@ Format: **Given / When / Then** + edge cases.
 - **When** tap Logout
 - **Then** kembali ke login screen + session dibersihkan
 
+### A3 Register + Verify Email (4-step)
+- **Given** user baru belum punya akun
+- **When** isi `Account Info` valid lalu lanjut `Preferences`
+- **Then** masuk ke step `Verify Email` (step 3 dari 4)
+
+- **When** isi OTP kurang dari 6 digit lalu tap `Verify Email`
+- **Then** muncul error validasi, tidak lanjut ke step finish
+
+- **When** isi OTP 6 digit valid lalu tap `Verify Email`
+- **Then** tampil loading state button, lanjut ke step `All Set`, lalu bisa masuk app
+
+**Edge**
+- tombol verify disabled kalau OTP belum 6 digit
+- resend code countdown jalan (60 detik), setelah habis berubah jadi tombol resend aktif
+- tap cepat berulang saat verify tidak menembak request berulang (button disabled saat loading)
+- `Change email` mengembalikan flow ke step `Account Info`
+
 ---
 
 ## B. JOBS TAB

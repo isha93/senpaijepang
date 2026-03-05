@@ -33,6 +33,7 @@ struct ArticleDetailView: View {
         }
         .accessibilityIdentifier("article_detail_view")
         .navigationBarHidden(true)
+        .toolbar(.hidden, for: .tabBar)
         .preferredColorScheme(.light) // Or respect system, but design wants clean look
     }
 

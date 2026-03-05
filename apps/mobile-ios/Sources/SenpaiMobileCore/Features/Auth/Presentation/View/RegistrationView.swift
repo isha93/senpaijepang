@@ -3,6 +3,7 @@ import SwiftUI
 struct RegistrationView: View {
     @ObservedObject private var viewModel: RegistrationViewModel
     @ObservedObject private var langManager = LanguageManager.shared
+    @FocusState private var isVerificationInputFocused: Bool
 
     init(viewModel: RegistrationViewModel) {
         self.viewModel = viewModel
@@ -20,6 +21,8 @@ struct RegistrationView: View {
                     accountInfoStep
                 case .preferences:
                     preferencesStep
+                case .verifyEmail:
+                    verifyEmailStep
                 case .allSet:
                     successStep
                 }
@@ -65,13 +68,13 @@ struct RegistrationView: View {
 
             // Progress bar
             HStack(spacing: 4) {
-                ForEach(0..<3, id: \.self) { index in
+                ForEach(0..<RegistrationStep.allCases.count, id: \.self) { index in
                     VStack(alignment: .leading, spacing: 4) {
                         RoundedRectangle(cornerRadius: 2)
                             .fill(progressColor(for: index))
                             .frame(height: 3)
 
-                        Text(RegistrationStep.accountInfo.stepLabels[index])
+                        Text(RegistrationStep.stepLabels[index])
                             .font(.system(size: 9, weight: index == viewModel.currentStep.rawValue ? .bold : .medium))
                             .foregroundStyle(index == viewModel.currentStep.rawValue ? AppTheme.accent : AppTheme.textTertiary)
                             .textCase(.uppercase)
@@ -122,6 +125,7 @@ struct RegistrationView: View {
                         TextField("Full name", text: $viewModel.fullName)
                             .font(.system(size: 14))
                             .foregroundStyle(AppTheme.textPrimary)
+                            .accessibilityIdentifier("auth_register_full_name_input")
                     }
                 }
                 .padding(.bottom, 16)
@@ -138,6 +142,7 @@ struct RegistrationView: View {
                             .keyboardType(.emailAddress)
                             .textInputAutocapitalization(.never)
                             .autocorrectionDisabled()
+                            .accessibilityIdentifier("auth_register_email_input")
                     }
                 }
                 .padding(.bottom, 16)
@@ -152,8 +157,10 @@ struct RegistrationView: View {
                         Group {
                             if viewModel.isPasswordVisible {
                                 TextField("Min. 8 characters", text: $viewModel.password)
+                                    .accessibilityIdentifier("auth_register_password_input")
                             } else {
                                 SecureField("Min. 8 characters", text: $viewModel.password)
+                                    .accessibilityIdentifier("auth_register_password_input")
                             }
                         }
                         .font(.system(size: 14))
@@ -173,22 +180,17 @@ struct RegistrationView: View {
                 errorView
 
                 // Continue button
-                Button { viewModel.continueToNextStep() } label: {
-                    HStack(spacing: 8) {
-                        LText("Continue")
-                            .font(.system(size: 16, weight: .bold))
-                        Image(systemName: "arrow.right")
-                            .font(.system(size: 16, weight: .bold))
-                    }
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 52)
-                    .background(AppTheme.accent)
-                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                    .shadow(color: AppTheme.accent.opacity(0.2), radius: 12, y: 6)
+                PrimaryButton(
+                    title: "Continue",
+                    isLoading: viewModel.isLoading,
+                    trailingSystemImage: "arrow.right"
+                ) {
+                    viewModel.continueToNextStep()
                 }
-                .buttonStyle(PressableButtonStyle())
+                .shadow(color: AppTheme.accent.opacity(0.2), radius: 12, y: 6)
+                .accessibilityIdentifier("auth_register_button")
                 .padding(.top, 16)
+                .animation(AppTheme.animationDefault, value: viewModel.isLoading)
 
                 // Log in link
                 HStack(spacing: 4) {
@@ -209,6 +211,7 @@ struct RegistrationView: View {
             .padding(.top, 24)
             .padding(.bottom, 32)
         }
+        .disabled(viewModel.isLoading)
     }
 
     // MARK: - Step 2: Preferences
@@ -336,6 +339,7 @@ struct RegistrationView: View {
                     }
                     .buttonStyle(PressableButtonStyle())
                     .frame(maxWidth: .infinity)
+                    .accessibilityIdentifier("auth_register_preferences_next_button")
                 }
                 .padding(.top, 32)
             }
@@ -372,7 +376,211 @@ struct RegistrationView: View {
         .buttonStyle(.plain)
     }
 
-    // MARK: - Step 3: Success
+    // MARK: - Step 3: Verify Email
+
+    @ViewBuilder
+    private var verifyEmailStep: some View {
+        VStack(spacing: 0) {
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 0) {
+                    VStack(spacing: 12) {
+                        ZStack {
+                            Circle()
+                                .fill(AppTheme.accent.opacity(0.12))
+                                .frame(width: 110, height: 110)
+                            Image(systemName: "envelope.badge")
+                                .font(.system(size: 40, weight: .semibold))
+                                .foregroundStyle(AppTheme.accent)
+                        }
+                        .padding(.bottom, 8)
+
+                        LText("Check your email")
+                            .font(.system(size: 22, weight: .bold))
+                            .minimumScaleFactor(0.7)
+                            .lineLimit(1)
+                            .foregroundStyle(AppTheme.textPrimary)
+
+                        VStack(spacing: 4) {
+                            LText("We sent a 6-digit code to")
+                                .font(.system(size: 14))
+                                .foregroundStyle(AppTheme.textSecondary)
+                            Text(viewModel.maskedEmail)
+                                .font(.system(size: 14, weight: .semibold))
+                                .italic()
+                                .foregroundStyle(AppTheme.textPrimary)
+                        }
+                    }
+                    .multilineTextAlignment(.center)
+                    .padding(.top, 28)
+                    .padding(.bottom, 34)
+
+                    verificationCodeInput
+                        .padding(.bottom, 16)
+
+                    verificationErrorView
+                        .padding(.bottom, 22)
+
+                    Button {
+                        viewModel.changeEmail()
+                    } label: {
+                        LText("Change email")
+                            .font(.system(size: 17, weight: .semibold))
+                            .foregroundStyle(AppTheme.accent)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("auth_verify_email_change_button")
+                    .padding(.bottom, 20)
+
+                    resendCodeStatus
+
+                    Spacer(minLength: 32)
+                }
+                .padding(.horizontal, 24)
+            }
+            .disabled(viewModel.isLoading)
+            .onAppear {
+                isVerificationInputFocused = true
+            }
+
+            VStack(spacing: 0) {
+                Divider()
+
+                VStack(spacing: 16) {
+                    PrimaryButton(
+                        title: "Verify Email",
+                        isLoading: viewModel.isLoading,
+                        isDisabled: !viewModel.isVerificationCodeComplete
+                    ) {
+                        viewModel.continueToNextStep()
+                    }
+                    .shadow(color: AppTheme.accent.opacity(0.2), radius: 12, y: 6)
+                    .accessibilityIdentifier("auth_verify_email_submit_button")
+
+                    LText("By continuing, you agree to our Terms of Service and Privacy Policy.")
+                        .font(.system(size: 11))
+                        .foregroundStyle(AppTheme.textTertiary)
+                        .multilineTextAlignment(.center)
+                        .frame(maxWidth: 250)
+                }
+                .padding(.horizontal, 24)
+                .padding(.top, 16)
+                .padding(.bottom, 20)
+            }
+            .background(AppTheme.backgroundCard)
+        }
+        .accessibilityIdentifier("auth_verify_email_view")
+    }
+
+    @ViewBuilder
+    private var verificationCodeInput: some View {
+        ZStack {
+            TextField("", text: verificationCodeBinding)
+                .keyboardType(.numberPad)
+                .textContentType(.oneTimeCode)
+                .focused($isVerificationInputFocused)
+                .frame(width: 1, height: 1)
+                .opacity(0.01)
+                .accessibilityIdentifier("auth_verify_email_code_input")
+
+            HStack(spacing: 10) {
+                ForEach(0..<6, id: \.self) { index in
+                    verificationCodeCell(for: index)
+                }
+            }
+            .contentShape(Rectangle())
+            .onTapGesture {
+                isVerificationInputFocused = true
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func verificationCodeCell(for index: Int) -> some View {
+        let characters = Array(viewModel.verificationCode)
+        let digit = index < characters.count ? String(characters[index]) : ""
+        let isFilled = !digit.isEmpty
+
+        Text(digit)
+            .font(.system(size: 24, weight: .bold, design: .rounded))
+            .foregroundStyle(AppTheme.textPrimary)
+            .frame(maxWidth: .infinity)
+            .frame(height: 62)
+            .background(Color(.systemGray6))
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(isFilled ? AppTheme.accent.opacity(0.6) : AppTheme.border, lineWidth: 1.2)
+            )
+            .accessibilityIdentifier("auth_verify_email_digit_\(index + 1)")
+    }
+
+    @ViewBuilder
+    private var resendCodeStatus: some View {
+        if viewModel.canResendVerificationCode {
+            Button {
+                viewModel.resendVerificationCode()
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: "arrow.clockwise")
+                        .font(.system(size: 14, weight: .bold))
+                    Text(viewModel.resendCodeLabel)
+                        .font(.system(size: 16, weight: .semibold))
+                }
+                .foregroundStyle(AppTheme.accent)
+                .padding(.horizontal, 22)
+                .frame(height: 54)
+                .background(Color(.systemGray6))
+                .clipShape(Capsule())
+                .overlay(
+                    Capsule()
+                        .stroke(AppTheme.border, lineWidth: 1)
+                )
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("auth_verify_email_resend_button")
+        } else {
+            HStack(spacing: 8) {
+                Image(systemName: "clock.fill")
+                    .font(.system(size: 14))
+                    .foregroundStyle(AppTheme.textTertiary)
+                Text("Resend code in \(viewModel.formattedResendCountdown)")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundStyle(AppTheme.textSecondary)
+            }
+            .padding(.horizontal, 24)
+            .frame(height: 54)
+            .background(Color(.systemGray6))
+            .clipShape(Capsule())
+            .overlay(
+                Capsule()
+                    .stroke(AppTheme.border, lineWidth: 1)
+            )
+            .accessibilityIdentifier("auth_verify_email_resend_countdown")
+        }
+    }
+
+    @ViewBuilder
+    private var verificationErrorView: some View {
+        if let message = viewModel.errorMessage, !message.isEmpty {
+            HStack(spacing: 8) {
+                Image(systemName: "exclamationmark.circle.fill")
+                    .font(.system(size: 14))
+                Text(message)
+                    .font(.system(size: 13))
+            }
+            .foregroundStyle(.red)
+            .transition(.opacity.combined(with: .move(edge: .top)))
+        }
+    }
+
+    private var verificationCodeBinding: Binding<String> {
+        Binding(
+            get: { viewModel.verificationCode },
+            set: { viewModel.updateVerificationCode($0) }
+        )
+    }
+
+    // MARK: - Step 4: Success
 
     @ViewBuilder
     private var successStep: some View {
@@ -401,6 +609,7 @@ struct RegistrationView: View {
                 .font(.system(size: 24, weight: .bold))
                 .foregroundStyle(AppTheme.textPrimary)
                 .padding(.bottom, 8)
+                .accessibilityIdentifier("auth_register_success_title")
 
             LText("Welcome to the family. Your journey starts here.")
                 .font(.system(size: 14))
@@ -422,6 +631,7 @@ struct RegistrationView: View {
                         .shadow(color: AppTheme.accent.opacity(0.2), radius: 12, y: 6)
                 }
                 .buttonStyle(PressableButtonStyle())
+                .accessibilityIdentifier("auth_register_go_dashboard_button")
 
                 Button { viewModel.goToDashboard() } label: {
                     LText("Complete Profile Later")

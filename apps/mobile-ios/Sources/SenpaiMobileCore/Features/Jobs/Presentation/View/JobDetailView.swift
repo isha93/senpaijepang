@@ -11,7 +11,14 @@ struct JobDetailView: View {
     var body: some View {
         ZStack(alignment: .bottom) {
             ScrollView {
-                if let detail = viewModel.detail {
+                if !viewModel.isLoading && viewModel.detail == nil {
+                    EmptyStateView(
+                        icon: "briefcase",
+                        title: "Job Not Available",
+                        message: "We couldn't load the details for this position. Please go back and try again."
+                    )
+                    .padding(.top, AppTheme.spacingXXL)
+                } else if let detail = viewModel.detail {
                     VStack(spacing: 0) {
                         // Header — logo + info
                         VStack(spacing: AppTheme.spacingM) {
@@ -187,18 +194,21 @@ struct JobDetailView: View {
             .background(AppTheme.backgroundPrimary)
 
             // Sticky CTA
-            VStack {
-                PrimaryButton(title: "Lamar Pekerjaan") {
-                    viewModel.applyJob()
+            if viewModel.detail != nil {
+                VStack {
+                    PrimaryButton(title: viewModel.applyButtonTitle) {
+                        viewModel.applyJob()
+                    }
+                    .padding(.horizontal, AppTheme.spacingL)
                 }
-                .padding(.horizontal, AppTheme.spacingL)
+                .padding(.vertical, AppTheme.spacingL)
+                .background(.ultraThinMaterial)
+                .transition(.move(edge: .bottom).combined(with: .opacity))
             }
-            .padding(.vertical, AppTheme.spacingL)
-            .background(.ultraThinMaterial)
-            .transition(.move(edge: .bottom).combined(with: .opacity))
         }
         .navigationTitle(langManager.localize(key: "Job Details"))
         #if os(iOS)
+        .toolbar(.hidden, for: .tabBar)
         .navigationBarTitleDisplayMode(.inline)
         #endif
         .toolbar {

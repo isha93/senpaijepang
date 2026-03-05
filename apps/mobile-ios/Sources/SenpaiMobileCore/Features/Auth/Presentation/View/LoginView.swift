@@ -50,6 +50,7 @@ struct LoginView: View {
                                 .foregroundStyle(AppTheme.textPrimary)
                                 .keyboardType(.emailAddress)
                                 .textInputAutocapitalization(.never)
+                                .accessibilityIdentifier("auth_email_input")
                                 .autocorrectionDisabled()
 
                             Image(systemName: "envelope.fill")
@@ -85,6 +86,7 @@ struct LoginView: View {
                             }
                             .font(.system(size: 16))
                             .foregroundStyle(AppTheme.textPrimary)
+                            .accessibilityIdentifier("auth_password_input")
 
                             Button {
                                 viewModel.togglePasswordVisibility()
@@ -123,6 +125,7 @@ struct LoginView: View {
                         .foregroundStyle(.red)
                         .padding(.vertical, 8)
                         .transition(.opacity.combined(with: .move(edge: .top)))
+                        .accessibilityIdentifier("auth_error_text")
                     }
 
                     // Log In Button
@@ -149,6 +152,7 @@ struct LoginView: View {
                     }
                     .buttonStyle(PressableButtonStyle())
                     .disabled(viewModel.isLoading)
+                    .accessibilityIdentifier("auth_login_button")
                     .padding(.top, 16)
                     .animation(AppTheme.animationDefault, value: viewModel.isLoading)
                     .animation(AppTheme.animationSoft, value: viewModel.errorMessage)
@@ -186,6 +190,7 @@ struct LoginView: View {
                                 .font(.system(size: 16, weight: .bold))
                                 .foregroundStyle(AppTheme.accent)
                         }
+                        .accessibilityIdentifier("auth_sign_up_link_button")
                         Spacer()
                     }
                     .padding(.top, 16)
@@ -193,6 +198,7 @@ struct LoginView: View {
                 }
                 .padding(.horizontal, 24)
             }
+            .disabled(viewModel.isLoading)
         }
         .background(AppTheme.backgroundPrimary)
         .navigationBarBackButtonHidden(true)

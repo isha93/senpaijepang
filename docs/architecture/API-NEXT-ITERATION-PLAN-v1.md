@@ -20,11 +20,13 @@ Sudah tersedia di runtime:
 Referensi:
 - `docs/architecture/openapi-runtime-v0.yaml`
 - `docs/architecture/API-IMPLEMENTATION-STATUS-v0.md`
+- `docs/architecture/API-EMAIL-VERIFICATION-PLAN-v1.md`
 
 ## 3. Gaps To Close
 Yang belum tersedia dan dibutuhkan dashboard iterasi berikutnya:
 - Bulk endpoints untuk jobs/feed operations.
 - Content lifecycle endpoints (publish/unpublish/schedule).
+- Auth email verification endpoints untuk onboarding 4-step iOS (`Verify Email` page).
 
 ## 4. Endpoint Backlog (Proposed)
 Priority P0 (completed):
@@ -55,6 +57,10 @@ Priority P1 (setelah P0 stabil):
 - `POST /admin/feed/posts/bulk`
 6. Content lifecycle endpoints:
 - publish/unpublish/schedule for jobs/posts
+7. Auth onboarding email verification endpoints:
+- `POST /auth/email-verification/send`
+- `POST /auth/email-verification/verify`
+- `POST /auth/email-verification/resend`
 
 Completed on 2026-03-05:
 - `POST /admin/kyc/documents/{documentId}/preview-url`

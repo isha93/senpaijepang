@@ -32,6 +32,7 @@ public struct ArticleDetailView: View {
             topNavigationBar
         }
         .navigationBarHidden(true)
+        .toolbar(.hidden, for: .tabBar)
         .preferredColorScheme(.light) // Or respect system, but design wants clean look
     }
 

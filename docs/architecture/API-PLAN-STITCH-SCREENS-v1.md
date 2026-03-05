@@ -101,6 +101,27 @@ Response fields needed:
 - `trustScoreLabel`, `verificationStatus`
 - `documents[] { documentType, status, required, uploadedAt, reviewedAt }`
 
+### 2.6 Registration Email Verification (new 4-step onboarding)
+UI behavior observed:
+- Setelah submit account info + preferences, user masuk step `Verify Email`.
+- Input OTP 6 digit, ada countdown resend 60 detik, aksi `Change email`.
+- CTA `Verify Email` disabled kalau OTP belum lengkap.
+
+Required endpoints (planned, not runtime yet):
+- `POST /v1/auth/email-verification/send`
+- `POST /v1/auth/email-verification/verify`
+- `POST /v1/auth/email-verification/resend`
+
+Suggested request shape:
+- `send`: `{ "email": "...", "purpose": "REGISTER" }`
+- `verify`: `{ "email": "...", "code": "123456", "purpose": "REGISTER" }`
+- `resend`: `{ "email": "...", "purpose": "REGISTER" }`
+
+Response fields needed:
+- `verificationId`, `expiresAt`, `resendAvailableAt`
+- `attemptsRemaining`
+- `verified` (boolean)
+
 ## 3. API Gaps vs Current Runtime
 Already available in runtime (v0):
 - Auth core (`register/login/refresh/logout/me`)
@@ -113,6 +134,7 @@ New domains needed for these screens:
 - Saved items domain (`saved-jobs`, `saved-posts`)
 - Job applications + journey tracking domain
 - Profile completion aggregation endpoint
+- Email verification domain for onboarding
 
 ## 4. Proposed Data Model Additions
 - `feed_posts`
@@ -150,6 +172,12 @@ New domains needed for these screens:
 - Build `GET /v1/users/me/profile`
 - Build verification document checklist endpoint
 - Wire final verification request endpoint
+
+### Wave 5: Auth Email Verification
+- Build `POST /v1/auth/email-verification/send`
+- Build `POST /v1/auth/email-verification/verify`
+- Build `POST /v1/auth/email-verification/resend`
+- Add abuse protection: cooldown, max attempts, idempotency on send/resend
 
 ## 7. Contract Rules
 - Semua endpoint baru harus masuk ke `docs/architecture/openapi-runtime-v0.yaml`.

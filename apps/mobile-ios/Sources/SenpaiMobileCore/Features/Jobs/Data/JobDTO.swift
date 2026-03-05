@@ -102,7 +102,9 @@ struct JobDetailResponseDTO: Decodable {
             benefits: [],
             employmentType: employmentLabel,
             isVisaSponsored: job.visaSponsorship,
-            locationDetail: job.location.displayLabel
+            locationDetail: job.location.displayLabel,
+            canApply: viewerState?.canApply ?? false,
+            applyCta: viewerState?.applyCta
         )
     }
 }

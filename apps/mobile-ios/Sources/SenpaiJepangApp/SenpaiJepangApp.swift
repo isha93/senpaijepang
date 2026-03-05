@@ -74,7 +74,22 @@ private final class AppContainer: ObservableObject {
                     JobEndpoint.detail(jobId: jobId),
                     responseType: JobDetailResponseDTO.self
                 )
-                return dto.toJobDetail()
+                let baseDetail = dto.toJobDetail()
+                let effectiveCanApply = await AppContainer.resolveApplyEligibility(
+                    detailDTO: dto,
+                    client: client
+                )
+                return JobDetail(
+                    job: baseDetail.job,
+                    description: baseDetail.description,
+                    requirements: baseDetail.requirements,
+                    benefits: baseDetail.benefits,
+                    employmentType: baseDetail.employmentType,
+                    isVisaSponsored: baseDetail.isVisaSponsored,
+                    locationDetail: baseDetail.locationDetail,
+                    canApply: effectiveCanApply,
+                    applyCta: effectiveCanApply ? baseDetail.applyCta : nil
+                )
             },
             toggleSaveHandler: { [client] jobId in
                 // Fetch current state, then save or unsave accordingly
@@ -277,6 +292,39 @@ private final class AppContainer: ObservableObject {
             responseType: KycSessionEnvelopeDTO.self
         )
         return created.session.id
+    }
+
+    private static func resolveApplyEligibility(
+        detailDTO: JobDetailResponseDTO,
+        client: APIClient
+    ) async -> Bool {
+        guard let viewerState = detailDTO.viewerState,
+              viewerState.authenticated,
+              viewerState.canApply else {
+            return false
+        }
+
+        do {
+            let status = try await client.request(
+                IdentityEndpoint.kycStatus,
+                responseType: KycStatusResponseDTO.self
+            )
+            return isKycVerified(status)
+        } catch {
+            return false
+        }
+    }
+
+    private static func isKycVerified(_ status: KycStatusResponseDTO) -> Bool {
+        let trustStatus = status.status.uppercased()
+        if trustStatus == "VERIFIED" || trustStatus == "APPROVED" {
+            return true
+        }
+
+        guard let sessionStatus = status.session?.status.uppercased() else {
+            return false
+        }
+        return sessionStatus == "VERIFIED" || sessionStatus == "APPROVED"
     }
 }
 

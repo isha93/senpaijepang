@@ -27,6 +27,7 @@ final class LoginViewModel: ObservableObject, ManagedTask {
     }
 
     func submitLogin() async {
+        guard !isLoading else { return }
         errorMessage = nil
 
         guard isValidEmail(email) else {
@@ -40,7 +41,7 @@ final class LoginViewModel: ObservableObject, ManagedTask {
         }
 
         isLoading = true
-        defer { isLoading = false }
+        let loadingStartedAt = DispatchTime.now().uptimeNanoseconds
 
         do {
             let session = try await authService.login(email: email, password: password)
@@ -48,6 +49,9 @@ final class LoginViewModel: ObservableObject, ManagedTask {
         } catch {
             errorMessage = error.localizedDescription
         }
+
+        await ensureMinimumLoadingDuration(since: loadingStartedAt)
+        isLoading = false
     }
 
     func togglePasswordVisibility() {
@@ -62,4 +66,13 @@ final class LoginViewModel: ObservableObject, ManagedTask {
         let emailRegex = #"^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$"#
         return value.range(of: emailRegex, options: .regularExpression) != nil
     }
+
+    private func ensureMinimumLoadingDuration(since startedAtNanoseconds: UInt64) async {
+        let elapsed = DispatchTime.now().uptimeNanoseconds - startedAtNanoseconds
+        guard elapsed < Self.minimumLoadingNanoseconds else { return }
+        let remaining = Self.minimumLoadingNanoseconds - elapsed
+        try? await Task.sleep(nanoseconds: remaining)
+    }
+
+    private static let minimumLoadingNanoseconds: UInt64 = 350_000_000
 }

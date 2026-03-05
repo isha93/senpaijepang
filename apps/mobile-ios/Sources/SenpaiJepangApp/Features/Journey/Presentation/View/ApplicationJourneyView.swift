@@ -28,6 +28,19 @@ struct ApplicationJourneyView: View {
                 }
                 .padding(.horizontal, AppTheme.spacingL)
                 .padding(.bottom, AppTheme.spacingXXL)
+            } else if !viewModel.isLoading {
+                VStack(spacing: AppTheme.spacingL) {
+                    EmptyStateView(
+                        icon: "map",
+                        title: "Belum Ada Journey",
+                        message: "Kamu belum punya proses lamaran aktif. Verifikasi profil dulu, lalu lamar pekerjaan."
+                    )
+                    PrimaryButton(title: "Verifikasi Sekarang") {
+                        viewModel.goToVerification()
+                    }
+                    .padding(.horizontal, AppTheme.spacingL)
+                }
+                .padding(.top, AppTheme.spacingXL)
             }
         }
         .background(AppTheme.backgroundPrimary)

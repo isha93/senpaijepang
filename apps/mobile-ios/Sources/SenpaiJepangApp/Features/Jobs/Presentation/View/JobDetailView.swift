@@ -197,7 +197,7 @@ struct JobDetailView: View {
             // Sticky CTA
             if viewModel.detail != nil {
                 VStack {
-                    PrimaryButton(title: "Lamar Pekerjaan") {
+                    PrimaryButton(title: viewModel.applyButtonTitle) {
                         viewModel.applyJob()
                     }
                     .accessibilityIdentifier("job_apply_button")
@@ -210,6 +210,7 @@ struct JobDetailView: View {
         }
         .navigationTitle(langManager.localize(key: "Job Details"))
         #if os(iOS)
+        .toolbar(.hidden, for: .tabBar)
         .navigationBarTitleDisplayMode(.inline)
         #endif
         .toolbar {

@@ -13,6 +13,21 @@
 - `auth_password_input`
 - `auth_login_button`
 - `auth_error_text`
+- `auth_sign_up_link_button`
+- `auth_register_button`
+- `auth_register_full_name_input`
+- `auth_register_email_input`
+- `auth_register_password_input`
+- `auth_register_preferences_next_button`
+- `auth_verify_email_view`
+- `auth_verify_email_code_input`
+- `auth_verify_email_digit_1` ... `auth_verify_email_digit_6`
+- `auth_verify_email_change_button`
+- `auth_verify_email_resend_button`
+- `auth_verify_email_resend_countdown`
+- `auth_verify_email_submit_button`
+- `auth_register_success_title`
+- `auth_register_go_dashboard_button`
 
 ## Home / Feed
 - `home_search_input`

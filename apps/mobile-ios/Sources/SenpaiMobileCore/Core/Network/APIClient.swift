@@ -16,7 +16,7 @@ public final class APIClient: APIClientProtocol {
     }
     
     public func request<T: Decodable>(_ endpoint: APIEndpoint, responseType: T.Type) async throws -> T {
-        let (data, response) = try await performRequest(endpoint)
+        let (data, _) = try await performRequest(endpoint)
         return try decode(data: data, responseType: responseType)
     }
     
@@ -25,7 +25,19 @@ public final class APIClient: APIClientProtocol {
     }
     
     private func performRequest(_ endpoint: APIEndpoint) async throws -> (Data, URLResponse) {
-        let request = try await buildURLRequest(from: endpoint)
+        try await performRequest(
+            endpoint,
+            forcedAccessToken: nil,
+            allowTokenRefresh: true
+        )
+    }
+
+    private func performRequest(
+        _ endpoint: APIEndpoint,
+        forcedAccessToken: String?,
+        allowTokenRefresh: Bool
+    ) async throws -> (Data, URLResponse) {
+        let request = try await buildURLRequest(from: endpoint, forcedAccessToken: forcedAccessToken)
         
         let (data, response) = try await session.data(for: request)
         
@@ -36,8 +48,22 @@ public final class APIClient: APIClientProtocol {
         switch httpResponse.statusCode {
         case 200...299:
             return (data, response)
+        case 401 where endpoint.requiresAuth && allowTokenRefresh:
+            do {
+                let refreshedAccessToken = try await refreshAccessToken()
+                return try await performRequest(
+                    endpoint,
+                    forcedAccessToken: refreshedAccessToken,
+                    allowTokenRefresh: false
+                )
+            } catch {
+                await tokenProvider?.handleUnauthorized()
+                throw APIError.unauthorized
+            }
+        case 401 where endpoint.requiresAuth:
+            await tokenProvider?.handleUnauthorized()
+            throw APIError.unauthorized
         case 401:
-            // Optional: Handle token refresh logic here
             throw APIError.unauthorized
         case 403:
             throw APIError.forbidden
@@ -50,7 +76,7 @@ public final class APIClient: APIClientProtocol {
         }
     }
     
-    private func buildURLRequest(from endpoint: APIEndpoint) async throws -> URLRequest {
+    private func buildURLRequest(from endpoint: APIEndpoint, forcedAccessToken: String?) async throws -> URLRequest {
         var urlComponents = URLComponents(url: APIConfiguration.shared.baseURL, resolvingAgainstBaseURL: true)
         
         // Ensure path starts with a slash if not empty
@@ -80,7 +106,13 @@ public final class APIClient: APIClientProtocol {
         }
         
         if endpoint.requiresAuth {
-            if let token = try await tokenProvider?.getAccessToken() {
+            let token: String?
+            if let forcedAccessToken {
+                token = forcedAccessToken
+            } else {
+                token = try await tokenProvider?.getAccessToken()
+            }
+            if let token, !token.isEmpty {
                 request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
             }
         }
@@ -90,6 +122,32 @@ public final class APIClient: APIClientProtocol {
         }
         
         return request
+    }
+
+    private func refreshAccessToken() async throws -> String {
+        guard let refreshToken = try await tokenProvider?.refreshToken(),
+              !refreshToken.isEmpty else {
+            throw APIError.unauthorized
+        }
+
+        let refreshEndpoint = RefreshTokenEndpoint(refreshToken: refreshToken)
+        let refreshRequest = try await buildURLRequest(from: refreshEndpoint, forcedAccessToken: nil)
+
+        let (data, response) = try await session.data(for: refreshRequest)
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw APIError.invalidResponse
+        }
+
+        guard (200...299).contains(httpResponse.statusCode) else {
+            throw APIError.unauthorized
+        }
+
+        let refreshedSession = try decode(data: data, responseType: RefreshTokenResponse.self)
+        await tokenProvider?.updateTokens(
+            accessToken: refreshedSession.accessToken,
+            refreshToken: refreshedSession.refreshToken
+        )
+        return refreshedSession.accessToken
     }
     
     private func decode<T: Decodable>(data: Data, responseType: T.Type) throws -> T {
@@ -101,4 +159,20 @@ public final class APIClient: APIClientProtocol {
             throw APIError.decodingError(error)
         }
     }
+}
+
+private struct RefreshTokenEndpoint: APIEndpoint {
+    let refreshToken: String
+
+    var path: String { "/v1/auth/refresh" }
+    var method: HTTPMethod { .post }
+    var body: Data? {
+        try? JSONEncoder().encode(["refreshToken": refreshToken])
+    }
+    var requiresAuth: Bool { false }
+}
+
+private struct RefreshTokenResponse: Decodable {
+    let accessToken: String
+    let refreshToken: String?
 }

@@ -190,6 +190,7 @@ struct LoginView: View {
                                 .font(.system(size: 16, weight: .bold))
                                 .foregroundStyle(AppTheme.accent)
                         }
+                        .accessibilityIdentifier("auth_sign_up_link_button")
                         Spacer()
                     }
                     .padding(.top, 16)
@@ -197,6 +198,7 @@ struct LoginView: View {
                 }
                 .padding(.horizontal, 24)
             }
+            .disabled(viewModel.isLoading)
         }
         .background(AppTheme.backgroundPrimary)
         .navigationBarBackButtonHidden(true)

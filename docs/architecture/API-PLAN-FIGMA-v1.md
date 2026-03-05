@@ -20,6 +20,7 @@ Update:
 ## 1. Planning Assumptions (to validate)
 Asumsi UI utama di Figma:
 - Auth screens: register, login, session refresh/logout.
+- Register flow target: 4 step (`Account Info` -> `Preferences` -> `Verify Email` -> `All Set`).
 - User onboarding & profile.
 - KYC flow: create session, upload docs, submit, status tracking.
 - Admin/Ops flow: review queue, review decision, audit timeline.

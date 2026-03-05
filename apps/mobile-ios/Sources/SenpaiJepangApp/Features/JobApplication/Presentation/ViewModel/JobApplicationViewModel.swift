@@ -81,7 +81,7 @@ final class JobApplicationViewModel: ObservableObject {
         isSubmitting = true
         errorMessage = nil
         Task {
-            defer { isSubmitting = false }
+            let loadingStartedAt = DispatchTime.now().uptimeNanoseconds
             do {
                 _ = try await ensureApplicationId()
                 withAnimation(AppTheme.animationDefault) {
@@ -90,6 +90,8 @@ final class JobApplicationViewModel: ObservableObject {
             } catch {
                 errorMessage = error.localizedDescription
             }
+            await ensureMinimumBusyDuration(since: loadingStartedAt)
+            isSubmitting = false
         }
     }
 
@@ -123,10 +125,7 @@ final class JobApplicationViewModel: ObservableObject {
     private func uploadCVTask(from url: URL) async {
         isUploadingCV = true
         errorMessage = nil
-
-        defer {
-            isUploadingCV = false
-        }
+        let loadingStartedAt = DispatchTime.now().uptimeNanoseconds
 
         do {
             let localFile = try await readLocalFile(from: url)
@@ -144,6 +143,8 @@ final class JobApplicationViewModel: ObservableObject {
         } catch {
             errorMessage = error.localizedDescription
         }
+        await ensureMinimumBusyDuration(since: loadingStartedAt)
+        isUploadingCV = false
     }
 
     private func readLocalFile(from url: URL) async throws -> LocalFile {
@@ -211,4 +212,13 @@ final class JobApplicationViewModel: ObservableObject {
         formatter.isAdaptive = true
         return formatter
     }()
+
+    private func ensureMinimumBusyDuration(since startedAtNanoseconds: UInt64) async {
+        let elapsed = DispatchTime.now().uptimeNanoseconds - startedAtNanoseconds
+        guard elapsed < Self.minimumBusyNanoseconds else { return }
+        let remaining = Self.minimumBusyNanoseconds - elapsed
+        try? await Task.sleep(nanoseconds: remaining)
+    }
+
+    private static let minimumBusyNanoseconds: UInt64 = 350_000_000
 }

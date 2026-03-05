@@ -45,6 +45,8 @@ public struct JobDetail: Equatable, Sendable {
     public let employmentType: String?
     public let isVisaSponsored: Bool
     public let locationDetail: String?
+    public let canApply: Bool
+    public let applyCta: String?
 
     public init(
         job: Job,
@@ -53,7 +55,9 @@ public struct JobDetail: Equatable, Sendable {
         benefits: [String] = [],
         employmentType: String? = nil,
         isVisaSponsored: Bool = false,
-        locationDetail: String? = nil
+        locationDetail: String? = nil,
+        canApply: Bool = false,
+        applyCta: String? = nil
     ) {
         self.job = job
         self.description = description
@@ -62,6 +66,8 @@ public struct JobDetail: Equatable, Sendable {
         self.employmentType = employmentType
         self.isVisaSponsored = isVisaSponsored
         self.locationDetail = locationDetail
+        self.canApply = canApply
+        self.applyCta = applyCta
     }
 }
 

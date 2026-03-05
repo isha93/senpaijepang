@@ -30,12 +30,16 @@ final class ApplicationJourneyViewModel: ObservableObject, ManagedTask {
         }) {
             journey = result
         } else {
-            journey = Self.mockJourney
+            journey = nil
         }
     }
 
     func goBack() {
         navigation.pop()
+    }
+
+    func goToVerification() {
+        navigation.push(.kycVerification)
     }
 
     var currentStepIndex: Int {

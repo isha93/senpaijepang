@@ -30,18 +30,32 @@ final class JobDetailViewModel: ObservableObject, ManagedTask {
         }) {
             detail = result
         } else {
-            detail = Self.mockDetails[jobId] ?? Self.fallbackDetail(jobId: jobId)
+            detail = nil
         }
     }
 
     func applyJob() {
-        if let job = detail?.job {
-            navigation.presentApplication(for: job)
+        guard let detail else { return }
+        if detail.canApply {
+            navigation.presentApplication(for: detail.job)
+            return
         }
+        navigation.push(.kycVerification)
     }
 
     func goBack() {
         navigation.pop()
+    }
+
+    var applyButtonTitle: String {
+        guard let detail else { return "Lamar Pekerjaan" }
+        if detail.canApply {
+            if let cta = detail.applyCta?.trimmingCharacters(in: .whitespacesAndNewlines), !cta.isEmpty {
+                return cta
+            }
+            return "Lamar Pekerjaan"
+        }
+        return "Yuk Verifikasi"
     }
 
     // MARK: - Fallback for unknown IDs

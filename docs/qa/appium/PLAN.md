@@ -10,6 +10,8 @@ Cross-platform UI automation for iOS + Android using Appium + WebdriverIO (JS).
 - Profile view
 
 ## Phase 2 (Regression)
+- Register 4-step flow (account -> preferences -> verify email -> finish)
+- Verify email UI states (otp input, countdown, resend, button loading/disabled)
 - Save/unsave job
 - Apply job
 - Saved posts

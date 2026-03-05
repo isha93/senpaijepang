@@ -46,6 +46,19 @@ extension AuthStateManager: AuthTokenProvider {
     nonisolated func refreshToken() async throws -> String? {
         UserDefaultsManager.shared.refreshToken
     }
+
+    nonisolated func updateTokens(accessToken: String, refreshToken: String?) async {
+        UserDefaultsManager.shared.accessToken = accessToken
+        if let refreshToken, !refreshToken.isEmpty {
+            UserDefaultsManager.shared.refreshToken = refreshToken
+        }
+    }
+
+    nonisolated func handleUnauthorized() async {
+        await MainActor.run {
+            AuthStateManager.shared.logout()
+        }
+    }
 }
 
 extension Notification.Name {

@@ -40,6 +40,11 @@ ANDROID_APP_PATH=apps/qa-automation-appium/apps/android/SenpaiJepang.apk \
 npm run test:android -w @senpaijepang/qa-automation-appium
 ```
 
+Run regression including register + verify email flow:
+```bash
+PLATFORM=ios RUN_REGISTER_VERIFY=1 npm run test:ios:regression -w @senpaijepang/qa-automation-appium
+```
+
 ## Video Recording
 
 Video recording can be enabled during runs with `APPIUM_RECORD_VIDEO`.
