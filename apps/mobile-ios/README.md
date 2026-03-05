@@ -145,6 +145,7 @@ apps/mobile-ios/
 │   │   │   ├── AppRootView.swift       #    Root NavigationStack wiring
 │   │   │   └── MainTabView.swift       #    Tab bar controller
 │   │   ├── Core/
+│   │   │   ├── Network/                #    🌐 APIClient, endpoint contract, APIError
 │   │   │   ├── Navigation/             #    🧭 AppRoute, NavigationManager
 │   │   │   ├── Task/                   #    ⏳ ManagedTask async helper
 │   │   │   └── Theme/                  #    🎨 AppTheme design tokens
@@ -159,14 +160,16 @@ apps/mobile-ios/
 │   │       ├── Profile/                #    👤 User profile
 │   │       └── Feed/                   #    📰 Community feed
 │   │
-│   └── SenpaiMobileCore/              # 📚 Shared Core Library
-│       └── (mirrors App structure)     #    Reusable across targets
+│   └── SenpaiMobileCore/               # 📚 Shared Core Library (SPM)
+│       └── (mirrors App modules)       #    Used for package-level testing/evolution
 │
 └── Tests/
     └── SenpaiMobileCoreTests/          # ✅ Unit tests
         ├── LoginViewModelTests.swift
         └── NavigationManagerTests.swift
 ```
+
+Current app target source scope is centralized in `Sources/SenpaiJepangApp` (including `Core/Network`).
 
 ---
 
