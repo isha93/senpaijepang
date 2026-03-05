@@ -4,6 +4,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
 
 private val SenpaiLightColorScheme = lightColorScheme(
     primary = SenpaiGreen,
@@ -16,6 +17,9 @@ private val SenpaiLightColorScheme = lightColorScheme(
     onBackground = SenpaiNavy,
     surface = SenpaiSurface,
     onSurface = SenpaiNavy,
+    surfaceVariant = Color(0xFFF0F3F2),
+    onSurfaceVariant = SenpaiSlate,
+    outline = SenpaiGray,
     error = SenpaiError,
 )
 
@@ -23,10 +27,13 @@ private val SenpaiDarkColorScheme = darkColorScheme(
     primary = SenpaiGreen,
     onPrimary = SenpaiNavy,
     secondary = SenpaiGreenDark,
-    background = SenpaiNavy,
+    background = Color(0xFF121413),
     onBackground = SenpaiSurface,
-    surface = SenpaiSlate,
+    surface = Color(0xFF1A1F1C),
     onSurface = SenpaiSurface,
+    surfaceVariant = Color(0xFF2A312D),
+    onSurfaceVariant = Color(0xFFB6C0B9),
+    outline = Color(0xFF3A443E),
     error = SenpaiError,
 )
 
