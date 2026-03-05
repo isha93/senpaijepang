@@ -8,13 +8,19 @@ android {
     namespace = "com.senpaij.jepang"
     compileSdk = 35
 
+    val apiBaseUrlFromProperty = (project.findProperty("API_BASE_URL") as String?)
+        ?.trim()
+        ?.takeIf { it.isNotEmpty() }
+    val apiBaseUrl = apiBaseUrlFromProperty ?: "https://senpai-api-app-production.up.railway.app/"
+    val normalizedApiBaseUrl = if (apiBaseUrl.endsWith("/")) apiBaseUrl else "$apiBaseUrl/"
+
     defaultConfig {
         applicationId = "com.senpaij.jepang"
         minSdk = 24
         targetSdk = 35
         versionCode = 1
         versionName = "1.0"
-        buildConfigField("String", "API_BASE_URL", "\"http://10.0.2.2:4000/\"")
+        buildConfigField("String", "API_BASE_URL", "\"$normalizedApiBaseUrl\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

@@ -6,18 +6,18 @@ import retrofit2.http.GET
 import retrofit2.http.POST
 
 interface AuthApi {
-    @POST("auth/register")
+    @POST("v1/auth/register")
     suspend fun register(@Body request: RegisterRequestDto): AuthResponseDto
 
-    @POST("auth/login")
+    @POST("v1/auth/login")
     suspend fun login(@Body request: LoginRequestDto): AuthResponseDto
 
-    @POST("auth/refresh")
+    @POST("v1/auth/refresh")
     suspend fun refresh(@Body request: RefreshRequestDto): AuthResponseDto
 
-    @POST("auth/logout")
+    @POST("v1/auth/logout")
     suspend fun logout(@Body request: LogoutRequestDto?): Response<Unit>
 
-    @GET("auth/me")
+    @GET("v1/auth/me")
     suspend fun me(): MeResponseDto
 }
