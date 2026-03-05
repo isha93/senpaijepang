@@ -29,6 +29,8 @@ final class JobDetailViewModel: ObservableObject, ManagedTask {
             try await self.jobService.fetchJobDetail(jobId: self.jobId)
         }) {
             detail = result
+        } else {
+            detail = Self.mockDetails[jobId] ?? Self.fallbackDetail(jobId: jobId)
         }
     }
 
@@ -40,6 +42,19 @@ final class JobDetailViewModel: ObservableObject, ManagedTask {
 
     func goBack() {
         navigation.pop()
+    }
+
+    // MARK: - Fallback for unknown IDs
+    private static func fallbackDetail(jobId: String) -> JobDetail {
+        let job = JobsListViewModel.mockJobs.first(where: { $0.id == jobId })
+        return JobDetail(
+            job: job ?? Job(id: jobId, title: "Job Position", companyName: "Company", location: "Japan"),
+            description: "This position is currently accepting applications. Contact the employer for more details about the role, requirements, and benefits.",
+            requirements: ["Valid work visa or SSW certification", "Basic Japanese proficiency (JLPT N4+)"],
+            employmentType: "Full-time",
+            isVisaSponsored: true,
+            locationDetail: job?.location ?? "Japan"
+        )
     }
 
     // MARK: - Unused mock data (kept for reference, not used in production)
