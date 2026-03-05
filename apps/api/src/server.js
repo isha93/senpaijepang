@@ -149,6 +149,11 @@ function matchAdminOrganizationVerificationRoute(pathname) {
   return match ? match[1] : null;
 }
 
+function matchAdminKycDocumentPreviewRoute(pathname) {
+  const match = String(pathname || '').match(/^\/admin\/kyc\/documents\/([^/]+)\/preview-url$/);
+  return match ? match[1] : null;
+}
+
 function matchAdminCaseActionRoute(pathname) {
   const match = String(pathname || '').match(/^\/admin\/cases\/([^/]+)\/action$/);
   return match ? match[1] : null;
@@ -915,6 +920,28 @@ async function handleRequest(
     return;
   }
 
+  if (req.method === 'GET' && pathname === '/admin/audit/events') {
+    const adminAuth = await authenticateAdminRequest(req, res, authService, adminApiKey, adminRoleCodes);
+    if (!adminAuth) {
+      return;
+    }
+
+    const result = await adminOpsService.listAuditEvents({
+      type: url.searchParams.get('type') || undefined,
+      actorType: url.searchParams.get('actorType') || undefined,
+      actorId: url.searchParams.get('actorId') || undefined,
+      entityType: url.searchParams.get('entityType') || undefined,
+      entityId: url.searchParams.get('entityId') || undefined,
+      action: url.searchParams.get('action') || undefined,
+      from: url.searchParams.get('from') || undefined,
+      to: url.searchParams.get('to') || undefined,
+      cursor: url.searchParams.get('cursor') || undefined,
+      limit: url.searchParams.get('limit') || undefined
+    });
+    sendJson(res, 200, result);
+    return;
+  }
+
   if (req.method === 'POST' && pathname === '/admin/users') {
     const adminAuth = await authenticateAdminRequest(req, res, authService, adminApiKey, adminRoleCodes);
     if (!adminAuth) {
@@ -1221,6 +1248,23 @@ async function handleRequest(
       status,
       cursor,
       limit
+    });
+    sendJson(res, 200, result);
+    return;
+  }
+
+  const adminKycPreviewDocumentId =
+    req.method === 'POST' ? matchAdminKycDocumentPreviewRoute(pathname) : null;
+  if (req.method === 'POST' && adminKycPreviewDocumentId) {
+    const adminAuth = await authenticateAdminRequest(req, res, authService, adminApiKey, adminRoleCodes);
+    if (!adminAuth) {
+      return;
+    }
+
+    const body = await readJsonBody(req);
+    const result = await kycService.issueDocumentPreviewUrl({
+      documentId: adminKycPreviewDocumentId,
+      expiresSec: body.expiresSec
     });
     sendJson(res, 200, result);
     return;

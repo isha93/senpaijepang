@@ -2,7 +2,7 @@
 
 Date: 2026-03-05
 Owner: API + Web Admin
-Status: In Progress (Iteration A completed, P1 user investigation endpoints completed)
+Status: In Progress (Iteration A completed, Iteration C completed, P1 user investigation endpoints completed)
 
 ## 1. Objective
 Menambahkan endpoint yang belum ada agar dashboard admin bisa naik dari CRUD dasar ke operasi harian yang lengkap (monitoring, moderation, audit, dan quality check).
@@ -23,12 +23,11 @@ Referensi:
 
 ## 3. Gaps To Close
 Yang belum tersedia dan dibutuhkan dashboard iterasi berikutnya:
-- User investigation endpoints untuk support/compliance.
-- Secure preview URL untuk dokumen KYC.
-- Queryable audit event endpoint untuk traceability.
+- Bulk endpoints untuk jobs/feed operations.
+- Content lifecycle endpoints (publish/unpublish/schedule).
 
 ## 4. Endpoint Backlog (Proposed)
-Priority P0 (remaining):
+Priority P0 (completed):
 1. `POST /admin/kyc/documents/{documentId}/preview-url`
 - Purpose: signed short-lived preview URL untuk dokumen KYC.
 - Body/Query:
@@ -58,6 +57,8 @@ Priority P1 (setelah P0 stabil):
 - publish/unpublish/schedule for jobs/posts
 
 Completed on 2026-03-05:
+- `POST /admin/kyc/documents/{documentId}/preview-url`
+- `GET /admin/audit/events`
 - `GET /admin/users/{userId}`
 - `GET /admin/users/{userId}/profile`
 - `GET /admin/users/{userId}/kyc/history`
@@ -78,7 +79,7 @@ Tambahan schema di `openapi-runtime-v0.yaml`:
 - `AdminApplicationListResponse`
 - `AdminApplicationDetailResponse`
 - `AdminApplicationStatusUpdateRequest`
-- `AdminAuditEvent`
+- `AdminAuditEventFilters`
 - `AdminAuditEventListResponse`
 - `AdminKycDocumentPreviewUrlResponse`
 
@@ -105,12 +106,12 @@ Iteration B (detail + actions):
 3. `PATCH /admin/applications/{applicationId}/status` (done)
 
 Iteration C (compliance hardening):
-1. `POST /admin/kyc/documents/{documentId}/preview-url`
-2. `GET /admin/audit/events`
+1. `POST /admin/kyc/documents/{documentId}/preview-url` (done)
+2. `GET /admin/audit/events` (done)
 
 Iteration D (expansion):
-1. Admin users investigation endpoints
-2. Bulk and content lifecycle endpoints
+1. Admin users investigation endpoints (done)
+2. Bulk and content lifecycle endpoints (remaining)
 
 ## 8. Docs Update Checklist Per Iteration
 Setiap iterasi endpoint wajib update file berikut dalam commit yang sama:

@@ -282,6 +282,23 @@ Format: **Given / When / Then** + edge cases.
 - **When** POST `/v1/admin/kyc/review`
 - **Then** 200 + status updated
 
+### G9 Admin KYC document preview URL
+- **When** POST `/v1/admin/kyc/documents/{documentId}/preview-url`
+- **Then** 200 + signed URL + `expiresAt`
+
+**Edge**
+- documentId tidak ditemukan -> 404
+- `expiresSec` di luar batas -> 400 (`invalid_expires_sec`)
+
+### G10 Admin audit events query
+- **When** GET `/v1/admin/audit/events`
+- **Then** 200 + `items` + `filters` + `pageInfo`
+- **When** GET `/v1/admin/audit/events?type=APPLICATION&entityType=JOB_APPLICATION&action=APPLICATION_STATUS_TRANSITION`
+- **Then** 200 + hasil terfilter
+
+**Edge**
+- `actorType` invalid -> 400 (`invalid_actor_type`)
+
 ---
 
 ## H. Legacy Compatibility Aliases

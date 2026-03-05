@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: SenpaiJepang API (Runtime v0)
-  version: 0.10.2
+  version: 0.10.3
   description: Runtime API contract implemented in repository as of 2026-03-05. Runtime paths are unversioned and also available via /v1 alias.
 servers:
   - url: http://localhost:4000
@@ -1522,6 +1522,87 @@ paths:
         '503':
           $ref: '#/components/responses/ApiError'
 
+  /admin/audit/events:
+    get:
+      tags: [Admin]
+      summary: Query admin audit events with entity/action filters
+      security:
+        - bearerAuth: []
+        - adminApiKeyAuth: []
+      parameters:
+        - in: query
+          name: type
+          required: false
+          schema:
+            type: string
+            enum: [ALL, KYC, APPLICATION, JOB, FEED, ORG, AUTH]
+        - in: query
+          name: actorType
+          required: false
+          schema:
+            type: string
+            enum: [ALL, USER, ADMIN, SYSTEM]
+        - in: query
+          name: actorId
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: entityType
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: entityId
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: action
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: from
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - in: query
+          name: to
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - in: query
+          name: cursor
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+        - in: query
+          name: limit
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminAuditEventListResponse'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/ApiError'
+        '403':
+          $ref: '#/components/responses/ApiError'
+        '503':
+          $ref: '#/components/responses/ApiError'
+
   /admin/applications:
     get:
       tags: [Admin]
@@ -1741,6 +1822,44 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/KycSessionEnvelope'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/ApiError'
+        '403':
+          $ref: '#/components/responses/ApiError'
+        '404':
+          $ref: '#/components/responses/ApiError'
+        '503':
+          $ref: '#/components/responses/ApiError'
+
+  /admin/kyc/documents/{documentId}/preview-url:
+    post:
+      tags: [Admin]
+      summary: Issue short-lived preview URL for KYC document
+      security:
+        - bearerAuth: []
+        - adminApiKeyAuth: []
+      parameters:
+        - in: path
+          name: documentId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminKycDocumentPreviewUrlRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminKycDocumentPreviewUrlResponse'
         '400':
           $ref: '#/components/responses/ApiError'
         '401':
@@ -2705,6 +2824,52 @@ components:
           items:
             $ref: '#/components/schemas/AdminActivityEvent'
 
+    AdminAuditEventFilters:
+      type: object
+      required: [type, actorType, actorId, entityType, entityId, action, from, to]
+      properties:
+        type:
+          type: string
+          enum: [ALL, KYC, APPLICATION, JOB, FEED, ORG, AUTH]
+        actorType:
+          type: string
+          enum: [ALL, USER, ADMIN, SYSTEM]
+        actorId:
+          type: string
+          nullable: true
+        entityType:
+          type: string
+          nullable: true
+        entityId:
+          type: string
+          nullable: true
+        action:
+          type: string
+          nullable: true
+        from:
+          type: string
+          format: date-time
+          nullable: true
+        to:
+          type: string
+          format: date-time
+          nullable: true
+
+    AdminAuditEventListResponse:
+      type: object
+      required: [count, filters, pageInfo, items]
+      properties:
+        count:
+          type: integer
+        filters:
+          $ref: '#/components/schemas/AdminAuditEventFilters'
+        pageInfo:
+          $ref: '#/components/schemas/JobPageInfo'
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdminActivityEvent'
+
     AdminApplicationApplicant:
       type: object
       required: [id]
@@ -3459,6 +3624,36 @@ components:
           description: Optional; defaults to authenticated admin email or legacy_admin_case_action for API-key mode.
         reason:
           type: string
+
+    AdminKycDocumentPreviewUrlRequest:
+      type: object
+      properties:
+        expiresSec:
+          type: integer
+          minimum: 60
+          maximum: 3600
+          description: Optional TTL override in seconds. Runtime enforces configured max.
+
+    AdminKycDocumentPreviewUrlResponse:
+      type: object
+      required: [documentId, kycSessionId, objectKey, url, method, expiresAt]
+      properties:
+        documentId:
+          type: string
+          format: uuid
+        kycSessionId:
+          type: string
+          format: uuid
+        objectKey:
+          type: string
+        url:
+          type: string
+        method:
+          type: string
+          enum: [GET]
+        expiresAt:
+          type: string
+          format: date-time
 
     AdminLegacyCaseActionRequest:
       type: object

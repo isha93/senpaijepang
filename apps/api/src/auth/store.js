@@ -333,6 +333,14 @@ export class InMemoryAuthStore {
     return null;
   }
 
+  findIdentityDocumentById(documentId) {
+    const normalizedDocumentId = String(documentId || '').trim();
+    if (!normalizedDocumentId) {
+      return null;
+    }
+    return this.identityDocumentsById.get(normalizedDocumentId) || null;
+  }
+
   createKycStatusEvent({ kycSessionId, fromStatus, toStatus, actorType, actorId, reason }) {
     const event = {
       id: randomUUID(),

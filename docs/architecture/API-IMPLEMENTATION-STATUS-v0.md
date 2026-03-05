@@ -73,6 +73,7 @@ Admin:
 - `PATCH /admin/users/{userId}` (Bearer super_admin role, fallback header `x-admin-api-key`)
 - `GET /admin/overview/summary` (Bearer admin role, fallback header `x-admin-api-key`)
 - `GET /admin/activity-events` (Bearer admin role, fallback header `x-admin-api-key`, supports `type/actorId/from/to/cursor/limit`)
+- `GET /admin/audit/events` (Bearer admin role, fallback header `x-admin-api-key`, supports `type/actorType/actorId/entityType/entityId/action/from/to/cursor/limit`)
 - `GET /admin/applications` (Bearer admin role, fallback header `x-admin-api-key`, supports `status/q/jobId/orgId/cursor/limit`)
 - `GET /admin/applications/{applicationId}` (Bearer admin role, fallback header `x-admin-api-key`)
 - `GET /admin/applications/{applicationId}/journey` (Bearer admin role, fallback header `x-admin-api-key`)
@@ -89,6 +90,7 @@ Admin:
 - `PATCH /admin/organizations/{orgId}/verification` (Bearer admin role, fallback header `x-admin-api-key`)
 - `POST /admin/kyc/review` (Bearer admin role, fallback header `x-admin-api-key`)
 - `GET /admin/kyc/review-queue` (Bearer admin role, fallback header `x-admin-api-key`, supports `status/cursor/limit`, returns `pageInfo`)
+- `POST /admin/kyc/documents/{documentId}/preview-url` (Bearer admin role, fallback header `x-admin-api-key`, short-lived signed preview URL)
 - `GET /admin/cases` (legacy compatibility alias -> `/admin/kyc/review-queue`, termasuk mapping status `OPEN/IN_REVIEW/WAITING_EVIDENCE/RESOLVED`)
 - `POST /admin/cases/{caseId}/action` (legacy compatibility alias -> `/admin/kyc/review`, support `action` mapping atau `decision` passthrough)
 

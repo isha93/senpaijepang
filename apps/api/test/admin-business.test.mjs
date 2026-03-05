@@ -574,6 +574,123 @@ test('admin application lifecycle updates are visible to user application endpoi
       assert.equal(activityWithCursor.json.pageInfo.cursor, '30');
       assert.equal(activityWithCursor.json.pageInfo.limit, 25);
 
+      const kycSession = await requestJson(baseUrl, '/identity/kyc/sessions', {
+        method: 'POST',
+        accessToken: candidateToken,
+        body: {
+          provider: 'manual'
+        }
+      });
+      assert.equal(kycSession.res.status, 201);
+      const kycSessionId = kycSession.json.session.id;
+
+      const uploadUrl = await requestJson(baseUrl, '/identity/kyc/upload-url', {
+        method: 'POST',
+        accessToken: candidateToken,
+        body: {
+          sessionId: kycSessionId,
+          documentType: 'passport',
+          fileName: 'candidate-passport.pdf',
+          contentType: 'application/pdf',
+          contentLength: 420000,
+          checksumSha256: 'a3f9f6f30311d8e8860f5f5f5366f6544dc34e8e833b8f13294f129f0d4af167'
+        }
+      });
+      assert.equal(uploadUrl.res.status, 201);
+
+      const registerDocument = await requestJson(baseUrl, '/identity/kyc/documents', {
+        method: 'POST',
+        accessToken: candidateToken,
+        body: {
+          sessionId: kycSessionId,
+          documentType: 'passport',
+          objectKey: uploadUrl.json.upload.objectKey,
+          checksumSha256: 'a3f9f6f30311d8e8860f5f5f5366f6544dc34e8e833b8f13294f129f0d4af167'
+        }
+      });
+      assert.equal(registerDocument.res.status, 201);
+      const documentId = registerDocument.json.document.id;
+
+      const missingKeyPreview = await requestJson(baseUrl, `/admin/kyc/documents/${documentId}/preview-url`, {
+        method: 'POST'
+      });
+      assert.equal(missingKeyPreview.res.status, 401);
+      assert.equal(missingKeyPreview.json.error.code, 'missing_admin_api_key');
+
+      const previewDefault = await requestJson(baseUrl, `/admin/kyc/documents/${documentId}/preview-url`, {
+        method: 'POST',
+        adminApiKey: TEST_ADMIN_API_KEY,
+        body: {}
+      });
+      assert.equal(previewDefault.res.status, 200);
+      assert.equal(previewDefault.json.documentId, documentId);
+      assert.equal(previewDefault.json.kycSessionId, kycSessionId);
+      assert.ok(typeof previewDefault.json.url === 'string' && previewDefault.json.url.length > 0);
+      assert.ok(typeof previewDefault.json.expiresAt === 'string');
+
+      const previewCustomTtl = await requestJson(baseUrl, `/admin/kyc/documents/${documentId}/preview-url`, {
+        method: 'POST',
+        adminApiKey: TEST_ADMIN_API_KEY,
+        body: {
+          expiresSec: 180
+        }
+      });
+      assert.equal(previewCustomTtl.res.status, 200);
+
+      const previewInvalidTtl = await requestJson(baseUrl, `/admin/kyc/documents/${documentId}/preview-url`, {
+        method: 'POST',
+        adminApiKey: TEST_ADMIN_API_KEY,
+        body: {
+          expiresSec: 10
+        }
+      });
+      assert.equal(previewInvalidTtl.res.status, 400);
+      assert.equal(previewInvalidTtl.json.error.code, 'invalid_expires_sec');
+
+      const previewUnknownDoc = await requestJson(
+        baseUrl,
+        '/admin/kyc/documents/00000000-0000-0000-0000-000000000000/preview-url',
+        {
+          method: 'POST',
+          adminApiKey: TEST_ADMIN_API_KEY,
+          body: {}
+        }
+      );
+      assert.equal(previewUnknownDoc.res.status, 404);
+      assert.equal(previewUnknownDoc.json.error.code, 'document_not_found');
+
+      const auditEvents = await requestJson(
+        baseUrl,
+        '/admin/audit/events?type=APPLICATION&entityType=JOB_APPLICATION&action=APPLICATION_STATUS_TRANSITION&limit=20',
+        {
+          adminApiKey: TEST_ADMIN_API_KEY
+        }
+      );
+      assert.equal(auditEvents.res.status, 200);
+      assert.equal(auditEvents.json.filters.type, 'APPLICATION');
+      assert.equal(auditEvents.json.filters.entityType, 'JOB_APPLICATION');
+      assert.equal(auditEvents.json.filters.action, 'APPLICATION_STATUS_TRANSITION');
+      assert.ok(auditEvents.json.items.some((item) => item.entityId === applicationId));
+
+      const auditFilteredByActorType = await requestJson(
+        baseUrl,
+        '/admin/audit/events?type=APPLICATION&actorType=ADMIN&limit=20',
+        {
+          adminApiKey: TEST_ADMIN_API_KEY
+        }
+      );
+      assert.equal(auditFilteredByActorType.res.status, 200);
+      assert.equal(auditFilteredByActorType.json.filters.actorType, 'ADMIN');
+      assert.ok(
+        auditFilteredByActorType.json.items.every((item) => String(item.actorType || '').toUpperCase() === 'ADMIN')
+      );
+
+      const auditInvalidActorType = await requestJson(baseUrl, '/admin/audit/events?actorType=INVALID', {
+        adminApiKey: TEST_ADMIN_API_KEY
+      });
+      assert.equal(auditInvalidActorType.res.status, 400);
+      assert.equal(auditInvalidActorType.json.error.code, 'invalid_actor_type');
+
       const invalidActivityType = await requestJson(baseUrl, '/admin/activity-events?type=INVALID', {
         adminApiKey: TEST_ADMIN_API_KEY
       });
