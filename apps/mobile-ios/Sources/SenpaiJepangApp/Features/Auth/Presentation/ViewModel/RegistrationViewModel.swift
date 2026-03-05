@@ -45,9 +45,10 @@ final class RegistrationViewModel: ObservableObject {
     @Published var workStatus: WorkStatus = .looking
     @Published var selectedPrefecture: String = ""
 
-    // Step 3: Verify Email (UI-only until API is ready)
+    // Step 3: Verify Email
     @Published var verificationCode: String = ""
     @Published private(set) var resendRemainingSeconds: Int = 0
+    @Published private(set) var isResendingCode: Bool = false
 
     // General
     @Published var isLoading: Bool = false
@@ -88,10 +89,8 @@ final class RegistrationViewModel: ObservableObject {
             Task { await registerAndAdvance() }
 
         case .preferences:
-            withAnimation(AppTheme.animationDefault) {
-                currentStep = .verifyEmail
-            }
-            startResendCooldown()
+            isLoading = true
+            Task { await sendVerificationChallengeAndAdvance() }
 
         case .verifyEmail:
             guard isVerificationCodeComplete else {
@@ -118,6 +117,8 @@ final class RegistrationViewModel: ObservableObject {
                 currentStep = .accountInfo
             }
         case .verifyEmail:
+            resendCountdownTask?.cancel()
+            resendRemainingSeconds = 0
             withAnimation(AppTheme.animationDefault) {
                 currentStep = .preferences
             }
@@ -149,16 +150,18 @@ final class RegistrationViewModel: ObservableObject {
     }
 
     func resendVerificationCode() {
-        guard canResendVerificationCode, !isLoading else { return }
+        guard canResendVerificationCode, !isLoading, !isResendingCode else { return }
         errorMessage = nil
-        startResendCooldown()
-        // TODO(api): Call resend verification endpoint once available.
+        isResendingCode = true
+        Task { await resendVerificationChallenge() }
     }
 
     func changeEmail() {
         guard !isLoading else { return }
         errorMessage = nil
         verificationCode = ""
+        resendCountdownTask?.cancel()
+        resendRemainingSeconds = 0
         withAnimation(AppTheme.animationDefault) {
             currentStep = .accountInfo
         }
@@ -219,16 +222,80 @@ final class RegistrationViewModel: ObservableObject {
         isLoading = false
     }
 
+    private func sendVerificationChallengeAndAdvance() async {
+        let loadingStartedAt = DispatchTime.now().uptimeNanoseconds
+
+        do {
+            guard let accessToken = pendingSession?.accessToken, !accessToken.isEmpty else {
+                throw AuthFlowError.missingRegistrationSession
+            }
+
+            let challenge = try await authService.sendEmailVerification(
+                accessToken: accessToken,
+                email: email,
+                purpose: .register
+            )
+            verificationCode = ""
+            startResendCooldown(from: challenge.nextResendInSec)
+
+            withAnimation(AppTheme.animationDefault) {
+                currentStep = .verifyEmail
+            }
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+
+        await ensureMinimumLoadingDuration(since: loadingStartedAt)
+        isLoading = false
+    }
+
     private func verifyCodeAndAdvance() async {
         let loadingStartedAt = DispatchTime.now().uptimeNanoseconds
 
-        // TODO(api): Replace local success transition with real verify-email endpoint call.
-        await ensureMinimumLoadingDuration(since: loadingStartedAt)
-        errorMessage = nil
-        withAnimation(AppTheme.animationDefault) {
-            currentStep = .allSet
+        do {
+            guard let accessToken = pendingSession?.accessToken, !accessToken.isEmpty else {
+                throw AuthFlowError.missingRegistrationSession
+            }
+
+            _ = try await authService.verifyEmailVerification(
+                accessToken: accessToken,
+                email: email,
+                code: verificationCode,
+                purpose: .register
+            )
+
+            errorMessage = nil
+            withAnimation(AppTheme.animationDefault) {
+                currentStep = .allSet
+            }
+        } catch {
+            errorMessage = error.localizedDescription
         }
+
+        await ensureMinimumLoadingDuration(since: loadingStartedAt)
         isLoading = false
+    }
+
+    private func resendVerificationChallenge() async {
+        let loadingStartedAt = DispatchTime.now().uptimeNanoseconds
+
+        do {
+            guard let accessToken = pendingSession?.accessToken, !accessToken.isEmpty else {
+                throw AuthFlowError.missingRegistrationSession
+            }
+
+            let challenge = try await authService.resendEmailVerification(
+                accessToken: accessToken,
+                email: email,
+                purpose: .register
+            )
+            startResendCooldown(from: challenge.nextResendInSec)
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+
+        await ensureMinimumLoadingDuration(since: loadingStartedAt)
+        isResendingCode = false
     }
 
     private func isValidEmail(_ value: String) -> Bool {
@@ -236,13 +303,9 @@ final class RegistrationViewModel: ObservableObject {
         return value.range(of: emailRegex, options: .regularExpression) != nil
     }
 
-    private func startResendCooldown() {
-        startResendCooldown(from: Self.defaultResendCooldownSeconds)
-    }
-
     private func startResendCooldown(from seconds: Int) {
         resendCountdownTask?.cancel()
-        resendRemainingSeconds = seconds
+        resendRemainingSeconds = max(0, seconds)
         resendCountdownTask = Task { [weak self] in
             guard let self else { return }
             while !Task.isCancelled && resendRemainingSeconds > 0 {
@@ -262,5 +325,15 @@ final class RegistrationViewModel: ObservableObject {
 
     private static let minimumLoadingNanoseconds: UInt64 = 350_000_000
     private static let verificationCodeLength = 6
-    private static let defaultResendCooldownSeconds = 60
+}
+
+private enum AuthFlowError: LocalizedError {
+    case missingRegistrationSession
+
+    var errorDescription: String? {
+        switch self {
+        case .missingRegistrationSession:
+            return "Registration session expired. Please create your account again."
+        }
+    }
 }

@@ -584,6 +584,55 @@ async function handleRequest(
     return;
   }
 
+  if (req.method === 'POST' && pathname === '/auth/email-verification/send') {
+    const user = await authenticateRequest(req, res, authService);
+    if (!user) {
+      return;
+    }
+
+    const body = await readJsonBody(req);
+    const result = await authService.sendEmailVerification({
+      userId: user.id,
+      email: body.email,
+      purpose: body.purpose
+    });
+    sendJson(res, 200, result);
+    return;
+  }
+
+  if (req.method === 'POST' && pathname === '/auth/email-verification/resend') {
+    const user = await authenticateRequest(req, res, authService);
+    if (!user) {
+      return;
+    }
+
+    const body = await readJsonBody(req);
+    const result = await authService.resendEmailVerification({
+      userId: user.id,
+      email: body.email,
+      purpose: body.purpose
+    });
+    sendJson(res, 200, result);
+    return;
+  }
+
+  if (req.method === 'POST' && pathname === '/auth/email-verification/verify') {
+    const user = await authenticateRequest(req, res, authService);
+    if (!user) {
+      return;
+    }
+
+    const body = await readJsonBody(req);
+    const result = await authService.verifyEmailVerification({
+      userId: user.id,
+      email: body.email,
+      purpose: body.purpose,
+      code: body.code
+    });
+    sendJson(res, 200, result);
+    return;
+  }
+
   if (req.method === 'POST' && pathname === '/organizations') {
     const user = await authenticateRequest(req, res, authService);
     if (!user) {

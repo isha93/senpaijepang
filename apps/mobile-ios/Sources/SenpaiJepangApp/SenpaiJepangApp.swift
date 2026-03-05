@@ -58,6 +58,40 @@ private final class AppContainer: ObservableObject {
                     responseType: AuthResponseDTO.self
                 )
                 return dto.toSession()
+            },
+            sendEmailVerificationHandler: { accessToken, email, purpose in
+                let dto = try await client.request(
+                    AuthEndpoint.sendEmailVerification(
+                        accessToken: accessToken,
+                        email: email,
+                        purpose: purpose
+                    ),
+                    responseType: EmailVerificationChallengeResponseDTO.self
+                )
+                return dto.toChallenge()
+            },
+            resendEmailVerificationHandler: { accessToken, email, purpose in
+                let dto = try await client.request(
+                    AuthEndpoint.resendEmailVerification(
+                        accessToken: accessToken,
+                        email: email,
+                        purpose: purpose
+                    ),
+                    responseType: EmailVerificationChallengeResponseDTO.self
+                )
+                return dto.toChallenge()
+            },
+            verifyEmailVerificationHandler: { accessToken, email, code, purpose in
+                let dto = try await client.request(
+                    AuthEndpoint.verifyEmailVerification(
+                        accessToken: accessToken,
+                        email: email,
+                        code: code,
+                        purpose: purpose
+                    ),
+                    responseType: EmailVerificationVerifyResponseDTO.self
+                )
+                return dto.toResult()
             }
         )
 

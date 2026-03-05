@@ -10,6 +10,23 @@ struct AuthSession: Equatable, Sendable {
     }
 }
 
+enum EmailVerificationPurpose: String, Equatable, Sendable {
+    case register = "REGISTER"
+}
+
+struct EmailVerificationChallenge: Equatable, Sendable {
+    let verificationId: String
+    let expiresAt: String?
+    let resendAvailableAt: String?
+    let nextResendInSec: Int
+    let developmentCode: String?
+}
+
+struct EmailVerificationResult: Equatable, Sendable {
+    let verified: Bool
+    let verifiedAt: String?
+}
+
 enum AuthValidationError: LocalizedError, Equatable {
     case invalidEmail
     case invalidPassword
@@ -28,4 +45,20 @@ enum AuthValidationError: LocalizedError, Equatable {
 protocol AuthServiceProtocol {
     func login(email: String, password: String) async throws -> AuthSession
     func register(fullName: String, email: String, password: String) async throws -> AuthSession
+    func sendEmailVerification(
+        accessToken: String,
+        email: String,
+        purpose: EmailVerificationPurpose
+    ) async throws -> EmailVerificationChallenge
+    func resendEmailVerification(
+        accessToken: String,
+        email: String,
+        purpose: EmailVerificationPurpose
+    ) async throws -> EmailVerificationChallenge
+    func verifyEmailVerification(
+        accessToken: String,
+        email: String,
+        code: String,
+        purpose: EmailVerificationPurpose
+    ) async throws -> EmailVerificationResult
 }

@@ -6,6 +6,8 @@ export class InMemoryAuthStore {
     this.userIdByEmail = new Map();
     this.sessionsById = new Map();
     this.sessionIdByTokenHash = new Map();
+    this.emailVerificationsById = new Map();
+    this.emailVerificationIdsByUserPurpose = new Map();
     this.kycSessionsById = new Map();
     this.kycSessionIdsByUserId = new Map();
     this.identityDocumentsById = new Map();
@@ -72,6 +74,7 @@ export class InMemoryAuthStore {
       fullName: fullName.trim(),
       email: normalizedEmail,
       passwordHash,
+      emailVerifiedAt: null,
       avatarUrl: null,
       createdAt: now,
       updatedAt: now
@@ -117,6 +120,119 @@ export class InMemoryAuthStore {
     user.passwordHash = passwordHash;
     user.updatedAt = new Date().toISOString();
     return user;
+  }
+
+  markUserEmailVerified({ userId, verifiedAt }) {
+    const user = this.usersById.get(userId);
+    if (!user) {
+      return null;
+    }
+
+    const verifiedAtMs = Number(verifiedAt);
+    const normalizedVerifiedAt = Number.isFinite(verifiedAtMs)
+      ? new Date(verifiedAtMs).toISOString()
+      : String(verifiedAt || '').trim() || new Date().toISOString();
+    user.emailVerifiedAt = normalizedVerifiedAt;
+    user.updatedAt = new Date().toISOString();
+    return user;
+  }
+
+  createEmailVerification({
+    userId,
+    email,
+    purpose,
+    codeHash,
+    expiresAt,
+    resendAvailableAt,
+    maxAttempts
+  }) {
+    const now = new Date().toISOString();
+    const verification = {
+      id: randomUUID(),
+      userId,
+      email: String(email || '').trim().toLowerCase(),
+      purpose: String(purpose || '').trim().toUpperCase(),
+      status: 'ACTIVE',
+      codeHash,
+      attemptCount: 0,
+      maxAttempts,
+      expiresAt,
+      resendAvailableAt,
+      verifiedAt: null,
+      createdAt: now,
+      updatedAt: now
+    };
+
+    this.emailVerificationsById.set(verification.id, verification);
+    const key = `${verification.userId}:${verification.purpose}`;
+    const ids = this.emailVerificationIdsByUserPurpose.get(key) || [];
+    ids.push(verification.id);
+    this.emailVerificationIdsByUserPurpose.set(key, ids);
+    return verification;
+  }
+
+  findLatestEmailVerificationByUserAndPurpose({ userId, purpose }) {
+    const key = `${String(userId || '').trim()}:${String(purpose || '').trim().toUpperCase()}`;
+    const ids = this.emailVerificationIdsByUserPurpose.get(key) || [];
+    if (ids.length === 0) {
+      return null;
+    }
+
+    const latestId = ids[ids.length - 1];
+    return this.emailVerificationsById.get(latestId) || null;
+  }
+
+  countEmailVerificationsSince({ userId, purpose, sinceAt }) {
+    const key = `${String(userId || '').trim()}:${String(purpose || '').trim().toUpperCase()}`;
+    const ids = this.emailVerificationIdsByUserPurpose.get(key) || [];
+    return ids.reduce((count, id) => {
+      const verification = this.emailVerificationsById.get(id);
+      if (!verification) {
+        return count;
+      }
+      return Date.parse(verification.createdAt) >= sinceAt ? count + 1 : count;
+    }, 0);
+  }
+
+  markEmailVerificationExpired({ verificationId }) {
+    const verification = this.emailVerificationsById.get(verificationId);
+    if (!verification) {
+      return null;
+    }
+
+    verification.status = 'EXPIRED';
+    verification.updatedAt = new Date().toISOString();
+    return verification;
+  }
+
+  incrementEmailVerificationAttempt({ verificationId }) {
+    const verification = this.emailVerificationsById.get(verificationId);
+    if (!verification) {
+      return null;
+    }
+
+    verification.attemptCount += 1;
+    if (verification.attemptCount >= verification.maxAttempts) {
+      verification.status = 'LOCKED';
+    }
+    verification.updatedAt = new Date().toISOString();
+    return verification;
+  }
+
+  markEmailVerificationVerified({ verificationId, verifiedAt }) {
+    const verification = this.emailVerificationsById.get(verificationId);
+    if (!verification) {
+      return null;
+    }
+
+    const verifiedAtMs = Number(verifiedAt);
+    const normalizedVerifiedAt = Number.isFinite(verifiedAtMs)
+      ? new Date(verifiedAtMs).toISOString()
+      : String(verifiedAt || '').trim() || new Date().toISOString();
+    verification.status = 'VERIFIED';
+    verification.verifiedAt = normalizedVerifiedAt;
+    verification.updatedAt = new Date().toISOString();
+    return verification;
   }
 
   ensureUserRole({ userId, roleCode }) {

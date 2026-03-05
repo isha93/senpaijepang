@@ -1,8 +1,8 @@
 openapi: 3.0.3
 info:
   title: SenpaiJepang API (Runtime v0)
-  version: 0.10.3
-  description: Runtime API contract implemented in repository as of 2026-03-05. Runtime paths are unversioned and also available via /v1 alias.
+  version: 0.10.4
+  description: Runtime API contract implemented in repository as of 2026-03-06. Runtime paths are unversioned and also available via /v1 alias.
 servers:
   - url: http://localhost:4000
     description: Local development
@@ -142,6 +142,88 @@ paths:
                   user:
                     $ref: '#/components/schemas/User'
         '401':
+          $ref: '#/components/responses/ApiError'
+
+  /auth/email-verification/send:
+    post:
+      tags: [Auth]
+      summary: Send email verification challenge code
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmailVerificationSendRequest'
+      responses:
+        '200':
+          description: Verification challenge sent
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmailVerificationChallengeResponse'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/ApiError'
+        '404':
+          $ref: '#/components/responses/ApiError'
+        '409':
+          $ref: '#/components/responses/ApiError'
+        '429':
+          $ref: '#/components/responses/ApiError'
+
+  /auth/email-verification/resend:
+    post:
+      tags: [Auth]
+      summary: Resend email verification challenge code
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmailVerificationSendRequest'
+      responses:
+        '200':
+          description: Verification challenge resent
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmailVerificationChallengeResponse'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/ApiError'
+        '404':
+          $ref: '#/components/responses/ApiError'
+        '409':
+          $ref: '#/components/responses/ApiError'
+        '429':
+          $ref: '#/components/responses/ApiError'
+
+  /auth/email-verification/verify:
+    post:
+      tags: [Auth]
+      summary: Verify email challenge code
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmailVerificationVerifyRequest'
+      responses:
+        '200':
+          description: Email verified
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmailVerificationVerifyResponse'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/ApiError'
+        '404':
+          $ref: '#/components/responses/ApiError'
+        '429':
           $ref: '#/components/responses/ApiError'
 
   /organizations:
@@ -2669,9 +2751,71 @@ components:
         refreshToken:
           type: string
 
+    EmailVerificationPurpose:
+      type: string
+      enum: [REGISTER]
+
+    EmailVerificationSendRequest:
+      type: object
+      required: [email, purpose]
+      properties:
+        email:
+          type: string
+          format: email
+        purpose:
+          $ref: '#/components/schemas/EmailVerificationPurpose'
+
+    EmailVerificationVerifyRequest:
+      type: object
+      required: [email, code, purpose]
+      properties:
+        email:
+          type: string
+          format: email
+        code:
+          type: string
+          pattern: '^\d{6}$'
+        purpose:
+          $ref: '#/components/schemas/EmailVerificationPurpose'
+
+    EmailVerificationChallengeResponse:
+      type: object
+      required: [verificationId, nextResendInSec]
+      properties:
+        verificationId:
+          type: string
+          format: uuid
+        expiresAt:
+          type: string
+          format: date-time
+          nullable: true
+        resendAvailableAt:
+          type: string
+          format: date-time
+          nullable: true
+        nextResendInSec:
+          type: integer
+          minimum: 0
+        developmentCode:
+          type: string
+          pattern: '^\d{6}$'
+          nullable: true
+          description: Non-production helper code, present only when static code mode is enabled.
+
+    EmailVerificationVerifyResponse:
+      type: object
+      required: [verified]
+      properties:
+        verified:
+          type: boolean
+        verifiedAt:
+          type: string
+          format: date-time
+          nullable: true
+
     User:
       type: object
-      required: [id, fullName, email, createdAt, roles]
+      required: [id, fullName, email, emailVerifiedAt, createdAt, roles]
       properties:
         id:
           type: string
@@ -2681,6 +2825,10 @@ components:
         email:
           type: string
           format: email
+        emailVerifiedAt:
+          type: string
+          format: date-time
+          nullable: true
         createdAt:
           type: string
           format: date-time
@@ -2819,7 +2967,7 @@ components:
 
     AdminUser:
       type: object
-      required: [id, fullName, email, createdAt, roles]
+      required: [id, fullName, email, emailVerifiedAt, createdAt, roles]
       properties:
         id:
           type: string
@@ -2829,6 +2977,10 @@ components:
         email:
           type: string
           format: email
+        emailVerifiedAt:
+          type: string
+          format: date-time
+          nullable: true
         createdAt:
           type: string
           format: date-time

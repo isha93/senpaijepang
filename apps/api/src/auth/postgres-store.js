@@ -4,11 +4,13 @@ function mapUserRow(row) {
   if (!row) return null;
   const createdAt = row.created_at ? new Date(row.created_at).toISOString() : null;
   const updatedAt = row.updated_at ? new Date(row.updated_at).toISOString() : createdAt;
+  const emailVerifiedAt = row.email_verified_at ? new Date(row.email_verified_at).toISOString() : null;
   return {
     id: row.id,
     fullName: row.full_name,
     email: row.email,
     passwordHash: row.password_hash,
+    emailVerifiedAt,
     avatarUrl: row.avatar_url || null,
     createdAt,
     updatedAt
@@ -103,6 +105,25 @@ function mapOrganizationVerificationRow(row) {
   };
 }
 
+function mapEmailVerificationRow(row) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    userId: row.user_id,
+    email: row.email,
+    purpose: row.purpose,
+    status: row.status,
+    codeHash: row.code_hash,
+    attemptCount: Number(row.attempt_count || 0),
+    maxAttempts: Number(row.max_attempts || 0),
+    expiresAt: row.expires_at ? new Date(row.expires_at).getTime() : null,
+    resendAvailableAt: row.resend_available_at ? new Date(row.resend_available_at).getTime() : null,
+    verifiedAt: row.verified_at ? new Date(row.verified_at).toISOString() : null,
+    createdAt: row.created_at ? new Date(row.created_at).toISOString() : null,
+    updatedAt: row.updated_at ? new Date(row.updated_at).toISOString() : null
+  };
+}
+
 export class PostgresAuthStore {
   constructor({ pool }) {
     this.pool = pool;
@@ -115,7 +136,7 @@ export class PostgresAuthStore {
         INSERT INTO users (id, full_name, email, password_hash)
         VALUES ($1, $2, $3, $4)
         ON CONFLICT (email) DO NOTHING
-        RETURNING id, full_name, email, password_hash, avatar_url, created_at, updated_at
+        RETURNING id, full_name, email, password_hash, email_verified_at, avatar_url, created_at, updated_at
       `,
       [randomUUID(), fullName.trim(), normalizedEmail, passwordHash]
     );
@@ -126,7 +147,7 @@ export class PostgresAuthStore {
   async findUserByEmail(email) {
     const normalizedEmail = email.trim().toLowerCase();
     const result = await this.pool.query(
-      'SELECT id, full_name, email, password_hash, avatar_url, created_at, updated_at FROM users WHERE email = $1 LIMIT 1',
+      'SELECT id, full_name, email, password_hash, email_verified_at, avatar_url, created_at, updated_at FROM users WHERE email = $1 LIMIT 1',
       [normalizedEmail]
     );
 
@@ -135,7 +156,7 @@ export class PostgresAuthStore {
 
   async findUserById(id) {
     const result = await this.pool.query(
-      'SELECT id, full_name, email, password_hash, avatar_url, created_at, updated_at FROM users WHERE id = $1 LIMIT 1',
+      'SELECT id, full_name, email, password_hash, email_verified_at, avatar_url, created_at, updated_at FROM users WHERE id = $1 LIMIT 1',
       [id]
     );
 
@@ -152,7 +173,7 @@ export class PostgresAuthStore {
           avatar_url = CASE WHEN $3::boolean THEN $4::text ELSE avatar_url END,
           updated_at = NOW()
         WHERE id = $1
-        RETURNING id, full_name, email, password_hash, avatar_url, created_at, updated_at
+        RETURNING id, full_name, email, password_hash, email_verified_at, avatar_url, created_at, updated_at
       `,
       [userId, fullName === undefined ? null : fullName, shouldUpdateAvatar, shouldUpdateAvatar ? avatarUrl : null]
     );
@@ -168,7 +189,7 @@ export class PostgresAuthStore {
           password_hash = $2,
           updated_at = NOW()
         WHERE id = $1
-        RETURNING id, full_name, email, password_hash, avatar_url, created_at, updated_at
+        RETURNING id, full_name, email, password_hash, email_verified_at, avatar_url, created_at, updated_at
       `,
       [userId, passwordHash]
     );
@@ -287,6 +308,7 @@ export class PostgresAuthStore {
       this.pool.query(
         `
           SELECT id, full_name, email, password_hash, avatar_url, created_at, updated_at
+          , email_verified_at
           FROM users
           WHERE ($1::text IS NULL OR full_name ILIKE $1 OR email ILIKE $1)
           ORDER BY created_at DESC
@@ -347,6 +369,212 @@ export class PostgresAuthStore {
       `,
       [sessionId]
     );
+  }
+
+  async markUserEmailVerified({ userId, verifiedAt }) {
+    const normalizedVerifiedAt = Number(verifiedAt);
+    const result = await this.pool.query(
+      `
+        UPDATE users
+        SET
+          email_verified_at = TO_TIMESTAMP($2 / 1000.0),
+          updated_at = NOW()
+        WHERE id = $1
+        RETURNING id, full_name, email, password_hash, email_verified_at, avatar_url, created_at, updated_at
+      `,
+      [userId, normalizedVerifiedAt]
+    );
+
+    return mapUserRow(result.rows[0]);
+  }
+
+  async createEmailVerification({
+    userId,
+    email,
+    purpose,
+    codeHash,
+    expiresAt,
+    resendAvailableAt,
+    maxAttempts
+  }) {
+    const result = await this.pool.query(
+      `
+        INSERT INTO email_verifications (
+          id,
+          user_id,
+          email,
+          purpose,
+          status,
+          code_hash,
+          attempt_count,
+          max_attempts,
+          expires_at,
+          resend_available_at
+        )
+        VALUES ($1, $2, $3, $4, 'ACTIVE', $5, 0, $6, TO_TIMESTAMP($7 / 1000.0), TO_TIMESTAMP($8 / 1000.0))
+        RETURNING
+          id,
+          user_id,
+          email,
+          purpose,
+          status,
+          code_hash,
+          attempt_count,
+          max_attempts,
+          expires_at,
+          resend_available_at,
+          verified_at,
+          created_at,
+          updated_at
+      `,
+      [
+        randomUUID(),
+        userId,
+        String(email || '').trim().toLowerCase(),
+        String(purpose || '').trim().toUpperCase(),
+        codeHash,
+        maxAttempts,
+        expiresAt,
+        resendAvailableAt
+      ]
+    );
+
+    return mapEmailVerificationRow(result.rows[0]);
+  }
+
+  async findLatestEmailVerificationByUserAndPurpose({ userId, purpose }) {
+    const result = await this.pool.query(
+      `
+        SELECT
+          id,
+          user_id,
+          email,
+          purpose,
+          status,
+          code_hash,
+          attempt_count,
+          max_attempts,
+          expires_at,
+          resend_available_at,
+          verified_at,
+          created_at,
+          updated_at
+        FROM email_verifications
+        WHERE user_id = $1 AND purpose = $2
+        ORDER BY created_at DESC
+        LIMIT 1
+      `,
+      [userId, String(purpose || '').trim().toUpperCase()]
+    );
+
+    return mapEmailVerificationRow(result.rows[0]);
+  }
+
+  async countEmailVerificationsSince({ userId, purpose, sinceAt }) {
+    const result = await this.pool.query(
+      `
+        SELECT COUNT(*)::int AS total
+        FROM email_verifications
+        WHERE user_id = $1
+          AND purpose = $2
+          AND created_at >= TO_TIMESTAMP($3 / 1000.0)
+      `,
+      [userId, String(purpose || '').trim().toUpperCase(), sinceAt]
+    );
+
+    return Number(result.rows[0]?.total || 0);
+  }
+
+  async markEmailVerificationExpired({ verificationId }) {
+    const result = await this.pool.query(
+      `
+        UPDATE email_verifications
+        SET
+          status = 'EXPIRED',
+          updated_at = NOW()
+        WHERE id = $1
+        RETURNING
+          id,
+          user_id,
+          email,
+          purpose,
+          status,
+          code_hash,
+          attempt_count,
+          max_attempts,
+          expires_at,
+          resend_available_at,
+          verified_at,
+          created_at,
+          updated_at
+      `,
+      [verificationId]
+    );
+
+    return mapEmailVerificationRow(result.rows[0]);
+  }
+
+  async incrementEmailVerificationAttempt({ verificationId }) {
+    const result = await this.pool.query(
+      `
+        UPDATE email_verifications
+        SET
+          attempt_count = attempt_count + 1,
+          status = CASE
+            WHEN attempt_count + 1 >= max_attempts THEN 'LOCKED'
+            ELSE status
+          END,
+          updated_at = NOW()
+        WHERE id = $1
+        RETURNING
+          id,
+          user_id,
+          email,
+          purpose,
+          status,
+          code_hash,
+          attempt_count,
+          max_attempts,
+          expires_at,
+          resend_available_at,
+          verified_at,
+          created_at,
+          updated_at
+      `,
+      [verificationId]
+    );
+
+    return mapEmailVerificationRow(result.rows[0]);
+  }
+
+  async markEmailVerificationVerified({ verificationId, verifiedAt }) {
+    const result = await this.pool.query(
+      `
+        UPDATE email_verifications
+        SET
+          status = 'VERIFIED',
+          verified_at = TO_TIMESTAMP($2 / 1000.0),
+          updated_at = NOW()
+        WHERE id = $1
+        RETURNING
+          id,
+          user_id,
+          email,
+          purpose,
+          status,
+          code_hash,
+          attempt_count,
+          max_attempts,
+          expires_at,
+          resend_available_at,
+          verified_at,
+          created_at,
+          updated_at
+      `,
+      [verificationId, verifiedAt]
+    );
+
+    return mapEmailVerificationRow(result.rows[0]);
   }
 
   async createKycSession({ userId, provider = 'manual' }) {

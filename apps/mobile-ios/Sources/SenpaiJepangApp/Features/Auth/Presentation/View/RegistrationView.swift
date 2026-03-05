@@ -437,7 +437,7 @@ struct RegistrationView: View {
                 }
                 .padding(.horizontal, 24)
             }
-            .disabled(viewModel.isLoading)
+            .disabled(viewModel.isLoading || viewModel.isResendingCode)
             .onAppear {
                 isVerificationInputFocused = true
             }
@@ -449,7 +449,7 @@ struct RegistrationView: View {
                     PrimaryButton(
                         title: "Verify Email",
                         isLoading: viewModel.isLoading,
-                        isDisabled: !viewModel.isVerificationCodeComplete
+                        isDisabled: !viewModel.isVerificationCodeComplete || viewModel.isResendingCode
                     ) {
                         viewModel.continueToNextStep()
                     }
@@ -521,10 +521,15 @@ struct RegistrationView: View {
                 viewModel.resendVerificationCode()
             } label: {
                 HStack(spacing: 8) {
-                    Image(systemName: "arrow.clockwise")
-                        .font(.system(size: 14, weight: .bold))
-                    Text(viewModel.resendCodeLabel)
-                        .font(.system(size: 16, weight: .semibold))
+                    if viewModel.isResendingCode {
+                        ProgressView()
+                            .tint(AppTheme.accent)
+                    } else {
+                        Image(systemName: "arrow.clockwise")
+                            .font(.system(size: 14, weight: .bold))
+                        Text(viewModel.resendCodeLabel)
+                            .font(.system(size: 16, weight: .semibold))
+                    }
                 }
                 .foregroundStyle(AppTheme.accent)
                 .padding(.horizontal, 22)
@@ -537,6 +542,7 @@ struct RegistrationView: View {
                 )
             }
             .buttonStyle(.plain)
+            .disabled(viewModel.isResendingCode || viewModel.isLoading)
             .accessibilityIdentifier("auth_verify_email_resend_button")
         } else {
             HStack(spacing: 8) {

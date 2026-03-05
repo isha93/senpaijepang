@@ -10,6 +10,47 @@ private final class MockAuthService: AuthServiceProtocol {
         loginCalled = true
         return response
     }
+
+    func register(fullName: String, email: String, password: String) async throws -> AuthSession {
+        response
+    }
+
+    func sendEmailVerification(
+        accessToken: String,
+        email: String,
+        purpose: EmailVerificationPurpose
+    ) async throws -> EmailVerificationChallenge {
+        EmailVerificationChallenge(
+            verificationId: "verify-id",
+            expiresAt: nil,
+            resendAvailableAt: nil,
+            nextResendInSec: 60,
+            developmentCode: nil
+        )
+    }
+
+    func resendEmailVerification(
+        accessToken: String,
+        email: String,
+        purpose: EmailVerificationPurpose
+    ) async throws -> EmailVerificationChallenge {
+        EmailVerificationChallenge(
+            verificationId: "verify-id-resend",
+            expiresAt: nil,
+            resendAvailableAt: nil,
+            nextResendInSec: 60,
+            developmentCode: nil
+        )
+    }
+
+    func verifyEmailVerification(
+        accessToken: String,
+        email: String,
+        code: String,
+        purpose: EmailVerificationPurpose
+    ) async throws -> EmailVerificationResult {
+        EmailVerificationResult(verified: true, verifiedAt: nil)
+    }
 }
 
 @MainActor

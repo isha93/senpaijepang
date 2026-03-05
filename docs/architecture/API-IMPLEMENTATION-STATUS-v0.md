@@ -1,6 +1,6 @@
 # API Implementation Status (Runtime v0)
 
-Date: 2026-03-05
+Date: 2026-03-06
 
 ## 1. Purpose
 - Menjadi referensi kondisi API yang benar-benar sudah hidup di codebase saat ini.
@@ -25,6 +25,9 @@ Auth:
 - `POST /auth/refresh`
 - `POST /auth/logout`
 - `GET /auth/me`
+- `POST /auth/email-verification/send`
+- `POST /auth/email-verification/resend`
+- `POST /auth/email-verification/verify`
 
 Organizations:
 - `POST /organizations`
@@ -146,6 +149,9 @@ Admin:
 - `011_application_documents_and_offer_audit.sql`:
   - `job_application_journey_events.actor_type/actor_id`
   - `job_application_documents`
+- `012_email_verification.sql`:
+  - `users.email_verified_at`
+  - `email_verifications`
 
 ## 6. KYC Status Model
 Raw session statuses:
@@ -238,7 +244,7 @@ Referensi hosting options:
 - Vendor-specific webhook orchestration (retry semantics, event schema mapping per provider) belum diimplementasikan.
 - Job catalog, feed content, saved jobs/posts, dan job applications sudah dipersist ke Postgres saat mode `AUTH_STORE=postgres`.
 - `GET /admin/activity-events` saat ini mengagregasi event `KYC` + `APPLICATION`; source untuk `JOB/FEED/ORG/AUTH` masih iterasi berikutnya.
-- Email verification onboarding endpoints (`/auth/email-verification/send|verify|resend`) belum tersedia di runtime v0; iOS currently uses UI-only verification step.
+- Email verification onboarding endpoints sudah tersedia di runtime v0; current implementation masih memakai placeholder delivery provider (SMTP/provider dispatch belum diaktifkan, static code mode dipakai untuk development/non-production).
 
 ## 13. Change Control
 - Setiap perubahan endpoint runtime wajib update `openapi-runtime-v0.yaml` dan file ini di commit yang sama.
