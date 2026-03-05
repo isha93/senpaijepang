@@ -12,5 +12,12 @@ targets:
         INFOPLIST_FILE: Info.plist
         GENERATE_INFOPLIST_FILE: NO
         DEVELOPMENT_TEAM: "" # Can be empty for local simulator builds
+    dependencies:
+      - package: netfox
     sources:
       - path: Sources/SenpaiJepangApp
+
+packages:
+  netfox:
+    url: https://github.com/kasketis/netfox
+    from: 1.21.0

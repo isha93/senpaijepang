@@ -52,7 +52,7 @@ struct MainTabView: View {
             .tag(0)
             .tabItem {
                 Label("Home".localized(), systemImage: "house")
-                    .accessibilityIdentifier("tab_home")
+                    .accessibilityIdentifier("tab_feed")
             }
 
             // Jobs Tab
@@ -80,7 +80,7 @@ struct MainTabView: View {
             .tag(2)
             .tabItem {
                 Label("Journey".localized(), systemImage: "map")
-                    .accessibilityIdentifier("tab_feed")
+                    .accessibilityIdentifier("tab_journey")
             }
 
             // Profile Tab

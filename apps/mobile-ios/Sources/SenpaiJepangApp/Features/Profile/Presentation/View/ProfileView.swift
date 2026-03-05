@@ -190,9 +190,9 @@ struct ProfileView: View {
 
             ProfileCompletionBar(percentage: profile.completionPercentage)
         }
+        .accessibilityIdentifier("profile_completion_card")
         .padding(AppTheme.spacingXL)
         .cardStyle()
-        .accessibilityIdentifier("profile_completion_card")
     }
 
     // MARK: - Documents Section

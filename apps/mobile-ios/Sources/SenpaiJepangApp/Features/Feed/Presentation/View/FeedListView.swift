@@ -59,6 +59,7 @@ struct FeedListView: View {
                         .font(.headline.bold())
                         .foregroundStyle(AppTheme.textPrimary)
                         .contentTransition(.numericText())
+                        .accessibilityIdentifier("feed_header_title")
                     Spacer()
                     Text(String(format: "%@ articles".localized(), "\(viewModel.posts.count)"))
                         .font(.caption)
@@ -90,6 +91,7 @@ struct FeedListView: View {
                             }
                             .buttonStyle(.plain)
                             .cardStyle()
+                            .accessibilityIdentifier("feed_item_\(post.id)")
                             .transition(.asymmetric(
                                 insertion: .opacity.combined(with: .offset(y: 12)),
                                 removal: .opacity
@@ -121,6 +123,7 @@ struct FeedListView: View {
                         Image(systemName: "bell")
                             .foregroundStyle(AppTheme.textSecondary)
                     }
+                    .accessibilityIdentifier("home_notification_button")
                     Button { 
                         onNavigateToProfile() 
                     } label: {
@@ -133,6 +136,7 @@ struct FeedListView: View {
                                     .foregroundStyle(AppTheme.accent)
                             }
                     }
+                    .accessibilityIdentifier("home_profile_button")
                 }
             }
         }

@@ -97,10 +97,10 @@ struct JobCard: View {
                         .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadiusSmall, style: .continuous))
                 }
                 .buttonStyle(PressableButtonStyle())
+                .accessibilityIdentifier("job_card_\(index)")
             }
         }
         .padding(AppTheme.spacingL)
         .cardStyle()
-        .accessibilityIdentifier("job_card_\(index)")
     }
 }
