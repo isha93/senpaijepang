@@ -2,11 +2,13 @@ import SwiftUI
 
 struct JobCard: View {
     private let job: Job
+    private let index: Int
     private let onTap: () -> Void
     private let onBookmark: () -> Void
 
-    init(job: Job, onTap: @escaping () -> Void, onBookmark: @escaping () -> Void) {
+    init(job: Job, index: Int = 0, onTap: @escaping () -> Void, onBookmark: @escaping () -> Void) {
         self.job = job
+        self.index = index
         self.onTap = onTap
         self.onBookmark = onBookmark
     }
@@ -99,5 +101,6 @@ struct JobCard: View {
         }
         .padding(AppTheme.spacingL)
         .cardStyle()
+        .accessibilityIdentifier("job_card_\(index)")
     }
 }

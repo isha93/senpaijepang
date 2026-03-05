@@ -51,6 +51,7 @@ struct SettingsView: View {
                             .foregroundStyle(.red)
                     }
                 }
+                .accessibilityIdentifier("profile_logout_button")
             } header: {
                 LText("Account")
             }

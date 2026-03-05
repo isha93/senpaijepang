@@ -52,6 +52,7 @@ struct MainTabView: View {
             .tag(0)
             .tabItem {
                 Label("Home".localized(), systemImage: "house")
+                    .accessibilityIdentifier("tab_home")
             }
 
             // Jobs Tab
@@ -65,6 +66,7 @@ struct MainTabView: View {
             .tag(1)
             .tabItem {
                 Label("Jobs".localized(), systemImage: "briefcase")
+                    .accessibilityIdentifier("tab_jobs")
             }
 
             // Journey Tab
@@ -78,6 +80,7 @@ struct MainTabView: View {
             .tag(2)
             .tabItem {
                 Label("Journey".localized(), systemImage: "map")
+                    .accessibilityIdentifier("tab_feed")
             }
 
             // Profile Tab
@@ -91,6 +94,7 @@ struct MainTabView: View {
             .tag(3)
             .tabItem {
                 Label("Profile".localized(), systemImage: "person")
+                    .accessibilityIdentifier("tab_profile")
             }
         }
         .tint(AppTheme.accent)

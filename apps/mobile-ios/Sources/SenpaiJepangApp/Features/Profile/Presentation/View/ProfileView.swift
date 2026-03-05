@@ -49,6 +49,7 @@ struct ProfileView: View {
                     Image(systemName: "gearshape")
                         .foregroundStyle(AppTheme.textPrimary)
                 }
+                .accessibilityIdentifier("profile_edit_button")
             }
         }
         .overlay {
@@ -108,6 +109,7 @@ struct ProfileView: View {
                 Text(profile.fullName)
                     .font(.title3.bold())
                     .foregroundStyle(AppTheme.textPrimary)
+                    .accessibilityIdentifier("profile_header_name")
 
                 HStack(spacing: 4) {
                     if let jobTitle = profile.jobTitle {
@@ -190,6 +192,7 @@ struct ProfileView: View {
         }
         .padding(AppTheme.spacingXL)
         .cardStyle()
+        .accessibilityIdentifier("profile_completion_card")
     }
 
     // MARK: - Documents Section

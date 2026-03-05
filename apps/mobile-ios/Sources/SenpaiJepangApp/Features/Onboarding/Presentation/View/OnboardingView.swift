@@ -384,6 +384,7 @@ struct OnboardingView: View {
                         viewModel.isAgreedToTerms.toggle()
                     }
                 }
+                .accessibilityIdentifier("onboarding_agree_checkbox")
             }
             
             // Main Button
@@ -424,6 +425,7 @@ struct OnboardingView: View {
                 )
             }
             .buttonStyle(PressableButtonStyle())
+            .accessibilityIdentifier("onboarding_next_button")
         }
         .padding(.horizontal, 24)
         .padding(.top, 16)

@@ -18,6 +18,7 @@ struct SearchBar: View {
             TextField(placeholder, text: $text)
                 .font(.body)
                 .foregroundStyle(AppTheme.textPrimary)
+                .accessibilityIdentifier("home_search_input")
 
             if !text.isEmpty {
                 Button {

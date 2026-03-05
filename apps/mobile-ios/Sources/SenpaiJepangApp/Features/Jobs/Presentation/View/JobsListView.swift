@@ -83,6 +83,7 @@ struct JobsListView: View {
                         ForEach(Array(viewModel.jobs.enumerated()), id: \.element.id) { index, job in
                             JobCard(
                                 job: job,
+                                index: index,
                                 onTap: { viewModel.selectJob(job) },
                                 onBookmark: {
                                     Task { await viewModel.toggleSave(job) }
@@ -104,6 +105,7 @@ struct JobsListView: View {
             .animation(AppTheme.animationSoft, value: viewModel.selectedTab)
         }
         .background(AppTheme.backgroundPrimary)
+        .accessibilityIdentifier("jobs_list")
         .navigationTitle("Jobs")
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)

@@ -105,6 +105,7 @@ struct FeedListView: View {
         .animation(AppTheme.animationSoft, value: viewModel.selectedCategory)
         .animation(AppTheme.animationSoft, value: viewModel.searchText)
         .background(AppTheme.backgroundPrimary)
+        .accessibilityIdentifier("feed_list")
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
