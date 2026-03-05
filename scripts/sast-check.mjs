@@ -36,7 +36,7 @@ function collectFiles(startDir, out = []) {
   for (const entry of entries) {
     const fullPath = path.join(startDir, entry.name);
     if (entry.isDirectory()) {
-      if (entry.name === 'node_modules' || entry.name.startsWith('.')) {
+      if (entry.name === 'node_modules' || entry.name.startsWith('.') || entry.name === 'qa-automation-appium') {
         continue;
       }
       collectFiles(fullPath, out);
