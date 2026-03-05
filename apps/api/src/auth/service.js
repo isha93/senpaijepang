@@ -279,6 +279,22 @@ export class AuthService {
     };
   }
 
+  async getAdminUser({ userId }) {
+    const normalizedUserId = String(userId || '').trim();
+    if (!normalizedUserId) {
+      throw new ApiError(400, 'invalid_user_id', 'userId is required');
+    }
+
+    const user = await this.store.findUserById(normalizedUserId);
+    if (!user) {
+      throw new ApiError(404, 'user_not_found', 'user not found');
+    }
+
+    return {
+      user: await this.publicUser(user)
+    };
+  }
+
   async createAdminUser({ fullName, email, password, roles }) {
     const normalizedName = String(fullName || '').trim();
     const normalizedEmail = String(email || '').trim().toLowerCase();

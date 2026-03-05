@@ -1,8 +1,8 @@
 # API Next Iteration Plan v1 (Dashboard Enablement)
 
-Date: 2026-03-03
+Date: 2026-03-05
 Owner: API + Web Admin
-Status: In Progress (Iteration A completed)
+Status: In Progress (Iteration A completed, P1 user investigation endpoints completed)
 
 ## 1. Objective
 Menambahkan endpoint yang belum ada agar dashboard admin bisa naik dari CRUD dasar ke operasi harian yang lengkap (monitoring, moderation, audit, dan quality check).
@@ -56,6 +56,11 @@ Priority P1 (setelah P0 stabil):
 - `POST /admin/feed/posts/bulk`
 6. Content lifecycle endpoints:
 - publish/unpublish/schedule for jobs/posts
+
+Completed on 2026-03-05:
+- `GET /admin/users/{userId}`
+- `GET /admin/users/{userId}/profile`
+- `GET /admin/users/{userId}/kyc/history`
 
 Completed this iteration (2026-03-03):
 1. `GET /admin/overview/summary`

@@ -159,6 +159,16 @@ function matchAdminUserRoute(pathname) {
   return match ? match[1] : null;
 }
 
+function matchAdminUserProfileRoute(pathname) {
+  const match = String(pathname || '').match(/^\/admin\/users\/([^/]+)\/profile$/);
+  return match ? match[1] : null;
+}
+
+function matchAdminUserKycHistoryRoute(pathname) {
+  const match = String(pathname || '').match(/^\/admin\/users\/([^/]+)\/kyc\/history$/);
+  return match ? match[1] : null;
+}
+
 function matchAdminApplicationRoute(pathname) {
   const match = String(pathname || '').match(/^\/admin\/applications\/([^/]+)$/);
   return match ? match[1] : null;
@@ -925,8 +935,48 @@ async function handleRequest(
     return;
   }
 
-  const adminUserId = req.method === 'PATCH' ? matchAdminUserRoute(pathname) : null;
-  if (req.method === 'PATCH' && adminUserId) {
+  const adminUserId = req.method === 'GET' ? matchAdminUserRoute(pathname) : null;
+  if (req.method === 'GET' && adminUserId) {
+    const adminAuth = await authenticateAdminRequest(req, res, authService, adminApiKey, adminRoleCodes);
+    if (!adminAuth) {
+      return;
+    }
+
+    const result = await authService.getAdminUser({ userId: adminUserId });
+    sendJson(res, 200, result);
+    return;
+  }
+
+  const adminUserProfileUserId = req.method === 'GET' ? matchAdminUserProfileRoute(pathname) : null;
+  if (req.method === 'GET' && adminUserProfileUserId) {
+    const adminAuth = await authenticateAdminRequest(req, res, authService, adminApiKey, adminRoleCodes);
+    if (!adminAuth) {
+      return;
+    }
+
+    const result = await profileService.getProfile({ userId: adminUserProfileUserId });
+    sendJson(res, 200, result);
+    return;
+  }
+
+  const adminUserKycHistoryUserId = req.method === 'GET' ? matchAdminUserKycHistoryRoute(pathname) : null;
+  if (req.method === 'GET' && adminUserKycHistoryUserId) {
+    const adminAuth = await authenticateAdminRequest(req, res, authService, adminApiKey, adminRoleCodes);
+    if (!adminAuth) {
+      return;
+    }
+
+    await authService.getAdminUser({ userId: adminUserKycHistoryUserId });
+    const result = await kycService.getHistory({
+      userId: adminUserKycHistoryUserId,
+      sessionId: url.searchParams.get('sessionId') || undefined
+    });
+    sendJson(res, 200, result);
+    return;
+  }
+
+  const adminUserPatchId = req.method === 'PATCH' ? matchAdminUserRoute(pathname) : null;
+  if (req.method === 'PATCH' && adminUserPatchId) {
     const adminAuth = await authenticateAdminRequest(req, res, authService, adminApiKey, adminRoleCodes);
     if (!adminAuth) {
       return;
@@ -937,7 +987,7 @@ async function handleRequest(
 
     const body = await readJsonBody(req);
     const result = await authService.updateAdminUser({
-      userId: adminUserId,
+      userId: adminUserPatchId,
       fullName: body.fullName,
       password: body.password,
       roles: body.roles

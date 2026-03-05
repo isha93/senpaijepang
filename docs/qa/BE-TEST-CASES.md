@@ -238,9 +238,16 @@ Format: **Given / When / Then** + edge cases.
 ### G3 Admin users management
 - **When** GET `/v1/admin/users`, POST `/v1/admin/users`, PATCH `/v1/admin/users/{userId}`
 - **Then** 200/201
+- **When** GET `/v1/admin/users/{userId}`
+- **Then** 200 + user detail
+- **When** GET `/v1/admin/users/{userId}/profile`
+- **Then** 200 + profile aggregate target user
+- **When** GET `/v1/admin/users/{userId}/kyc/history?sessionId=<optional>`
+- **Then** 200 + history target user
 
 **Edge**
 - non-`super_admin` untuk create/update admin user -> 403
+- userId tidak ditemukan -> 404
 
 ### G4 Admin applications ops
 - **When** GET `/v1/admin/applications`

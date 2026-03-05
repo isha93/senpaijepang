@@ -290,6 +290,29 @@ test('admin users management works with api key and bearer super_admin role', as
       assert.ok(listAdminUsers.json.pageInfo.total >= 1);
       assert.ok(listAdminUsers.json.items.some((item) => item.id === permanentAdminId));
 
+      const getAdminUser = await requestJson(baseUrl, `/admin/users/${permanentAdminId}`, {
+        adminApiKey: TEST_ADMIN_API_KEY
+      });
+      assert.equal(getAdminUser.res.status, 200);
+      assert.equal(getAdminUser.json.user.id, permanentAdminId);
+      assert.equal(getAdminUser.json.user.email, 'permanent-admin@example.com');
+      assert.deepEqual(getAdminUser.json.user.roles, ['sdm', 'super_admin']);
+
+      const getAdminUserProfile = await requestJson(baseUrl, `/admin/users/${permanentAdminId}/profile`, {
+        adminApiKey: TEST_ADMIN_API_KEY
+      });
+      assert.equal(getAdminUserProfile.res.status, 200);
+      assert.equal(getAdminUserProfile.json.profile.id, permanentAdminId);
+      assert.equal(getAdminUserProfile.json.profile.email, 'permanent-admin@example.com');
+      assert.equal(getAdminUserProfile.json.profile.verificationStatus, 'NOT_STARTED');
+
+      const emptyHistory = await requestJson(baseUrl, `/admin/users/${permanentAdminId}/kyc/history`, {
+        adminApiKey: TEST_ADMIN_API_KEY
+      });
+      assert.equal(emptyHistory.res.status, 200);
+      assert.equal(emptyHistory.json.session, null);
+      assert.deepEqual(emptyHistory.json.events, []);
+
       const patchAdminUser = await requestJson(baseUrl, `/admin/users/${permanentAdminId}`, {
         method: 'PATCH',
         adminApiKey: TEST_ADMIN_API_KEY,
@@ -310,6 +333,45 @@ test('admin users management works with api key and bearer super_admin role', as
       });
       assert.equal(loginWithNewPassword.res.status, 200);
       assert.equal(loginWithNewPassword.json.user.email, 'permanent-admin@example.com');
+      const permanentAdminToken = loginWithNewPassword.json.accessToken;
+
+      const createAdminKycSession = await requestJson(baseUrl, '/identity/kyc/sessions', {
+        method: 'POST',
+        accessToken: permanentAdminToken,
+        body: {
+          provider: 'manual'
+        }
+      });
+      assert.equal(createAdminKycSession.res.status, 201);
+      const adminKycSessionId = createAdminKycSession.json.session.id;
+
+      const populatedHistory = await requestJson(
+        baseUrl,
+        `/admin/users/${permanentAdminId}/kyc/history?sessionId=${adminKycSessionId}`,
+        {
+          adminApiKey: TEST_ADMIN_API_KEY
+        }
+      );
+      assert.equal(populatedHistory.res.status, 200);
+      assert.equal(populatedHistory.json.session.id, adminKycSessionId);
+      assert.ok(populatedHistory.json.events.length >= 1);
+      assert.equal(populatedHistory.json.events[0].toStatus, 'CREATED');
+
+      const missingDetail = await requestJson(baseUrl, '/admin/users/00000000-0000-0000-0000-000000000000', {
+        adminApiKey: TEST_ADMIN_API_KEY
+      });
+      assert.equal(missingDetail.res.status, 404);
+      assert.equal(missingDetail.json.error.code, 'user_not_found');
+
+      const missingHistory = await requestJson(
+        baseUrl,
+        '/admin/users/00000000-0000-0000-0000-000000000000/kyc/history',
+        {
+          adminApiKey: TEST_ADMIN_API_KEY
+        }
+      );
+      assert.equal(missingHistory.res.status, 404);
+      assert.equal(missingHistory.json.error.code, 'user_not_found');
 
       const regularAdminRegister = await requestJson(baseUrl, '/auth/register', {
         method: 'POST',

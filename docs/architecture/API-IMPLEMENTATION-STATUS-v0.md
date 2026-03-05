@@ -67,6 +67,9 @@ Identity/KYC:
 Admin:
 - `GET /admin/users` (Bearer super_admin role, fallback header `x-admin-api-key`)
 - `POST /admin/users` (Bearer super_admin role, fallback header `x-admin-api-key`)
+- `GET /admin/users/{userId}` (admin investigation read endpoint)
+- `GET /admin/users/{userId}/profile` (admin investigation read endpoint)
+- `GET /admin/users/{userId}/kyc/history` (admin investigation read endpoint)
 - `PATCH /admin/users/{userId}` (Bearer super_admin role, fallback header `x-admin-api-key`)
 - `GET /admin/overview/summary` (Bearer admin role, fallback header `x-admin-api-key`)
 - `GET /admin/activity-events` (Bearer admin role, fallback header `x-admin-api-key`, supports `type/actorId/from/to/cursor/limit`)
