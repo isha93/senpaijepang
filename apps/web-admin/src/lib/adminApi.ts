@@ -188,6 +188,15 @@ export type KycSessionEnvelope = {
   session: KycSession;
 };
 
+export type ContentLifecycleStatus = 'DRAFT' | 'PUBLISHED' | 'SCHEDULED';
+
+export type ContentLifecycleState = {
+  status: ContentLifecycleStatus;
+  effectiveStatus: ContentLifecycleStatus;
+  publishedAt: string | null;
+  scheduledAt: string | null;
+};
+
 export type AdminFeedPost = {
   id: string;
   title: string;
@@ -195,7 +204,8 @@ export type AdminFeedPost = {
   category: string;
   author: string;
   imageUrl?: string | null;
-  publishedAt: string;
+  publishedAt: string | null;
+  lifecycle: ContentLifecycleState;
 };
 
 export type AdminFeedPostListResponse = {
@@ -203,7 +213,9 @@ export type AdminFeedPostListResponse = {
   pageInfo: JobPageInfo;
 };
 
-export type AdminFeedPostUpsertInput = Omit<AdminFeedPost, 'id'>;
+export type AdminFeedPostUpsertInput = Omit<AdminFeedPost, 'id' | 'lifecycle'> & {
+  lifecycle?: Partial<Pick<ContentLifecycleState, 'status' | 'publishedAt' | 'scheduledAt'>>;
+};
 
 export type AdminFeedPostEnvelope = {
   post: AdminFeedPost;
@@ -221,7 +233,8 @@ export type FeedPost = {
   category: string;
   author: string;
   imageUrl?: string | null;
-  publishedAt: string;
+  publishedAt: string | null;
+  lifecycle: ContentLifecycleState;
   viewerState: {
     authenticated: boolean;
     saved: boolean;
@@ -257,6 +270,7 @@ export type AdminJob = {
   requirements: string[];
   location: JobLocationDetail;
   employer: JobEmployer;
+  lifecycle: ContentLifecycleState;
 };
 
 export type AdminJobListResponse = {
@@ -264,7 +278,9 @@ export type AdminJobListResponse = {
   pageInfo: JobPageInfo;
 };
 
-export type AdminJobUpsertInput = Omit<AdminJob, 'id'>;
+export type AdminJobUpsertInput = Omit<AdminJob, 'id' | 'lifecycle'> & {
+  lifecycle?: Partial<Pick<ContentLifecycleState, 'status' | 'publishedAt' | 'scheduledAt'>>;
+};
 
 export type AdminJobEnvelope = {
   job: AdminJob;
@@ -273,6 +289,45 @@ export type AdminJobEnvelope = {
 export type AdminJobDeleteResponse = {
   removed: boolean;
   jobId: string;
+};
+
+export type AdminBulkAction = 'PUBLISH' | 'UNPUBLISH' | 'SCHEDULE' | 'DELETE';
+
+export type AdminBulkItemError = {
+  code: string;
+  message: string;
+};
+
+export type AdminJobBulkResultItem = {
+  jobId: string;
+  success: boolean;
+  removed?: boolean;
+  lifecycle?: ContentLifecycleState;
+  error?: AdminBulkItemError;
+};
+
+export type AdminFeedBulkResultItem = {
+  postId: string;
+  success: boolean;
+  removed?: boolean;
+  lifecycle?: ContentLifecycleState;
+  error?: AdminBulkItemError;
+};
+
+export type AdminJobsBulkResponse = {
+  action: AdminBulkAction;
+  total: number;
+  successCount: number;
+  failureCount: number;
+  results: AdminJobBulkResultItem[];
+};
+
+export type AdminFeedPostsBulkResponse = {
+  action: AdminBulkAction;
+  total: number;
+  successCount: number;
+  failureCount: number;
+  results: AdminFeedBulkResultItem[];
 };
 
 export type ApplicationStatus = 'SUBMITTED' | 'IN_REVIEW' | 'INTERVIEW' | 'OFFERED' | 'HIRED' | 'REJECTED';
@@ -342,6 +397,53 @@ export type AdminApplicationStatusUpdateResponse = {
   application: JobApplicationSummary;
   applicant: AdminApplicationApplicant;
   journeyEvent: ApplicationJourneyEvent | null;
+};
+
+export type ApplicationDocumentReviewStatus = 'PENDING' | 'VALID' | 'INVALID';
+
+export type ApplicationDocument = {
+  id: string;
+  applicationId: string;
+  userId: string;
+  documentType: string;
+  fileName: string;
+  contentType: string;
+  contentLength: number;
+  checksumSha256: string;
+  reviewStatus: ApplicationDocumentReviewStatus;
+  reviewReason: string | null;
+  reviewedAt: string | null;
+  reviewedBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type AdminApplicationDocumentListResponse = {
+  application: JobApplicationSummary;
+  applicant: AdminApplicationApplicant;
+  items: ApplicationDocument[];
+  total: number;
+};
+
+export type AdminApplicationDocumentReviewInput = {
+  reviewStatus: ApplicationDocumentReviewStatus;
+  reviewReason?: string;
+  reviewedBy?: string;
+};
+
+export type AdminApplicationDocumentReviewResponse = {
+  updated: boolean;
+  application: JobApplicationSummary;
+  applicant: AdminApplicationApplicant;
+  document: ApplicationDocument;
+};
+
+export type AdminApplicationDocumentPreviewResponse = {
+  documentId: string;
+  applicationId: string;
+  url: string;
+  method: string;
+  expiresAt: string;
 };
 
 export type OrganizationVerificationStatus = 'PENDING' | 'VERIFIED' | 'MISMATCH' | 'NOT_FOUND' | 'REJECTED';
@@ -499,6 +601,31 @@ export function updateAdminApplicationStatus(applicationId: string, body: AdminA
   });
 }
 
+export function getAdminApplicationDocuments(applicationId: string) {
+  return adminRequest<AdminApplicationDocumentListResponse>(`/admin/applications/${applicationId}/documents`);
+}
+
+export function reviewAdminApplicationDocument(
+  applicationId: string,
+  documentId: string,
+  body: AdminApplicationDocumentReviewInput
+) {
+  return adminRequest<AdminApplicationDocumentReviewResponse>(
+    `/admin/applications/${applicationId}/documents/${documentId}`,
+    {
+      method: 'PATCH',
+      body
+    }
+  );
+}
+
+export function issueAdminApplicationDocumentPreviewUrl(documentId: string, body: { expiresSec?: number } = {}) {
+  return adminRequest<AdminApplicationDocumentPreviewResponse>(`/admin/applications/documents/${documentId}/preview-url`, {
+    method: 'POST',
+    body
+  });
+}
+
 export function getAdminFeedPosts(params: {
   q?: string;
   category?: string;
@@ -526,6 +653,39 @@ export function updateAdminFeedPost(postId: string, body: Partial<AdminFeedPostU
 export function deleteAdminFeedPost(postId: string) {
   return adminRequest<AdminFeedPostDeleteResponse>(`/admin/feed/posts/${postId}`, {
     method: 'DELETE'
+  });
+}
+
+export function publishAdminFeedPost(postId: string, body: { publishedAt?: string } = {}) {
+  return adminRequest<AdminFeedPostEnvelope>(`/admin/feed/posts/${postId}/publish`, {
+    method: 'POST',
+    body
+  });
+}
+
+export function unpublishAdminFeedPost(postId: string) {
+  return adminRequest<AdminFeedPostEnvelope>(`/admin/feed/posts/${postId}/unpublish`, {
+    method: 'POST',
+    body: {}
+  });
+}
+
+export function scheduleAdminFeedPost(postId: string, body: { scheduledAt: string }) {
+  return adminRequest<AdminFeedPostEnvelope>(`/admin/feed/posts/${postId}/schedule`, {
+    method: 'POST',
+    body
+  });
+}
+
+export function bulkUpdateAdminFeedPosts(body: {
+  action: AdminBulkAction;
+  postIds: string[];
+  scheduledAt?: string;
+  publishedAt?: string;
+}) {
+  return adminRequest<AdminFeedPostsBulkResponse>('/admin/feed/posts/bulk', {
+    method: 'POST',
+    body
   });
 }
 
@@ -565,6 +725,39 @@ export function updateAdminJob(jobId: string, body: Partial<AdminJobUpsertInput>
 export function deleteAdminJob(jobId: string) {
   return adminRequest<AdminJobDeleteResponse>(`/admin/jobs/${jobId}`, {
     method: 'DELETE'
+  });
+}
+
+export function publishAdminJob(jobId: string, body: { publishedAt?: string } = {}) {
+  return adminRequest<AdminJobEnvelope>(`/admin/jobs/${jobId}/publish`, {
+    method: 'POST',
+    body
+  });
+}
+
+export function unpublishAdminJob(jobId: string) {
+  return adminRequest<AdminJobEnvelope>(`/admin/jobs/${jobId}/unpublish`, {
+    method: 'POST',
+    body: {}
+  });
+}
+
+export function scheduleAdminJob(jobId: string, body: { scheduledAt: string }) {
+  return adminRequest<AdminJobEnvelope>(`/admin/jobs/${jobId}/schedule`, {
+    method: 'POST',
+    body
+  });
+}
+
+export function bulkUpdateAdminJobs(body: {
+  action: AdminBulkAction;
+  jobIds: string[];
+  scheduledAt?: string;
+  publishedAt?: string;
+}) {
+  return adminRequest<AdminJobsBulkResponse>('/admin/jobs/bulk', {
+    method: 'POST',
+    body
   });
 }
 

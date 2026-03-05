@@ -1,12 +1,17 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import {
+  AdminBulkAction,
   AdminFeedPost,
   AdminFeedPostUpsertInput,
   FeedPost,
+  bulkUpdateAdminFeedPosts,
   createAdminFeedPost,
   deleteAdminFeedPost,
   getAdminFeedPosts,
   getPublicFeedPosts,
+  publishAdminFeedPost,
+  scheduleAdminFeedPost,
+  unpublishAdminFeedPost,
   updateAdminFeedPost
 } from '../lib/adminApi';
 
@@ -65,25 +70,20 @@ function categoryTone(category: string) {
   return 'chip orange';
 }
 
-function deriveStatus(publishedAt?: string | null) {
-  if (!publishedAt) return 'Draft';
-  const date = new Date(publishedAt);
-  if (Number.isNaN(date.getTime())) return 'Draft';
-
-  const now = Date.now();
-  const ms = date.getTime();
-  if (ms > now + 24 * 60 * 60 * 1000) return 'Draft';
-  if (now - ms > 180 * 24 * 60 * 60 * 1000) return 'Archived';
+function deriveStatus(post: { lifecycle?: { effectiveStatus?: string; status?: string } }) {
+  const status = post.lifecycle?.effectiveStatus || post.lifecycle?.status || 'PUBLISHED';
+  if (status === 'DRAFT') return 'Draft';
+  if (status === 'SCHEDULED') return 'Scheduled';
   return 'Published';
 }
 
-function statusClass(status: 'Published' | 'Draft' | 'Archived') {
+function statusClass(status: 'Published' | 'Draft' | 'Scheduled') {
   if (status === 'Published') return 'state published';
   if (status === 'Draft') return 'state draft';
   return 'state archived';
 }
 
-function formatDate(iso: string | undefined) {
+function formatDate(iso: string | null | undefined) {
   if (!iso) return '-';
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return '-';
@@ -94,7 +94,7 @@ function formatDate(iso: string | undefined) {
   });
 }
 
-function toDateTimeLocal(iso: string | undefined) {
+function toDateTimeLocal(iso: string | null | undefined) {
   if (!iso) return '';
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) {
@@ -172,6 +172,8 @@ export function FeedAdminPage() {
   const [error, setError] = useState<string | null>(null);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
   const [deletingPostId, setDeletingPostId] = useState<string | null>(null);
+  const [selectedPostIds, setSelectedPostIds] = useState<string[]>([]);
+  const [bulkActionLoading, setBulkActionLoading] = useState<AdminBulkAction | null>(null);
   const [modalMode, setModalMode] = useState<'create' | 'edit' | null>(null);
   const [editingPostId, setEditingPostId] = useState<string | null>(null);
   const [form, setForm] = useState<FeedFormState>(DEFAULT_FEED_FORM);
@@ -197,6 +199,7 @@ export function FeedAdminPage() {
         })
       ]);
       setAdminPosts(adminData.items);
+      setSelectedPostIds([]);
       setPublicPosts(publicData.items);
       setAdminTotal(adminData.pageInfo.total);
       setPublicTotal(publicData.pageInfo.total);
@@ -332,6 +335,125 @@ export function FeedAdminPage() {
     }
   }
 
+  function toggleSelectPost(postId: string) {
+    setSelectedPostIds((prev) => (prev.includes(postId) ? prev.filter((id) => id !== postId) : [...prev, postId]));
+  }
+
+  function toggleSelectAllVisible(checked: boolean) {
+    if (!checked) {
+      setSelectedPostIds([]);
+      return;
+    }
+    setSelectedPostIds(managementRows.map((item) => item.id));
+  }
+
+  async function handleBulkAction(action: AdminBulkAction) {
+    if (bulkActionLoading || selectedPostIds.length === 0) {
+      return;
+    }
+    let scheduledAt: string | undefined;
+    if (action === 'DELETE') {
+      const confirmed = window.confirm(`Delete ${selectedPostIds.length} selected posts?`);
+      if (!confirmed) {
+        return;
+      }
+    }
+    if (action === 'SCHEDULE') {
+      const input = window.prompt('Input schedule datetime (ISO), e.g. 2026-03-20T08:00:00.000Z');
+      if (!input) {
+        return;
+      }
+      scheduledAt = input.trim();
+    }
+
+    setBulkActionLoading(action);
+    setActionMessage(null);
+    setError(null);
+    try {
+      const result = await bulkUpdateAdminFeedPosts({
+        action,
+        postIds: selectedPostIds,
+        scheduledAt
+      });
+      setActionMessage(`${action}: ${result.successCount}/${result.total} success`);
+      await loadData({
+        adminCursor,
+        publicCursor
+      });
+    } catch (err) {
+      const message =
+        typeof err === 'object' && err && 'message' in err
+          ? String((err as { message: unknown }).message)
+          : 'Failed to run bulk action';
+      setActionMessage(message);
+    } finally {
+      setBulkActionLoading(null);
+    }
+  }
+
+  async function handlePublish(post: AdminFeedPost) {
+    setActionMessage(null);
+    setError(null);
+    try {
+      await publishAdminFeedPost(post.id);
+      setActionMessage(`Published "${post.title}".`);
+      await loadData({
+        adminCursor,
+        publicCursor
+      });
+    } catch (err) {
+      const message =
+        typeof err === 'object' && err && 'message' in err
+          ? String((err as { message: unknown }).message)
+          : 'Failed to publish post';
+      setActionMessage(message);
+    }
+  }
+
+  async function handleUnpublish(post: AdminFeedPost) {
+    setActionMessage(null);
+    setError(null);
+    try {
+      await unpublishAdminFeedPost(post.id);
+      setActionMessage(`Unpublished "${post.title}".`);
+      await loadData({
+        adminCursor,
+        publicCursor
+      });
+    } catch (err) {
+      const message =
+        typeof err === 'object' && err && 'message' in err
+          ? String((err as { message: unknown }).message)
+          : 'Failed to unpublish post';
+      setActionMessage(message);
+    }
+  }
+
+  async function handleSchedule(post: AdminFeedPost) {
+    const input = window.prompt('Input schedule datetime (ISO), e.g. 2026-03-20T08:00:00.000Z');
+    if (!input) {
+      return;
+    }
+    setActionMessage(null);
+    setError(null);
+    try {
+      await scheduleAdminFeedPost(post.id, {
+        scheduledAt: input.trim()
+      });
+      setActionMessage(`Scheduled "${post.title}".`);
+      await loadData({
+        adminCursor,
+        publicCursor
+      });
+    } catch (err) {
+      const message =
+        typeof err === 'object' && err && 'message' in err
+          ? String((err as { message: unknown }).message)
+          : 'Failed to schedule post';
+      setActionMessage(message);
+    }
+  }
+
   function goToPreviousPage() {
     if (loading) {
       return;
@@ -393,6 +515,8 @@ export function FeedAdminPage() {
   const activeRowsCount = activeTab === 'management' ? managementRows.length : previewRowsForTable.length;
   const hasPreviousPage = activeTab === 'management' ? adminCursorHistory.length > 0 : publicCursorHistory.length > 0;
   const hasNextPage = activeTab === 'management' ? adminNextCursor !== null : publicNextCursor !== null;
+  const allVisibleSelected =
+    managementRows.length > 0 && managementRows.every((item) => selectedPostIds.includes(item.id));
 
   return (
     <section className="surface-card page-section feed-page">
@@ -401,9 +525,43 @@ export function FeedAdminPage() {
           <h3>Feed Posts</h3>
           <p>Manage content and QA the public feed view.</p>
         </div>
-        <button type="button" className="btn-primary" onClick={openCreateModal}>
-          Create Post
-        </button>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <button type="button" className="btn-primary" onClick={openCreateModal}>
+            Create Post
+          </button>
+          <button
+            type="button"
+            className="btn-secondary"
+            onClick={() => void handleBulkAction('PUBLISH')}
+            disabled={selectedPostIds.length === 0 || bulkActionLoading !== null}
+          >
+            {bulkActionLoading === 'PUBLISH' ? 'Publishing...' : `Publish Selected (${selectedPostIds.length})`}
+          </button>
+          <button
+            type="button"
+            className="btn-secondary"
+            onClick={() => void handleBulkAction('UNPUBLISH')}
+            disabled={selectedPostIds.length === 0 || bulkActionLoading !== null}
+          >
+            {bulkActionLoading === 'UNPUBLISH' ? 'Unpublishing...' : 'Unpublish Selected'}
+          </button>
+          <button
+            type="button"
+            className="btn-secondary"
+            onClick={() => void handleBulkAction('SCHEDULE')}
+            disabled={selectedPostIds.length === 0 || bulkActionLoading !== null}
+          >
+            {bulkActionLoading === 'SCHEDULE' ? 'Scheduling...' : 'Schedule Selected'}
+          </button>
+          <button
+            type="button"
+            className="btn-danger"
+            onClick={() => void handleBulkAction('DELETE')}
+            disabled={selectedPostIds.length === 0 || bulkActionLoading !== null}
+          >
+            {bulkActionLoading === 'DELETE' ? 'Deleting...' : 'Delete Selected'}
+          </button>
+        </div>
       </div>
 
       <div className="feed-tabs">
@@ -444,6 +602,15 @@ export function FeedAdminPage() {
           <table className="data-table">
             <thead>
               <tr>
+                <th>
+                  <input
+                    type="checkbox"
+                    checked={allVisibleSelected}
+                    onChange={(event) => toggleSelectAllVisible(event.target.checked)}
+                    aria-label="Select all posts"
+                    disabled={activeTab !== 'management'}
+                  />
+                </th>
                 <th>Post Title</th>
                 <th>Category</th>
                 <th>Author</th>
@@ -455,9 +622,17 @@ export function FeedAdminPage() {
             <tbody>
               {activeTab === 'management'
                 ? managementRows.map((item) => {
-                    const status = deriveStatus(item.publishedAt);
+                    const status = deriveStatus(item);
                     return (
                       <tr key={item.id}>
+                        <td>
+                          <input
+                            type="checkbox"
+                            checked={selectedPostIds.includes(item.id)}
+                            onChange={() => toggleSelectPost(item.id)}
+                            aria-label={`Select ${item.title}`}
+                          />
+                        </td>
                         <td>
                           <div className="table-title">
                             <span className="table-avatar" />
@@ -481,6 +656,19 @@ export function FeedAdminPage() {
                           <button type="button" onClick={() => openEditModal(item)} disabled={Boolean(deletingPostId)}>
                             Edit
                           </button>
+                          <button type="button" onClick={() => void handlePublish(item)} disabled={Boolean(deletingPostId)}>
+                            Publish
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => void handleUnpublish(item)}
+                            disabled={Boolean(deletingPostId)}
+                          >
+                            Unpublish
+                          </button>
+                          <button type="button" onClick={() => void handleSchedule(item)} disabled={Boolean(deletingPostId)}>
+                            Schedule
+                          </button>
                           <button
                             type="button"
                             className="danger"
@@ -494,9 +682,10 @@ export function FeedAdminPage() {
                     );
                   })
                 : previewRowsForTable.map((item) => {
-                    const status = deriveStatus(item.publishedAt);
+                    const status = deriveStatus(item);
                     return (
                       <tr key={item.id}>
+                        <td />
                         <td>
                           <div className="table-title">
                             <span className="table-avatar" />
@@ -526,12 +715,12 @@ export function FeedAdminPage() {
                   })}
               {!loading && activeTab === 'management' && managementRows.length === 0 ? (
                 <tr>
-                  <td colSpan={6}>No posts found for this filter.</td>
+                  <td colSpan={7}>No posts found for this filter.</td>
                 </tr>
               ) : null}
               {!loading && activeTab === 'preview' && previewRowsForTable.length === 0 ? (
                 <tr>
-                  <td colSpan={6}>No posts found for this filter.</td>
+                  <td colSpan={7}>No posts found for this filter.</td>
                 </tr>
               ) : null}
             </tbody>

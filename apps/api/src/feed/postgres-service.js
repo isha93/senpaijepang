@@ -3,6 +3,9 @@ import { POST_SEED_DATA, FeedApiError, createFeedService } from './service.js';
 
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 50;
+const MAX_BULK_ITEMS = 100;
+const FEED_LIFECYCLE_STATUSES = new Set(['DRAFT', 'PUBLISHED', 'SCHEDULED']);
+const FEED_BULK_ACTIONS = new Set(['PUBLISH', 'UNPUBLISH', 'SCHEDULE', 'DELETE']);
 
 function normalizeLimit(limit) {
   if (limit === undefined || limit === null || String(limit).trim() === '') {
@@ -47,8 +50,89 @@ function normalizePostId(postId) {
   return normalized;
 }
 
+function normalizeRequiredLifecycleDate(value, fieldName) {
+  const normalized = String(value || '').trim();
+  const timestamp = Date.parse(normalized);
+  if (!Number.isFinite(timestamp)) {
+    throw new FeedApiError(400, 'invalid_lifecycle_date', `${fieldName} must be valid ISO date-time`);
+  }
+  return new Date(timestamp).toISOString();
+}
+
+function normalizeOptionalLifecycleDate(value, fieldName) {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (value === null || String(value).trim() === '') {
+    return null;
+  }
+  return normalizeRequiredLifecycleDate(value, fieldName);
+}
+
+function normalizeBulkAction(action) {
+  const normalized = String(action || '')
+    .trim()
+    .toUpperCase();
+  if (!FEED_BULK_ACTIONS.has(normalized)) {
+    throw new FeedApiError(
+      400,
+      'invalid_bulk_action',
+      `action must be one of ${Array.from(FEED_BULK_ACTIONS).join(', ')}`
+    );
+  }
+  return normalized;
+}
+
+function normalizeBulkPostIds(postIds) {
+  if (!Array.isArray(postIds) || postIds.length === 0) {
+    throw new FeedApiError(400, 'invalid_post_ids', 'postIds must be a non-empty array');
+  }
+  if (postIds.length > MAX_BULK_ITEMS) {
+    throw new FeedApiError(400, 'invalid_post_ids', `postIds must not exceed ${MAX_BULK_ITEMS} items`);
+  }
+  const normalized = [];
+  const seen = new Set();
+  for (const value of postIds) {
+    const id = String(value || '').trim();
+    if (!id) {
+      throw new FeedApiError(400, 'invalid_post_ids', 'postIds must contain non-empty ids');
+    }
+    if (!seen.has(id)) {
+      seen.add(id);
+      normalized.push(id);
+    }
+  }
+  return normalized;
+}
+
+function resolveEffectiveLifecycleStatus({ lifecycleStatus, scheduledAt }) {
+  if (lifecycleStatus === 'SCHEDULED') {
+    if (!scheduledAt) {
+      return 'DRAFT';
+    }
+    return Date.parse(scheduledAt) <= Date.now() ? 'PUBLISHED' : 'SCHEDULED';
+  }
+  return lifecycleStatus;
+}
+
+function isPostPubliclyVisible(post) {
+  return resolveEffectiveLifecycleStatus(post) === 'PUBLISHED';
+}
+
+function toLifecycleState(post) {
+  return {
+    status: post.lifecycleStatus,
+    effectiveStatus: resolveEffectiveLifecycleStatus(post),
+    publishedAt: post.publishedAt || null,
+    scheduledAt: post.scheduledAt || null
+  };
+}
+
 function mapPostRow(row) {
   if (!row) return null;
+  const lifecycleStatus = String(row.lifecycle_status || 'PUBLISHED')
+    .trim()
+    .toUpperCase();
   return {
     id: row.id,
     title: row.title,
@@ -56,7 +140,9 @@ function mapPostRow(row) {
     category: row.category,
     author: row.author,
     imageUrl: row.image_url || null,
-    publishedAt: new Date(row.published_at).toISOString()
+    publishedAt: row.published_at ? new Date(row.published_at).toISOString() : null,
+    lifecycleStatus: FEED_LIFECYCLE_STATUSES.has(lifecycleStatus) ? lifecycleStatus : 'PUBLISHED',
+    scheduledAt: row.scheduled_publish_at ? new Date(row.scheduled_publish_at).toISOString() : null
   };
 }
 
@@ -69,6 +155,7 @@ function toFeedPost(post, { authenticated, saved }) {
     author: post.author,
     imageUrl: post.imageUrl,
     publishedAt: post.publishedAt,
+    lifecycle: toLifecycleState(post),
     viewerState: {
       authenticated,
       saved
@@ -84,7 +171,8 @@ function toAdminPost(post) {
     category: post.category,
     author: post.author,
     imageUrl: post.imageUrl,
-    publishedAt: post.publishedAt
+    publishedAt: post.publishedAt,
+    lifecycle: toLifecycleState(post)
   };
 }
 
@@ -98,9 +186,11 @@ async function upsertPostToDb(pool, post) {
         category,
         author,
         image_url,
-        published_at
+        published_at,
+        lifecycle_status,
+        scheduled_publish_at
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7::timestamptz)
+      VALUES ($1, $2, $3, $4, $5, $6, $7::timestamptz, $8, $9::timestamptz)
       ON CONFLICT (id)
       DO UPDATE SET
         title = EXCLUDED.title,
@@ -109,9 +199,23 @@ async function upsertPostToDb(pool, post) {
         author = EXCLUDED.author,
         image_url = EXCLUDED.image_url,
         published_at = EXCLUDED.published_at,
+        lifecycle_status = EXCLUDED.lifecycle_status,
+        scheduled_publish_at = EXCLUDED.scheduled_publish_at,
         updated_at = NOW()
     `,
-    [post.id, post.title, post.excerpt, post.category, post.author, post.imageUrl, post.publishedAt]
+    [
+      post.id,
+      post.title,
+      post.excerpt,
+      post.category,
+      post.author,
+      post.imageUrl,
+      post.publishedAt || null,
+      FEED_LIFECYCLE_STATUSES.has(String(post.lifecycleStatus || '').toUpperCase())
+        ? String(post.lifecycleStatus).toUpperCase()
+        : 'PUBLISHED',
+      post.scheduledAt || null
+    ]
   );
 }
 
@@ -160,7 +264,9 @@ export class PostgresFeedService {
           category,
           author,
           image_url,
-          published_at
+          published_at,
+          lifecycle_status,
+          scheduled_publish_at
         FROM feed_posts
         WHERE id = $1
         LIMIT 1
@@ -182,7 +288,9 @@ export class PostgresFeedService {
     const normalizedLimit = normalizeLimit(limit);
     const authenticated = Boolean(userId);
 
-    const whereParts = [];
+    const whereParts = [
+      `(lifecycle_status = 'PUBLISHED' OR (lifecycle_status = 'SCHEDULED' AND scheduled_publish_at IS NOT NULL AND scheduled_publish_at <= NOW()))`
+    ];
     const params = [];
     if (normalizedCategory) {
       params.push(normalizedCategory);
@@ -216,7 +324,9 @@ export class PostgresFeedService {
           category,
           author,
           image_url,
-          published_at
+          published_at,
+          lifecycle_status,
+          scheduled_publish_at
         FROM feed_posts
         ${whereClause}
         ORDER BY published_at DESC, created_at DESC
@@ -283,7 +393,9 @@ export class PostgresFeedService {
           fp.category,
           fp.author,
           fp.image_url,
-          fp.published_at
+          fp.published_at,
+          fp.lifecycle_status,
+          fp.scheduled_publish_at
         FROM user_saved_posts usp
         JOIN feed_posts fp ON fp.id = usp.post_id
         WHERE usp.user_id = $1
@@ -318,6 +430,9 @@ export class PostgresFeedService {
         queryable: client,
         lockClause: 'FOR UPDATE'
       });
+      if (!isPostPubliclyVisible(post)) {
+        throw new FeedApiError(404, 'post_not_found', 'post not found');
+      }
       const result = await client.query(
         `
           INSERT INTO user_saved_posts (id, user_id, post_id)
@@ -390,7 +505,9 @@ export class PostgresFeedService {
           category,
           author,
           image_url,
-          published_at
+          published_at,
+          lifecycle_status,
+          scheduled_publish_at
         FROM feed_posts
         ${whereClause}
         ORDER BY published_at DESC, created_at DESC
@@ -431,6 +548,108 @@ export class PostgresFeedService {
       await upsertPostToDb(client, result.post);
       return result;
     });
+  }
+
+  async publishPost({ postId, publishedAt }) {
+    return withTransaction(this.pool, async (client) => {
+      const existing = await this.getPostByIdOrThrow(postId, {
+        queryable: client,
+        lockClause: 'FOR UPDATE'
+      });
+      const next = {
+        ...existing,
+        lifecycleStatus: 'PUBLISHED',
+        publishedAt: normalizeOptionalLifecycleDate(publishedAt, 'publishedAt') || new Date().toISOString(),
+        scheduledAt: null
+      };
+      await upsertPostToDb(client, next);
+      return { post: toAdminPost(next) };
+    });
+  }
+
+  async unpublishPost({ postId }) {
+    return withTransaction(this.pool, async (client) => {
+      const existing = await this.getPostByIdOrThrow(postId, {
+        queryable: client,
+        lockClause: 'FOR UPDATE'
+      });
+      const next = {
+        ...existing,
+        lifecycleStatus: 'DRAFT',
+        publishedAt: null,
+        scheduledAt: null
+      };
+      await upsertPostToDb(client, next);
+      return { post: toAdminPost(next) };
+    });
+  }
+
+  async schedulePost({ postId, scheduledAt }) {
+    const normalizedScheduledAt = normalizeRequiredLifecycleDate(scheduledAt, 'scheduledAt');
+    return withTransaction(this.pool, async (client) => {
+      const existing = await this.getPostByIdOrThrow(postId, {
+        queryable: client,
+        lockClause: 'FOR UPDATE'
+      });
+      const next = {
+        ...existing,
+        lifecycleStatus: 'SCHEDULED',
+        publishedAt: normalizedScheduledAt,
+        scheduledAt: normalizedScheduledAt
+      };
+      await upsertPostToDb(client, next);
+      return { post: toAdminPost(next) };
+    });
+  }
+
+  async bulkUpdatePosts({ action, postIds, scheduledAt, publishedAt }) {
+    const normalizedAction = normalizeBulkAction(action);
+    const normalizedPostIds = normalizeBulkPostIds(postIds);
+    const results = [];
+
+    for (const postId of normalizedPostIds) {
+      try {
+        if (normalizedAction === 'PUBLISH') {
+          const result = await this.publishPost({ postId, publishedAt });
+          results.push({ postId, success: true, lifecycle: result.post.lifecycle });
+          continue;
+        }
+        if (normalizedAction === 'UNPUBLISH') {
+          const result = await this.unpublishPost({ postId });
+          results.push({ postId, success: true, lifecycle: result.post.lifecycle });
+          continue;
+        }
+        if (normalizedAction === 'SCHEDULE') {
+          const result = await this.schedulePost({ postId, scheduledAt });
+          results.push({ postId, success: true, lifecycle: result.post.lifecycle });
+          continue;
+        }
+        const result = await this.deletePost({ postId });
+        results.push({ postId, success: true, removed: result.removed });
+      } catch (error) {
+        if (error instanceof FeedApiError) {
+          results.push({
+            postId,
+            success: false,
+            error: {
+              code: error.code,
+              message: error.message
+            }
+          });
+          continue;
+        }
+        throw error;
+      }
+    }
+
+    const successCount = results.filter((item) => item.success).length;
+    return {
+      action: normalizedAction,
+      total: normalizedPostIds.length,
+      successCount,
+      failureCount: normalizedPostIds.length - successCount,
+      results
+    };
   }
 
   async deletePost({ postId }) {

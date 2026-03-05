@@ -107,6 +107,25 @@ Format: **Given / When / Then** + edge cases.
 - **When** POST `/v1/users/me/saved-jobs` -> GET `/v1/users/me/saved-jobs` -> DELETE `/v1/users/me/saved-jobs/{jobId}`
 - **Then** semuanya 200 dan state sinkron
 
+### B7 Application documents upload flow
+- **Given** user login dan sudah punya `applicationId`
+- **When** POST `/v1/users/me/applications/{applicationId}/documents/upload-url` lalu POST `/v1/users/me/applications/{applicationId}/documents`
+- **Then** 201 + dokumen tercatat di aplikasi tersebut
+
+**Edge**
+- content type / content length invalid -> 400
+- checksum duplicate pada aplikasi yang sama -> 409 (`duplicate_application_document`)
+- objectKey bukan milik user+application -> 403 (`invalid_object_key_ownership`)
+
+### B8 Candidate offer decision flow
+- **Given** status aplikasi `OFFERED`
+- **When** POST `/v1/users/me/applications/{applicationId}/offer/accept` atau `/offer/decline`
+- **Then** 200 + status berubah ke `HIRED` (accept) atau `REJECTED` (decline)
+
+**Edge**
+- status belum `OFFERED` -> 409 (`offer_not_available`)
+- admin mencoba `OFFERED -> HIRED/REJECTED` via `/admin/applications/{applicationId}/status` -> 409 (`offer_decision_required`)
+
 ---
 
 ## C. FEED & SAVED POSTS
@@ -259,16 +278,45 @@ Format: **Given / When / Then** + edge cases.
 - **When** PATCH `/v1/admin/applications/{applicationId}/status`
 - **Then** 200 + transition valid
 
+### G5 Admin monitoring dokumen lamaran
+- **When** GET `/v1/admin/applications/{applicationId}/documents`
+- **Then** 200 + daftar dokumen lamaran kandidat
+- **When** PATCH `/v1/admin/applications/{applicationId}/documents/{documentId}`
+- **Then** 200 + review status (`PENDING/VALID/INVALID`) terupdate
+- **When** POST `/v1/admin/applications/documents/{documentId}/preview-url`
+- **Then** 200 + signed preview URL sementara
+
+**Edge**
+- dokumen tidak ditemukan -> 404 (`application_document_not_found`)
+- `reviewStatus` invalid -> 400 (`invalid_review_status`)
+- `expiresSec` di luar range -> 400 (`invalid_expires_sec`)
+
 **Edge**
 - status transition invalid -> 409
 
 ### G5 Admin jobs CRUD
 - **When** GET/POST/PATCH/DELETE `/v1/admin/jobs...`
 - **Then** 200/201
+- **When** POST `/v1/admin/jobs/{jobId}/publish`
+- **Then** 200 + `job.lifecycle.status=PUBLISHED`
+- **When** POST `/v1/admin/jobs/{jobId}/unpublish`
+- **Then** 200 + `job.lifecycle.status=DRAFT`
+- **When** POST `/v1/admin/jobs/{jobId}/schedule` dengan `scheduledAt`
+- **Then** 200 + `job.lifecycle.status=SCHEDULED`
+- **When** POST `/v1/admin/jobs/bulk` dengan `action` dan `jobIds`
+- **Then** 200 + ringkasan `successCount/failureCount/results`
 
 ### G6 Admin feed CRUD
 - **When** GET/POST/PATCH/DELETE `/v1/admin/feed/posts...`
 - **Then** 200/201
+- **When** POST `/v1/admin/feed/posts/{postId}/publish`
+- **Then** 200 + `post.lifecycle.status=PUBLISHED`
+- **When** POST `/v1/admin/feed/posts/{postId}/unpublish`
+- **Then** 200 + `post.lifecycle.status=DRAFT`
+- **When** POST `/v1/admin/feed/posts/{postId}/schedule` dengan `scheduledAt`
+- **Then** 200 + `post.lifecycle.status=SCHEDULED`
+- **When** POST `/v1/admin/feed/posts/bulk` dengan `action` dan `postIds`
+- **Then** 200 + ringkasan `successCount/failureCount/results`
 
 ### G7 Admin organizations verification
 - **When** GET `/v1/admin/organizations`

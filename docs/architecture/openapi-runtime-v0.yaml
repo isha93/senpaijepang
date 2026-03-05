@@ -468,6 +468,159 @@ paths:
         '404':
           $ref: '#/components/responses/ApiError'
 
+  /users/me/applications/{applicationId}/documents/upload-url:
+    post:
+      tags: [Jobs]
+      summary: Create upload URL for application document
+      parameters:
+        - in: path
+          name: applicationId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApplicationDocumentUploadUrlRequest'
+      responses:
+        '201':
+          description: Upload URL created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApplicationDocumentUploadUrlResponse'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/ApiError'
+        '404':
+          $ref: '#/components/responses/ApiError'
+
+  /users/me/applications/{applicationId}/documents:
+    get:
+      tags: [Jobs]
+      summary: List uploaded documents for a user application
+      parameters:
+        - in: path
+          name: applicationId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserApplicationDocumentListResponse'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/ApiError'
+        '404':
+          $ref: '#/components/responses/ApiError'
+    post:
+      tags: [Jobs]
+      summary: Register uploaded application document
+      parameters:
+        - in: path
+          name: applicationId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApplicationDocumentRegisterRequest'
+      responses:
+        '201':
+          description: Document registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApplicationDocumentRegisterResponse'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/ApiError'
+        '404':
+          $ref: '#/components/responses/ApiError'
+        '409':
+          $ref: '#/components/responses/ApiError'
+
+  /users/me/applications/{applicationId}/offer/accept:
+    post:
+      tags: [Jobs]
+      summary: Candidate accepts an offered application
+      parameters:
+        - in: path
+          name: applicationId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApplicationOfferDecisionRequest'
+      responses:
+        '200':
+          description: Offer accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApplicationOfferDecisionResponse'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/ApiError'
+        '404':
+          $ref: '#/components/responses/ApiError'
+        '409':
+          $ref: '#/components/responses/ApiError'
+
+  /users/me/applications/{applicationId}/offer/decline:
+    post:
+      tags: [Jobs]
+      summary: Candidate declines an offered application
+      parameters:
+        - in: path
+          name: applicationId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApplicationOfferDecisionRequest'
+      responses:
+        '200':
+          description: Offer declined
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApplicationOfferDecisionResponse'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/ApiError'
+        '404':
+          $ref: '#/components/responses/ApiError'
+        '409':
+          $ref: '#/components/responses/ApiError'
+
   /feed/posts:
     get:
       tags: [Feed]
@@ -1015,6 +1168,146 @@ paths:
           $ref: '#/components/responses/ApiError'
         '503':
           $ref: '#/components/responses/ApiError'
+
+  /admin/jobs/bulk:
+    post:
+      tags: [Admin]
+      summary: Run bulk lifecycle or delete action on jobs
+      security:
+        - bearerAuth: []
+        - adminApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminJobsBulkRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminJobsBulkResponse'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/ApiError'
+        '403':
+          $ref: '#/components/responses/ApiError'
+        '503':
+          $ref: '#/components/responses/ApiError'
+
+  /admin/jobs/{jobId}/publish:
+    post:
+      tags: [Admin]
+      summary: Publish a job
+      security:
+        - bearerAuth: []
+        - adminApiKeyAuth: []
+      parameters:
+        - in: path
+          name: jobId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContentPublishRequest'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminJobEnvelope'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/ApiError'
+        '403':
+          $ref: '#/components/responses/ApiError'
+        '404':
+          $ref: '#/components/responses/ApiError'
+        '503':
+          $ref: '#/components/responses/ApiError'
+
+  /admin/jobs/{jobId}/unpublish:
+    post:
+      tags: [Admin]
+      summary: Unpublish a job to draft
+      security:
+        - bearerAuth: []
+        - adminApiKeyAuth: []
+      parameters:
+        - in: path
+          name: jobId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminJobEnvelope'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/ApiError'
+        '403':
+          $ref: '#/components/responses/ApiError'
+        '404':
+          $ref: '#/components/responses/ApiError'
+        '503':
+          $ref: '#/components/responses/ApiError'
+
+  /admin/jobs/{jobId}/schedule:
+    post:
+      tags: [Admin]
+      summary: Schedule a job publication
+      security:
+        - bearerAuth: []
+        - adminApiKeyAuth: []
+      parameters:
+        - in: path
+          name: jobId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContentScheduleRequest'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminJobEnvelope'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/ApiError'
+        '403':
+          $ref: '#/components/responses/ApiError'
+        '404':
+          $ref: '#/components/responses/ApiError'
+        '503':
+          $ref: '#/components/responses/ApiError'
     delete:
       tags: [Admin]
       summary: Delete job for admin management
@@ -1138,6 +1431,146 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/AdminFeedPostUpdateRequest'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminFeedPostEnvelope'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/ApiError'
+        '403':
+          $ref: '#/components/responses/ApiError'
+        '404':
+          $ref: '#/components/responses/ApiError'
+        '503':
+          $ref: '#/components/responses/ApiError'
+
+  /admin/feed/posts/bulk:
+    post:
+      tags: [Admin]
+      summary: Run bulk lifecycle or delete action on feed posts
+      security:
+        - bearerAuth: []
+        - adminApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminFeedPostsBulkRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminFeedPostsBulkResponse'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/ApiError'
+        '403':
+          $ref: '#/components/responses/ApiError'
+        '503':
+          $ref: '#/components/responses/ApiError'
+
+  /admin/feed/posts/{postId}/publish:
+    post:
+      tags: [Admin]
+      summary: Publish a feed post
+      security:
+        - bearerAuth: []
+        - adminApiKeyAuth: []
+      parameters:
+        - in: path
+          name: postId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContentPublishRequest'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminFeedPostEnvelope'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/ApiError'
+        '403':
+          $ref: '#/components/responses/ApiError'
+        '404':
+          $ref: '#/components/responses/ApiError'
+        '503':
+          $ref: '#/components/responses/ApiError'
+
+  /admin/feed/posts/{postId}/unpublish:
+    post:
+      tags: [Admin]
+      summary: Unpublish a feed post to draft
+      security:
+        - bearerAuth: []
+        - adminApiKeyAuth: []
+      parameters:
+        - in: path
+          name: postId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminFeedPostEnvelope'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/ApiError'
+        '403':
+          $ref: '#/components/responses/ApiError'
+        '404':
+          $ref: '#/components/responses/ApiError'
+        '503':
+          $ref: '#/components/responses/ApiError'
+
+  /admin/feed/posts/{postId}/schedule:
+    post:
+      tags: [Admin]
+      summary: Schedule a feed post publication
+      security:
+        - bearerAuth: []
+        - adminApiKeyAuth: []
+      parameters:
+        - in: path
+          name: postId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContentScheduleRequest'
       responses:
         '200':
           description: Updated
@@ -1764,6 +2197,120 @@ paths:
         '503':
           $ref: '#/components/responses/ApiError'
 
+  /admin/applications/{applicationId}/documents:
+    get:
+      tags: [Admin]
+      summary: List documents uploaded for a specific application
+      security:
+        - bearerAuth: []
+        - adminApiKeyAuth: []
+      parameters:
+        - in: path
+          name: applicationId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminApplicationDocumentListResponse'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/ApiError'
+        '403':
+          $ref: '#/components/responses/ApiError'
+        '404':
+          $ref: '#/components/responses/ApiError'
+        '503':
+          $ref: '#/components/responses/ApiError'
+
+  /admin/applications/{applicationId}/documents/{documentId}:
+    patch:
+      tags: [Admin]
+      summary: Review application document
+      security:
+        - bearerAuth: []
+        - adminApiKeyAuth: []
+      parameters:
+        - in: path
+          name: applicationId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: path
+          name: documentId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminApplicationDocumentReviewRequest'
+      responses:
+        '200':
+          description: Reviewed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminApplicationDocumentReviewResponse'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/ApiError'
+        '403':
+          $ref: '#/components/responses/ApiError'
+        '404':
+          $ref: '#/components/responses/ApiError'
+        '503':
+          $ref: '#/components/responses/ApiError'
+
+  /admin/applications/documents/{documentId}/preview-url:
+    post:
+      tags: [Admin]
+      summary: Issue short-lived preview URL for application document
+      security:
+        - bearerAuth: []
+        - adminApiKeyAuth: []
+      parameters:
+        - in: path
+          name: documentId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminApplicationDocumentPreviewRequest'
+      responses:
+        '200':
+          description: Preview URL issued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminApplicationDocumentPreviewResponse'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/ApiError'
+        '403':
+          $ref: '#/components/responses/ApiError'
+        '404':
+          $ref: '#/components/responses/ApiError'
+        '503':
+          $ref: '#/components/responses/ApiError'
+
   /admin/organizations/{orgId}/verification:
     patch:
       tags: [Admin]
@@ -2342,6 +2889,56 @@ components:
       type: string
       enum: [FULL_TIME, PART_TIME, CONTRACT]
 
+    ContentLifecycleStatus:
+      type: string
+      enum: [DRAFT, PUBLISHED, SCHEDULED]
+
+    ContentLifecycleState:
+      type: object
+      required: [status, effectiveStatus, publishedAt, scheduledAt]
+      properties:
+        status:
+          $ref: '#/components/schemas/ContentLifecycleStatus'
+        effectiveStatus:
+          $ref: '#/components/schemas/ContentLifecycleStatus'
+        publishedAt:
+          type: string
+          format: date-time
+          nullable: true
+        scheduledAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    ContentLifecyclePatch:
+      type: object
+      properties:
+        status:
+          $ref: '#/components/schemas/ContentLifecycleStatus'
+        publishedAt:
+          type: string
+          format: date-time
+          nullable: true
+        scheduledAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    ContentPublishRequest:
+      type: object
+      properties:
+        publishedAt:
+          type: string
+          format: date-time
+
+    ContentScheduleRequest:
+      type: object
+      required: [scheduledAt]
+      properties:
+        scheduledAt:
+          type: string
+          format: date-time
+
     JobViewerState:
       type: object
       required: [authenticated, saved, canApply, applyCta]
@@ -2394,7 +2991,7 @@ components:
 
     JobSummary:
       type: object
-      required: [id, title, employmentType, visaSponsorship, location, employer, viewerState]
+      required: [id, title, employmentType, visaSponsorship, location, employer, lifecycle, viewerState]
       properties:
         id:
           type: string
@@ -2408,13 +3005,15 @@ components:
           $ref: '#/components/schemas/JobLocationSummary'
         employer:
           $ref: '#/components/schemas/JobEmployer'
+        lifecycle:
+          $ref: '#/components/schemas/ContentLifecycleState'
         viewerState:
           $ref: '#/components/schemas/JobViewerState'
 
     JobDetail:
       type: object
       required:
-        [id, title, employmentType, visaSponsorship, description, requirements, location, employer]
+        [id, title, employmentType, visaSponsorship, description, requirements, location, employer, lifecycle]
       properties:
         id:
           type: string
@@ -2434,6 +3033,8 @@ components:
           $ref: '#/components/schemas/JobLocationDetail'
         employer:
           $ref: '#/components/schemas/JobEmployer'
+        lifecycle:
+          $ref: '#/components/schemas/ContentLifecycleState'
 
     JobPageInfo:
       type: object
@@ -2511,6 +3112,8 @@ components:
           $ref: '#/components/schemas/JobLocationDetail'
         employer:
           $ref: '#/components/schemas/JobEmployer'
+        lifecycle:
+          $ref: '#/components/schemas/ContentLifecyclePatch'
 
     AdminJobUpdateRequest:
       type: object
@@ -2531,6 +3134,8 @@ components:
           $ref: '#/components/schemas/JobLocationDetail'
         employer:
           $ref: '#/components/schemas/JobEmployer'
+        lifecycle:
+          $ref: '#/components/schemas/ContentLifecyclePatch'
 
     AdminJobDeleteResponse:
       type: object
@@ -2540,6 +3145,66 @@ components:
           type: boolean
         jobId:
           type: string
+
+    AdminBulkAction:
+      type: string
+      enum: [PUBLISH, UNPUBLISH, SCHEDULE, DELETE]
+
+    AdminJobsBulkRequest:
+      type: object
+      required: [action, jobIds]
+      properties:
+        action:
+          $ref: '#/components/schemas/AdminBulkAction'
+        jobIds:
+          type: array
+          minItems: 1
+          items:
+            type: string
+        publishedAt:
+          type: string
+          format: date-time
+        scheduledAt:
+          type: string
+          format: date-time
+
+    AdminJobBulkResultItem:
+      type: object
+      required: [jobId, success]
+      properties:
+        jobId:
+          type: string
+        success:
+          type: boolean
+        removed:
+          type: boolean
+        lifecycle:
+          $ref: '#/components/schemas/ContentLifecycleState'
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+
+    AdminJobsBulkResponse:
+      type: object
+      required: [action, total, successCount, failureCount, results]
+      properties:
+        action:
+          $ref: '#/components/schemas/AdminBulkAction'
+        total:
+          type: integer
+        successCount:
+          type: integer
+        failureCount:
+          type: integer
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdminJobBulkResultItem'
 
     SaveJobRequest:
       type: object
@@ -2631,6 +3296,13 @@ components:
           type: string
         description:
           type: string
+        actorType:
+          type: string
+          enum: [USER, ADMIN, SYSTEM]
+          nullable: true
+        actorId:
+          type: string
+          nullable: true
         createdAt:
           type: string
           format: date-time
@@ -2656,6 +3328,177 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ApplicationJourneyEvent'
+
+    ApplicationDocumentReviewStatus:
+      type: string
+      enum: [PENDING, VALID, INVALID]
+
+    ApplicationDocument:
+      type: object
+      required:
+        - id
+        - applicationId
+        - userId
+        - documentType
+        - fileName
+        - contentType
+        - contentLength
+        - checksumSha256
+        - reviewStatus
+        - reviewedAt
+        - reviewedBy
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        applicationId:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        documentType:
+          type: string
+        fileName:
+          type: string
+        contentType:
+          type: string
+        contentLength:
+          type: integer
+        checksumSha256:
+          type: string
+        reviewStatus:
+          $ref: '#/components/schemas/ApplicationDocumentReviewStatus'
+        reviewReason:
+          type: string
+          nullable: true
+        reviewedAt:
+          type: string
+          format: date-time
+          nullable: true
+        reviewedBy:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    ApplicationDocumentUploadUrlRequest:
+      type: object
+      required: [documentType, fileName, contentType, contentLength, checksumSha256]
+      properties:
+        documentType:
+          type: string
+          maxLength: 64
+        fileName:
+          type: string
+          maxLength: 180
+        contentType:
+          type: string
+        contentLength:
+          type: integer
+          minimum: 1
+          maximum: 10485760
+        checksumSha256:
+          type: string
+          pattern: '^[a-f0-9]{64}$'
+
+    ApplicationDocumentUploadUrlResponse:
+      type: object
+      required: [applicationId, upload]
+      properties:
+        applicationId:
+          type: string
+          format: uuid
+        upload:
+          type: object
+          required: [objectKey, uploadUrl, method, headers, expiresAt]
+          properties:
+            objectKey:
+              type: string
+            uploadUrl:
+              type: string
+            method:
+              type: string
+            headers:
+              type: object
+              additionalProperties:
+                type: string
+            expiresAt:
+              type: string
+              format: date-time
+
+    ApplicationDocumentRegisterRequest:
+      type: object
+      required: [documentType, fileName, contentType, contentLength, objectKey, checksumSha256]
+      properties:
+        documentType:
+          type: string
+          maxLength: 64
+        fileName:
+          type: string
+          maxLength: 180
+        contentType:
+          type: string
+        contentLength:
+          type: integer
+          minimum: 1
+          maximum: 10485760
+        objectKey:
+          type: string
+          maxLength: 1024
+        checksumSha256:
+          type: string
+          pattern: '^[a-f0-9]{64}$'
+
+    ApplicationDocumentRegisterResponse:
+      type: object
+      required: [applicationId, document]
+      properties:
+        applicationId:
+          type: string
+          format: uuid
+        document:
+          $ref: '#/components/schemas/ApplicationDocument'
+
+    UserApplicationDocumentListResponse:
+      type: object
+      required: [application, items, total]
+      properties:
+        application:
+          $ref: '#/components/schemas/JobApplicationSummary'
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ApplicationDocument'
+        total:
+          type: integer
+
+    ApplicationOfferDecisionRequest:
+      type: object
+      properties:
+        reason:
+          type: string
+          maxLength: 500
+
+    ApplicationOfferDecisionResponse:
+      type: object
+      required: [updated, decision, application, journeyEvent]
+      properties:
+        updated:
+          type: boolean
+        decision:
+          type: string
+          enum: [ACCEPT, DECLINE]
+        application:
+          $ref: '#/components/schemas/JobApplicationSummary'
+        journeyEvent:
+          $ref: '#/components/schemas/ApplicationJourneyEvent'
 
     AdminOverviewSummaryResponse:
       type: object
@@ -2962,6 +3805,73 @@ components:
             - $ref: '#/components/schemas/ApplicationJourneyEvent'
           nullable: true
 
+    AdminApplicationDocumentListResponse:
+      type: object
+      required: [application, applicant, items, total]
+      properties:
+        application:
+          $ref: '#/components/schemas/JobApplicationSummary'
+        applicant:
+          $ref: '#/components/schemas/AdminApplicationApplicant'
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ApplicationDocument'
+        total:
+          type: integer
+
+    AdminApplicationDocumentReviewRequest:
+      type: object
+      required: [reviewStatus]
+      properties:
+        reviewStatus:
+          $ref: '#/components/schemas/ApplicationDocumentReviewStatus'
+        reviewReason:
+          type: string
+          maxLength: 500
+        reviewedBy:
+          type: string
+          maxLength: 180
+
+    AdminApplicationDocumentReviewResponse:
+      type: object
+      required: [updated, application, applicant, document]
+      properties:
+        updated:
+          type: boolean
+        application:
+          $ref: '#/components/schemas/JobApplicationSummary'
+        applicant:
+          $ref: '#/components/schemas/AdminApplicationApplicant'
+        document:
+          $ref: '#/components/schemas/ApplicationDocument'
+
+    AdminApplicationDocumentPreviewRequest:
+      type: object
+      properties:
+        expiresSec:
+          type: integer
+          minimum: 60
+          maximum: 900
+
+    AdminApplicationDocumentPreviewResponse:
+      type: object
+      required: [documentId, applicationId, url, method, expiresAt]
+      properties:
+        documentId:
+          type: string
+          format: uuid
+        applicationId:
+          type: string
+          format: uuid
+        url:
+          type: string
+        method:
+          type: string
+        expiresAt:
+          type: string
+          format: date-time
+
     FeedViewerState:
       type: object
       required: [authenticated, saved]
@@ -2973,7 +3883,7 @@ components:
 
     FeedPost:
       type: object
-      required: [id, title, excerpt, category, author, imageUrl, publishedAt, viewerState]
+      required: [id, title, excerpt, category, author, imageUrl, publishedAt, lifecycle, viewerState]
       properties:
         id:
           type: string
@@ -2991,6 +3901,9 @@ components:
         publishedAt:
           type: string
           format: date-time
+          nullable: true
+        lifecycle:
+          $ref: '#/components/schemas/ContentLifecycleState'
         viewerState:
           $ref: '#/components/schemas/FeedViewerState'
 
@@ -3007,7 +3920,7 @@ components:
 
     AdminFeedPost:
       type: object
-      required: [id, title, excerpt, category, author, imageUrl, publishedAt]
+      required: [id, title, excerpt, category, author, imageUrl, publishedAt, lifecycle]
       properties:
         id:
           type: string
@@ -3025,6 +3938,9 @@ components:
         publishedAt:
           type: string
           format: date-time
+          nullable: true
+        lifecycle:
+          $ref: '#/components/schemas/ContentLifecycleState'
 
     AdminFeedPostEnvelope:
       type: object
@@ -3062,6 +3978,8 @@ components:
         publishedAt:
           type: string
           format: date-time
+        lifecycle:
+          $ref: '#/components/schemas/ContentLifecyclePatch'
 
     AdminFeedPostUpdateRequest:
       type: object
@@ -3080,6 +3998,8 @@ components:
         publishedAt:
           type: string
           format: date-time
+        lifecycle:
+          $ref: '#/components/schemas/ContentLifecyclePatch'
 
     AdminFeedPostDeleteResponse:
       type: object
@@ -3089,6 +4009,62 @@ components:
           type: boolean
         postId:
           type: string
+
+    AdminFeedPostsBulkRequest:
+      type: object
+      required: [action, postIds]
+      properties:
+        action:
+          $ref: '#/components/schemas/AdminBulkAction'
+        postIds:
+          type: array
+          minItems: 1
+          items:
+            type: string
+        publishedAt:
+          type: string
+          format: date-time
+        scheduledAt:
+          type: string
+          format: date-time
+
+    AdminFeedPostBulkResultItem:
+      type: object
+      required: [postId, success]
+      properties:
+        postId:
+          type: string
+        success:
+          type: boolean
+        removed:
+          type: boolean
+        lifecycle:
+          $ref: '#/components/schemas/ContentLifecycleState'
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+
+    AdminFeedPostsBulkResponse:
+      type: object
+      required: [action, total, successCount, failureCount, results]
+      properties:
+        action:
+          $ref: '#/components/schemas/AdminBulkAction'
+        total:
+          type: integer
+        successCount:
+          type: integer
+        failureCount:
+          type: integer
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdminFeedPostBulkResultItem'
 
     SavePostRequest:
       type: object

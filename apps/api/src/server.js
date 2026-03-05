@@ -119,6 +119,27 @@ function matchApplicationJourneyRoute(pathname) {
   return match ? match[1] : null;
 }
 
+function matchUserApplicationDocumentsRoute(pathname) {
+  const match = String(pathname || '').match(/^\/users\/me\/applications\/([^/]+)\/documents$/);
+  return match ? match[1] : null;
+}
+
+function matchUserApplicationDocumentUploadUrlRoute(pathname) {
+  const match = String(pathname || '').match(/^\/users\/me\/applications\/([^/]+)\/documents\/upload-url$/);
+  return match ? match[1] : null;
+}
+
+function matchUserApplicationOfferRoute(pathname) {
+  const match = String(pathname || '').match(/^\/users\/me\/applications\/([^/]+)\/offer\/(accept|decline)$/);
+  if (!match) {
+    return null;
+  }
+  return {
+    applicationId: match[1],
+    action: match[2]
+  };
+}
+
 function matchSavedPostRoute(pathname) {
   const match = String(pathname || '').match(/^\/users\/me\/saved-posts\/([^/]+)$/);
   return match ? match[1] : null;
@@ -139,9 +160,31 @@ function matchAdminJobRoute(pathname) {
   return match ? match[1] : null;
 }
 
+function matchAdminJobLifecycleRoute(pathname) {
+  const match = String(pathname || '').match(/^\/admin\/jobs\/([^/]+)\/(publish|unpublish|schedule)$/);
+  if (!match) {
+    return null;
+  }
+  return {
+    jobId: match[1],
+    action: match[2]
+  };
+}
+
 function matchAdminFeedPostRoute(pathname) {
   const match = String(pathname || '').match(/^\/admin\/feed\/posts\/([^/]+)$/);
   return match ? match[1] : null;
+}
+
+function matchAdminFeedPostLifecycleRoute(pathname) {
+  const match = String(pathname || '').match(/^\/admin\/feed\/posts\/([^/]+)\/(publish|unpublish|schedule)$/);
+  if (!match) {
+    return null;
+  }
+  return {
+    postId: match[1],
+    action: match[2]
+  };
 }
 
 function matchAdminOrganizationVerificationRoute(pathname) {
@@ -186,6 +229,27 @@ function matchAdminApplicationJourneyRoute(pathname) {
 
 function matchAdminApplicationStatusRoute(pathname) {
   const match = String(pathname || '').match(/^\/admin\/applications\/([^/]+)\/status$/);
+  return match ? match[1] : null;
+}
+
+function matchAdminApplicationDocumentsRoute(pathname) {
+  const match = String(pathname || '').match(/^\/admin\/applications\/([^/]+)\/documents$/);
+  return match ? match[1] : null;
+}
+
+function matchAdminApplicationDocumentRoute(pathname) {
+  const match = String(pathname || '').match(/^\/admin\/applications\/([^/]+)\/documents\/([^/]+)$/);
+  if (!match) {
+    return null;
+  }
+  return {
+    applicationId: match[1],
+    documentId: match[2]
+  };
+}
+
+function matchAdminApplicationDocumentPreviewRoute(pathname) {
+  const match = String(pathname || '').match(/^\/admin\/applications\/documents\/([^/]+)\/preview-url$/);
   return match ? match[1] : null;
 }
 
@@ -843,6 +907,92 @@ async function handleRequest(
     return;
   }
 
+  const userApplicationDocumentsUploadUrlId =
+    req.method === 'POST' ? matchUserApplicationDocumentUploadUrlRoute(pathname) : null;
+  if (req.method === 'POST' && userApplicationDocumentsUploadUrlId) {
+    const user = await authenticateRequest(req, res, authService);
+    if (!user) {
+      return;
+    }
+
+    const body = await readJsonBody(req);
+    const result = await jobsService.createUserApplicationDocumentUploadUrl({
+      userId: user.id,
+      applicationId: userApplicationDocumentsUploadUrlId,
+      documentType: body.documentType,
+      fileName: body.fileName,
+      contentType: body.contentType,
+      contentLength: body.contentLength,
+      checksumSha256: body.checksumSha256
+    });
+    sendJson(res, 201, result);
+    return;
+  }
+
+  const userApplicationDocumentsId =
+    ['GET', 'POST'].includes(req.method || '') ? matchUserApplicationDocumentsRoute(pathname) : null;
+  if (req.method === 'GET' && userApplicationDocumentsId) {
+    const user = await authenticateRequest(req, res, authService);
+    if (!user) {
+      return;
+    }
+
+    const result = await jobsService.listUserApplicationDocuments({
+      userId: user.id,
+      applicationId: userApplicationDocumentsId
+    });
+    sendJson(res, 200, result);
+    return;
+  }
+
+  if (req.method === 'POST' && userApplicationDocumentsId) {
+    const user = await authenticateRequest(req, res, authService);
+    if (!user) {
+      return;
+    }
+
+    const body = await readJsonBody(req);
+    const result = await jobsService.registerUserApplicationDocument({
+      userId: user.id,
+      applicationId: userApplicationDocumentsId,
+      documentType: body.documentType,
+      fileName: body.fileName,
+      contentType: body.contentType,
+      contentLength: body.contentLength,
+      objectKey: body.objectKey,
+      checksumSha256: body.checksumSha256
+    });
+    sendJson(res, 201, result);
+    return;
+  }
+
+  const userApplicationOfferAction =
+    req.method === 'POST' ? matchUserApplicationOfferRoute(pathname) : null;
+  if (req.method === 'POST' && userApplicationOfferAction) {
+    const user = await authenticateRequest(req, res, authService);
+    if (!user) {
+      return;
+    }
+
+    const body = await readJsonBody(req);
+    let result;
+    if (userApplicationOfferAction.action === 'accept') {
+      result = await jobsService.acceptOfferForUser({
+        userId: user.id,
+        applicationId: userApplicationOfferAction.applicationId,
+        reason: body.reason
+      });
+    } else {
+      result = await jobsService.declineOfferForUser({
+        userId: user.id,
+        applicationId: userApplicationOfferAction.applicationId,
+        reason: body.reason
+      });
+    }
+    sendJson(res, 200, result);
+    return;
+  }
+
   if (req.method === 'POST' && pathname === '/users/me/saved-jobs') {
     const user = await authenticateRequest(req, res, authService);
     if (!user) {
@@ -1073,6 +1223,58 @@ async function handleRequest(
     return;
   }
 
+  const adminApplicationDocumentsId =
+    req.method === 'GET' ? matchAdminApplicationDocumentsRoute(pathname) : null;
+  if (req.method === 'GET' && adminApplicationDocumentsId) {
+    const adminAuth = await authenticateAdminRequest(req, res, authService, adminApiKey, adminRoleCodes);
+    if (!adminAuth) {
+      return;
+    }
+
+    const result = await jobsService.listAdminApplicationDocuments({
+      applicationId: adminApplicationDocumentsId
+    });
+    sendJson(res, 200, result);
+    return;
+  }
+
+  const adminApplicationDocumentTarget =
+    req.method === 'PATCH' ? matchAdminApplicationDocumentRoute(pathname) : null;
+  if (req.method === 'PATCH' && adminApplicationDocumentTarget) {
+    const adminAuth = await authenticateAdminRequest(req, res, authService, adminApiKey, adminRoleCodes);
+    if (!adminAuth) {
+      return;
+    }
+
+    const body = await readJsonBody(req);
+    const result = await jobsService.reviewAdminApplicationDocument({
+      applicationId: adminApplicationDocumentTarget.applicationId,
+      documentId: adminApplicationDocumentTarget.documentId,
+      reviewStatus: body.reviewStatus,
+      reviewReason: body.reviewReason,
+      reviewedBy: body.reviewedBy || adminAuth.user?.email || null
+    });
+    sendJson(res, 200, result);
+    return;
+  }
+
+  const adminApplicationDocumentPreviewId =
+    req.method === 'POST' ? matchAdminApplicationDocumentPreviewRoute(pathname) : null;
+  if (req.method === 'POST' && adminApplicationDocumentPreviewId) {
+    const adminAuth = await authenticateAdminRequest(req, res, authService, adminApiKey, adminRoleCodes);
+    if (!adminAuth) {
+      return;
+    }
+
+    const body = await readJsonBody(req);
+    const result = await jobsService.issueAdminApplicationDocumentPreviewUrl({
+      documentId: adminApplicationDocumentPreviewId,
+      expiresSec: body.expiresSec
+    });
+    sendJson(res, 200, result);
+    return;
+  }
+
   const adminApplicationId = req.method === 'GET' ? matchAdminApplicationRoute(pathname) : null;
   if (req.method === 'GET' && adminApplicationId) {
     const adminAuth = await authenticateAdminRequest(req, res, authService, adminApiKey, adminRoleCodes);
@@ -1111,6 +1313,52 @@ async function handleRequest(
     const body = await readJsonBody(req);
     const result = await jobsService.createJob(body);
     sendJson(res, 201, result);
+    return;
+  }
+
+  if (req.method === 'POST' && pathname === '/admin/jobs/bulk') {
+    const adminAuth = await authenticateAdminRequest(req, res, authService, adminApiKey, adminRoleCodes);
+    if (!adminAuth) {
+      return;
+    }
+
+    const body = await readJsonBody(req);
+    const result = await jobsService.bulkUpdateJobs({
+      action: body.action,
+      jobIds: body.jobIds,
+      scheduledAt: body.scheduledAt,
+      publishedAt: body.publishedAt
+    });
+    sendJson(res, 200, result);
+    return;
+  }
+
+  const adminJobLifecycle =
+    req.method === 'POST' ? matchAdminJobLifecycleRoute(pathname) : null;
+  if (req.method === 'POST' && adminJobLifecycle) {
+    const adminAuth = await authenticateAdminRequest(req, res, authService, adminApiKey, adminRoleCodes);
+    if (!adminAuth) {
+      return;
+    }
+
+    const body = await readJsonBody(req);
+    let result;
+    if (adminJobLifecycle.action === 'publish') {
+      result = await jobsService.publishJob({
+        jobId: adminJobLifecycle.jobId,
+        publishedAt: body.publishedAt
+      });
+    } else if (adminJobLifecycle.action === 'unpublish') {
+      result = await jobsService.unpublishJob({
+        jobId: adminJobLifecycle.jobId
+      });
+    } else {
+      result = await jobsService.scheduleJob({
+        jobId: adminJobLifecycle.jobId,
+        scheduledAt: body.scheduledAt
+      });
+    }
+    sendJson(res, 200, result);
     return;
   }
 
@@ -1168,6 +1416,52 @@ async function handleRequest(
     const body = await readJsonBody(req);
     const result = await feedService.createPost(body);
     sendJson(res, 201, result);
+    return;
+  }
+
+  if (req.method === 'POST' && pathname === '/admin/feed/posts/bulk') {
+    const adminAuth = await authenticateAdminRequest(req, res, authService, adminApiKey, adminRoleCodes);
+    if (!adminAuth) {
+      return;
+    }
+
+    const body = await readJsonBody(req);
+    const result = await feedService.bulkUpdatePosts({
+      action: body.action,
+      postIds: body.postIds,
+      scheduledAt: body.scheduledAt,
+      publishedAt: body.publishedAt
+    });
+    sendJson(res, 200, result);
+    return;
+  }
+
+  const adminFeedLifecycle =
+    req.method === 'POST' ? matchAdminFeedPostLifecycleRoute(pathname) : null;
+  if (req.method === 'POST' && adminFeedLifecycle) {
+    const adminAuth = await authenticateAdminRequest(req, res, authService, adminApiKey, adminRoleCodes);
+    if (!adminAuth) {
+      return;
+    }
+
+    const body = await readJsonBody(req);
+    let result;
+    if (adminFeedLifecycle.action === 'publish') {
+      result = await feedService.publishPost({
+        postId: adminFeedLifecycle.postId,
+        publishedAt: body.publishedAt
+      });
+    } else if (adminFeedLifecycle.action === 'unpublish') {
+      result = await feedService.unpublishPost({
+        postId: adminFeedLifecycle.postId
+      });
+    } else {
+      result = await feedService.schedulePost({
+        postId: adminFeedLifecycle.postId,
+        scheduledAt: body.scheduledAt
+      });
+    }
+    sendJson(res, 200, result);
     return;
   }
 

@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { createInMemoryObjectStorage } from '../identity/object-storage.js';
 
 export class JobsApiError extends Error {
   constructor(status, code, message) {
@@ -10,13 +11,17 @@ export class JobsApiError extends Error {
 
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 50;
+const MAX_BULK_ITEMS = 100;
 const EMPLOYMENT_TYPES = new Set(['FULL_TIME', 'PART_TIME', 'CONTRACT']);
+const JOB_LIFECYCLE_STATUSES = new Set(['DRAFT', 'PUBLISHED', 'SCHEDULED']);
+const JOB_BULK_ACTIONS = new Set(['PUBLISH', 'UNPUBLISH', 'SCHEDULE', 'DELETE']);
+const APPLICATION_DOCUMENT_REVIEW_STATUSES = new Set(['PENDING', 'VALID', 'INVALID']);
 const APPLICATION_STATUSES = new Set(['SUBMITTED', 'IN_REVIEW', 'INTERVIEW', 'OFFERED', 'HIRED', 'REJECTED']);
 const APPLICATION_STATUS_TRANSITIONS = {
   SUBMITTED: new Set(['IN_REVIEW', 'INTERVIEW', 'OFFERED', 'HIRED', 'REJECTED']),
   IN_REVIEW: new Set(['INTERVIEW', 'OFFERED', 'HIRED', 'REJECTED']),
   INTERVIEW: new Set(['OFFERED', 'HIRED', 'REJECTED']),
-  OFFERED: new Set(['HIRED', 'REJECTED']),
+  OFFERED: new Set(),
   HIRED: new Set(),
   REJECTED: new Set()
 };
@@ -35,6 +40,15 @@ const MAX_REQUIREMENT_LENGTH = 300;
 const MAX_CITY_LENGTH = 120;
 const MAX_DISPLAY_LABEL_LENGTH = 180;
 const MAX_EMPLOYER_NAME_LENGTH = 180;
+const MAX_APPLICATION_DOCUMENT_TYPE_LENGTH = 64;
+const MAX_APPLICATION_FILE_NAME_LENGTH = 180;
+const MAX_APPLICATION_OBJECT_KEY_LENGTH = 1024;
+const MAX_APPLICATION_REVIEW_REASON_LENGTH = 500;
+const DEFAULT_APPLICATION_ALLOWED_CONTENT_TYPES = new Set(['application/pdf', 'image/jpeg', 'image/png']);
+const DEFAULT_APPLICATION_MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
+const APPLICATION_PREVIEW_DEFAULT_EXPIRES_SEC = 120;
+const APPLICATION_PREVIEW_MAX_EXPIRES_SEC = 900;
+const APPLICATION_DOCUMENT_ACTOR_TYPES = new Set(['USER', 'ADMIN', 'SYSTEM']);
 
 export const JOB_SEED_DATA = [
   {
@@ -138,7 +152,12 @@ export const JOB_SEED_DATA = [
       isVerifiedEmployer: true
     }
   }
-];
+].map((job, index) => ({
+  ...job,
+  lifecycleStatus: 'PUBLISHED',
+  publishedAt: new Date(Date.UTC(2026, 0, index + 1, 9, 0, 0)).toISOString(),
+  scheduledAt: null
+}));
 
 function normalizeLimit(limit) {
   if (limit === undefined || limit === null || String(limit).trim() === '') {
@@ -242,6 +261,224 @@ function normalizeOptionalReason(reason) {
   return normalized;
 }
 
+function normalizeApplicationId(applicationId) {
+  const normalized = String(applicationId || '').trim();
+  if (!normalized) {
+    throw new JobsApiError(400, 'invalid_application_id', 'applicationId is required');
+  }
+  return normalized;
+}
+
+function normalizeApplicationDocumentId(documentId) {
+  const normalized = String(documentId || '').trim();
+  if (!normalized) {
+    throw new JobsApiError(400, 'invalid_document_id', 'documentId is required');
+  }
+  return normalized;
+}
+
+function normalizeApplicationDocumentType(documentType) {
+  const normalized = String(documentType || '')
+    .trim()
+    .toUpperCase();
+  if (!normalized) {
+    throw new JobsApiError(400, 'invalid_document_type', 'documentType is required');
+  }
+  if (normalized.length > MAX_APPLICATION_DOCUMENT_TYPE_LENGTH) {
+    throw new JobsApiError(
+      400,
+      'invalid_document_type',
+      `documentType must be <= ${MAX_APPLICATION_DOCUMENT_TYPE_LENGTH} characters`
+    );
+  }
+  return normalized;
+}
+
+function normalizeApplicationFileName(fileName) {
+  const normalized = String(fileName || '').trim();
+  if (!normalized) {
+    throw new JobsApiError(400, 'invalid_file_name', 'fileName is required');
+  }
+  if (normalized.length > MAX_APPLICATION_FILE_NAME_LENGTH) {
+    throw new JobsApiError(
+      400,
+      'invalid_file_name',
+      `fileName must be <= ${MAX_APPLICATION_FILE_NAME_LENGTH} characters`
+    );
+  }
+  return normalized;
+}
+
+function normalizeApplicationObjectKey(objectKey) {
+  const normalized = String(objectKey || '').trim();
+  if (!normalized) {
+    throw new JobsApiError(400, 'invalid_object_key', 'objectKey is required');
+  }
+  if (normalized.length > MAX_APPLICATION_OBJECT_KEY_LENGTH) {
+    throw new JobsApiError(
+      400,
+      'invalid_object_key',
+      `objectKey must be <= ${MAX_APPLICATION_OBJECT_KEY_LENGTH} characters`
+    );
+  }
+  if (normalized.startsWith('/') || normalized.includes('..')) {
+    throw new JobsApiError(400, 'invalid_object_key', 'objectKey is invalid');
+  }
+  if (!/^[a-zA-Z0-9/_\-.]+$/.test(normalized)) {
+    throw new JobsApiError(400, 'invalid_object_key', 'objectKey contains unsupported characters');
+  }
+  return normalized;
+}
+
+function normalizeApplicationContentType(contentType) {
+  const normalized = String(contentType || '')
+    .trim()
+    .toLowerCase();
+  if (!normalized) {
+    throw new JobsApiError(400, 'invalid_content_type', 'contentType is required');
+  }
+  if (!DEFAULT_APPLICATION_ALLOWED_CONTENT_TYPES.has(normalized)) {
+    throw new JobsApiError(
+      400,
+      'invalid_content_type',
+      `contentType must be one of ${Array.from(DEFAULT_APPLICATION_ALLOWED_CONTENT_TYPES).join(', ')}`
+    );
+  }
+  return normalized;
+}
+
+function normalizeApplicationContentLength(contentLength) {
+  const normalized = Number(contentLength);
+  if (!Number.isFinite(normalized) || normalized <= 0) {
+    throw new JobsApiError(400, 'invalid_content_length', 'contentLength must be a positive number');
+  }
+  if (normalized > DEFAULT_APPLICATION_MAX_UPLOAD_BYTES) {
+    throw new JobsApiError(
+      400,
+      'invalid_content_length',
+      `contentLength must be <= ${DEFAULT_APPLICATION_MAX_UPLOAD_BYTES} bytes`
+    );
+  }
+  return Math.floor(normalized);
+}
+
+function normalizeApplicationChecksumSha256(checksumSha256) {
+  const normalized = String(checksumSha256 || '')
+    .trim()
+    .toLowerCase();
+  if (!/^[a-f0-9]{64}$/.test(normalized)) {
+    throw new JobsApiError(400, 'invalid_checksum_sha256', 'checksumSha256 must be 64 hex characters');
+  }
+  return normalized;
+}
+
+function normalizeApplicationDocumentReviewStatus(reviewStatus) {
+  const normalized = String(reviewStatus || '')
+    .trim()
+    .toUpperCase();
+  if (!APPLICATION_DOCUMENT_REVIEW_STATUSES.has(normalized)) {
+    throw new JobsApiError(
+      400,
+      'invalid_review_status',
+      `reviewStatus must be one of ${Array.from(APPLICATION_DOCUMENT_REVIEW_STATUSES).join(', ')}`
+    );
+  }
+  return normalized;
+}
+
+function normalizeApplicationReviewReason(reviewReason) {
+  if (reviewReason === undefined || reviewReason === null) {
+    return null;
+  }
+  const normalized = String(reviewReason).trim();
+  if (!normalized) {
+    return null;
+  }
+  if (normalized.length > MAX_APPLICATION_REVIEW_REASON_LENGTH) {
+    throw new JobsApiError(
+      400,
+      'invalid_review_reason',
+      `reviewReason must be <= ${MAX_APPLICATION_REVIEW_REASON_LENGTH} characters`
+    );
+  }
+  return normalized;
+}
+
+function normalizeApplicationPreviewExpiresSec(expiresSec) {
+  if (expiresSec === undefined || expiresSec === null || String(expiresSec).trim() === '') {
+    return APPLICATION_PREVIEW_DEFAULT_EXPIRES_SEC;
+  }
+  const normalized = Number(expiresSec);
+  if (
+    !Number.isFinite(normalized) ||
+    normalized < 60 ||
+    normalized > APPLICATION_PREVIEW_MAX_EXPIRES_SEC
+  ) {
+    throw new JobsApiError(
+      400,
+      'invalid_expires_sec',
+      `expiresSec must be between 60 and ${APPLICATION_PREVIEW_MAX_EXPIRES_SEC}`
+    );
+  }
+  return Math.floor(normalized);
+}
+
+function normalizeApplicationActorType(actorType) {
+  const normalized = String(actorType || '')
+    .trim()
+    .toUpperCase();
+  if (!APPLICATION_DOCUMENT_ACTOR_TYPES.has(normalized)) {
+    throw new JobsApiError(
+      400,
+      'invalid_actor_type',
+      `actorType must be one of ${Array.from(APPLICATION_DOCUMENT_ACTOR_TYPES).join(', ')}`
+    );
+  }
+  return normalized;
+}
+
+function normalizeApplicationActorId(actorId) {
+  if (actorId === undefined || actorId === null) {
+    return null;
+  }
+  const normalized = String(actorId).trim();
+  if (!normalized) {
+    return null;
+  }
+  if (normalized.length > 180) {
+    throw new JobsApiError(400, 'invalid_actor_id', 'actorId must be <= 180 characters');
+  }
+  return normalized;
+}
+
+function sanitizeFileToken(value, fallback) {
+  const normalized = String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  return normalized || fallback;
+}
+
+function buildApplicationDocumentObjectKey({ userId, applicationId, documentType, fileName }) {
+  const timestampToken = new Date().toISOString().replace(/[-:.TZ]/g, '');
+  const safeFileName = sanitizeFileToken(fileName, 'document.bin');
+  const safeDocumentType = sanitizeFileToken(documentType, 'document');
+  return `applications/${userId}/${applicationId}/${timestampToken}-${safeDocumentType}-${randomUUID()}-${safeFileName}`;
+}
+
+function assertApplicationObjectKeyOwnership({ userId, applicationId, objectKey }) {
+  const expectedPrefix = `applications/${userId}/${applicationId}/`;
+  if (!String(objectKey || '').startsWith(expectedPrefix)) {
+    throw new JobsApiError(
+      403,
+      'invalid_object_key_ownership',
+      'objectKey is not allowed for this application'
+    );
+  }
+}
+
 function normalizeOptionalUpdatedBy(updatedBy) {
   if (updatedBy === undefined || updatedBy === null) {
     return null;
@@ -268,6 +505,120 @@ function normalizeOptionalDateTime(value, fieldName) {
   return new Date(timestamp).toISOString();
 }
 
+function normalizeRequiredLifecycleStatus(status, fieldName = 'status') {
+  const normalized = String(status || '')
+    .trim()
+    .toUpperCase();
+  if (!JOB_LIFECYCLE_STATUSES.has(normalized)) {
+    throw new JobsApiError(
+      400,
+      'invalid_lifecycle_status',
+      `${fieldName} must be one of ${Array.from(JOB_LIFECYCLE_STATUSES).join(', ')}`
+    );
+  }
+  return normalized;
+}
+
+function normalizeOptionalLifecycleStatus(status, fieldName = 'status') {
+  if (status === undefined) {
+    return undefined;
+  }
+  return normalizeRequiredLifecycleStatus(status, fieldName);
+}
+
+function normalizeRequiredLifecycleDate(value, fieldName) {
+  const normalized = String(value || '').trim();
+  const timestamp = Date.parse(normalized);
+  if (!Number.isFinite(timestamp)) {
+    throw new JobsApiError(400, 'invalid_lifecycle_date', `${fieldName} must be valid ISO date-time`);
+  }
+  return new Date(timestamp).toISOString();
+}
+
+function normalizeOptionalLifecycleDate(value, fieldName) {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (value === null || String(value).trim() === '') {
+    return null;
+  }
+  return normalizeRequiredLifecycleDate(value, fieldName);
+}
+
+function normalizeBulkAction(action) {
+  const normalized = String(action || '')
+    .trim()
+    .toUpperCase();
+  if (!JOB_BULK_ACTIONS.has(normalized)) {
+    throw new JobsApiError(
+      400,
+      'invalid_bulk_action',
+      `action must be one of ${Array.from(JOB_BULK_ACTIONS).join(', ')}`
+    );
+  }
+  return normalized;
+}
+
+function normalizeBulkJobIds(jobIds) {
+  if (!Array.isArray(jobIds) || jobIds.length === 0) {
+    throw new JobsApiError(400, 'invalid_job_ids', 'jobIds must be a non-empty array');
+  }
+  if (jobIds.length > MAX_BULK_ITEMS) {
+    throw new JobsApiError(400, 'invalid_job_ids', `jobIds must not exceed ${MAX_BULK_ITEMS} items`);
+  }
+  const normalized = [];
+  const seen = new Set();
+  for (const value of jobIds) {
+    const id = String(value || '').trim();
+    if (!id) {
+      throw new JobsApiError(400, 'invalid_job_ids', 'jobIds must contain non-empty ids');
+    }
+    if (!seen.has(id)) {
+      seen.add(id);
+      normalized.push(id);
+    }
+  }
+  return normalized;
+}
+
+function ensureJobLifecycle(job) {
+  const lifecycleStatus = normalizeRequiredLifecycleStatus(
+    job.lifecycleStatus || 'PUBLISHED',
+    'lifecycle.status'
+  );
+  const publishedAt = job.publishedAt ? normalizeRequiredLifecycleDate(job.publishedAt, 'lifecycle.publishedAt') : null;
+  const scheduledAt = job.scheduledAt ? normalizeRequiredLifecycleDate(job.scheduledAt, 'lifecycle.scheduledAt') : null;
+  return {
+    ...job,
+    lifecycleStatus,
+    publishedAt,
+    scheduledAt
+  };
+}
+
+function resolveEffectiveLifecycleStatus({ lifecycleStatus, scheduledAt }) {
+  if (lifecycleStatus === 'SCHEDULED') {
+    if (!scheduledAt) {
+      return 'DRAFT';
+    }
+    return Date.parse(scheduledAt) <= Date.now() ? 'PUBLISHED' : 'SCHEDULED';
+  }
+  return lifecycleStatus;
+}
+
+function isJobPubliclyVisible(job) {
+  return resolveEffectiveLifecycleStatus(job) === 'PUBLISHED';
+}
+
+function toLifecycleState(job) {
+  return {
+    status: job.lifecycleStatus,
+    effectiveStatus: resolveEffectiveLifecycleStatus(job),
+    publishedAt: job.publishedAt || null,
+    scheduledAt: job.scheduledAt || null
+  };
+}
+
 function ensureTransitionAllowed(fromStatus, toStatus) {
   if (fromStatus === toStatus) {
     return false;
@@ -283,16 +634,27 @@ function ensureTransitionAllowed(fromStatus, toStatus) {
   return true;
 }
 
-function buildStatusJourneyEvent({ status, reason, updatedBy, createdAt }) {
-  const title = APPLICATION_STATUS_EVENT_TITLES[status] || `Application status ${status}`;
+function buildStatusJourneyEvent({
+  status,
+  reason,
+  updatedBy,
+  createdAt,
+  actorType = 'ADMIN',
+  actorId = null,
+  title,
+  description
+}) {
+  const resolvedTitle = title || APPLICATION_STATUS_EVENT_TITLES[status] || `Application status ${status}`;
   const reasonSuffix = reason ? ` Reason: ${reason}` : '';
   const actor = updatedBy ? ` by ${updatedBy}` : '';
-  const description = `Application status updated to ${status}${actor}.${reasonSuffix}`.trim();
+  const resolvedDescription = (description || `Application status updated to ${status}${actor}.${reasonSuffix}`).trim();
   return {
     id: randomUUID(),
     status,
-    title,
-    description,
+    title: resolvedTitle,
+    description: resolvedDescription,
+    actorType: normalizeApplicationActorType(actorType),
+    actorId: normalizeApplicationActorId(actorId),
     createdAt
   };
 }
@@ -519,6 +881,7 @@ function toJobSummary(job, viewerState) {
       logoUrl: job.employer.logoUrl,
       isVerifiedEmployer: job.employer.isVerifiedEmployer
     },
+    lifecycle: toLifecycleState(job),
     viewerState
   };
 }
@@ -544,7 +907,8 @@ function toJobDetail(job, viewerState) {
         name: job.employer.name,
         logoUrl: job.employer.logoUrl,
         isVerifiedEmployer: job.employer.isVerifiedEmployer
-      }
+      },
+      lifecycle: toLifecycleState(job)
     },
     viewerState
   };
@@ -578,6 +942,25 @@ function toApplicationSummary(application, job) {
   };
 }
 
+function toApplicationDocument(document) {
+  return {
+    id: document.id,
+    applicationId: document.applicationId,
+    userId: document.userId,
+    documentType: document.documentType,
+    fileName: document.fileName,
+    contentType: document.contentType,
+    contentLength: document.contentLength,
+    checksumSha256: document.checksumSha256,
+    reviewStatus: document.reviewStatus,
+    reviewReason: document.reviewReason,
+    reviewedAt: document.reviewedAt,
+    reviewedBy: document.reviewedBy,
+    createdAt: document.createdAt,
+    updatedAt: document.updatedAt
+  };
+}
+
 function toAdminJob(job) {
   return {
     id: job.id,
@@ -598,19 +981,23 @@ function toAdminJob(job) {
       name: job.employer.name,
       logoUrl: job.employer.logoUrl,
       isVerifiedEmployer: job.employer.isVerifiedEmployer
-    }
+    },
+    lifecycle: toLifecycleState(job)
   };
 }
 
 export class JobsService {
-  constructor({ jobs = JOB_SEED_DATA, userDirectory = null } = {}) {
-    this.jobs = Array.from(jobs);
+  constructor({ jobs = JOB_SEED_DATA, userDirectory = null, objectStorage = null } = {}) {
+    this.jobs = Array.from(jobs).map((job) => ensureJobLifecycle(job));
     this.jobById = new Map(this.jobs.map((job) => [job.id, job]));
     this.savedByUserId = new Map();
     this.applicationsById = new Map();
     this.applicationIdsByUserId = new Map();
     this.applicationIdByUserJob = new Map();
+    this.applicationDocumentsById = new Map();
+    this.applicationDocumentIdsByApplicationId = new Map();
     this.userDirectory = userDirectory;
+    this.objectStorage = objectStorage || createInMemoryObjectStorage();
   }
 
   getSavedMapForUser(userId) {
@@ -631,6 +1018,30 @@ export class JobsService {
       this.applicationIdsByUserId.set(userId, []);
     }
     return this.applicationIdsByUserId.get(userId);
+  }
+
+  getApplicationByIdOrThrow(applicationId) {
+    const normalizedApplicationId = normalizeApplicationId(applicationId);
+    const application = this.applicationsById.get(normalizedApplicationId);
+    if (!application) {
+      throw new JobsApiError(404, 'application_not_found', 'application not found');
+    }
+    return application;
+  }
+
+  getUserApplicationByIdOrThrow({ userId, applicationId }) {
+    const application = this.getApplicationByIdOrThrow(applicationId);
+    if (application.userId !== userId) {
+      throw new JobsApiError(404, 'application_not_found', 'application not found');
+    }
+    return application;
+  }
+
+  getApplicationDocumentIds(applicationId) {
+    if (!this.applicationDocumentIdsByApplicationId.has(applicationId)) {
+      this.applicationDocumentIdsByApplicationId.set(applicationId, []);
+    }
+    return this.applicationDocumentIdsByApplicationId.get(applicationId);
   }
 
   async getApplicantById(userId) {
@@ -682,6 +1093,9 @@ export class JobsService {
     const normalizedLimit = normalizeLimit(limit);
 
     const filtered = this.jobs.filter((job) => {
+      if (!isJobPubliclyVisible(job)) {
+        return false;
+      }
       if (normalizedEmploymentType && job.employmentType !== normalizedEmploymentType) {
         return false;
       }
@@ -725,6 +1139,9 @@ export class JobsService {
 
   getJobDetail({ jobId, userId }) {
     const job = this.getJobByIdOrThrow(jobId);
+    if (!isJobPubliclyVisible(job)) {
+      throw new JobsApiError(404, 'job_not_found', 'job not found');
+    }
 
     return toJobDetail(
       job,
@@ -769,6 +1186,9 @@ export class JobsService {
 
   saveJob({ userId, jobId }) {
     const job = this.getJobByIdOrThrow(jobId);
+    if (!isJobPubliclyVisible(job)) {
+      throw new JobsApiError(404, 'job_not_found', 'job not found');
+    }
 
     const savedMap = this.getSavedMapForUser(userId);
     const isNew = !savedMap.has(job.id);
@@ -797,6 +1217,9 @@ export class JobsService {
 
   applyToJob({ userId, jobId, note }) {
     const job = this.getJobByIdOrThrow(jobId);
+    if (!isJobPubliclyVisible(job)) {
+      throw new JobsApiError(404, 'job_not_found', 'job not found');
+    }
     const normalizedNote = normalizeApplicationNote(note);
     const userJobKey = makeUserJobKey(userId, job.id);
 
@@ -824,6 +1247,8 @@ export class JobsService {
           status: 'SUBMITTED',
           title: 'Application submitted',
           description: normalizedNote || 'Application was submitted by candidate',
+          actorType: 'USER',
+          actorId: userId,
           createdAt: now
         }
       ]
@@ -870,21 +1295,260 @@ export class JobsService {
   }
 
   getApplicationJourney({ userId, applicationId }) {
-    const normalizedApplicationId = String(applicationId || '').trim();
-    if (!normalizedApplicationId) {
-      throw new JobsApiError(400, 'invalid_application_id', 'applicationId is required');
-    }
-
-    const application = this.applicationsById.get(normalizedApplicationId);
-    if (!application || application.userId !== userId) {
-      throw new JobsApiError(404, 'application_not_found', 'application not found');
-    }
+    const application = this.getUserApplicationByIdOrThrow({ userId, applicationId });
 
     const job = this.getJobByIdOrThrow(application.jobId);
     return {
       application: toApplicationSummary(application, job),
       journey: Array.from(application.journey)
     };
+  }
+
+  async createUserApplicationDocumentUploadUrl({
+    userId,
+    applicationId,
+    documentType,
+    fileName,
+    contentType,
+    contentLength,
+    checksumSha256
+  }) {
+    const application = this.getUserApplicationByIdOrThrow({ userId, applicationId });
+    const normalizedDocumentType = normalizeApplicationDocumentType(documentType);
+    const normalizedFileName = normalizeApplicationFileName(fileName);
+    const normalizedContentType = normalizeApplicationContentType(contentType);
+    const normalizedContentLength = normalizeApplicationContentLength(contentLength);
+    const normalizedChecksumSha256 = normalizeApplicationChecksumSha256(checksumSha256);
+    const objectKey = buildApplicationDocumentObjectKey({
+      userId,
+      applicationId: application.id,
+      documentType: normalizedDocumentType,
+      fileName: normalizedFileName
+    });
+    const upload = await this.objectStorage.createUploadUrl({
+      objectKey,
+      contentType: normalizedContentType,
+      contentLength: normalizedContentLength,
+      checksumSha256: normalizedChecksumSha256
+    });
+    return {
+      applicationId: application.id,
+      upload: {
+        objectKey,
+        uploadUrl: upload.uploadUrl,
+        method: upload.method || 'PUT',
+        headers: upload.headers || {},
+        expiresAt: upload.expiresAt
+      }
+    };
+  }
+
+  registerUserApplicationDocument({
+    userId,
+    applicationId,
+    documentType,
+    fileName,
+    contentType,
+    contentLength,
+    objectKey,
+    checksumSha256
+  }) {
+    const application = this.getUserApplicationByIdOrThrow({ userId, applicationId });
+    const normalizedDocumentType = normalizeApplicationDocumentType(documentType);
+    const normalizedFileName = normalizeApplicationFileName(fileName);
+    const normalizedContentType = normalizeApplicationContentType(contentType);
+    const normalizedContentLength = normalizeApplicationContentLength(contentLength);
+    const normalizedObjectKey = normalizeApplicationObjectKey(objectKey);
+    const normalizedChecksumSha256 = normalizeApplicationChecksumSha256(checksumSha256);
+    assertApplicationObjectKeyOwnership({
+      userId,
+      applicationId: application.id,
+      objectKey: normalizedObjectKey
+    });
+
+    const existingForApplication = this.getApplicationDocumentIds(application.id)
+      .map((documentId) => this.applicationDocumentsById.get(documentId))
+      .filter(Boolean);
+    if (existingForApplication.some((document) => document.checksumSha256 === normalizedChecksumSha256)) {
+      throw new JobsApiError(409, 'duplicate_application_document', 'document with same checksum already exists');
+    }
+
+    const now = new Date().toISOString();
+    const document = {
+      id: randomUUID(),
+      applicationId: application.id,
+      userId,
+      documentType: normalizedDocumentType,
+      fileName: normalizedFileName,
+      contentType: normalizedContentType,
+      contentLength: normalizedContentLength,
+      objectKey: normalizedObjectKey,
+      checksumSha256: normalizedChecksumSha256,
+      reviewStatus: 'PENDING',
+      reviewReason: null,
+      reviewedAt: null,
+      reviewedBy: null,
+      createdAt: now,
+      updatedAt: now
+    };
+    this.applicationDocumentsById.set(document.id, document);
+    this.getApplicationDocumentIds(application.id).push(document.id);
+
+    return {
+      applicationId: application.id,
+      document: toApplicationDocument(document)
+    };
+  }
+
+  listUserApplicationDocuments({ userId, applicationId }) {
+    const application = this.getUserApplicationByIdOrThrow({ userId, applicationId });
+    const job = this.getJobByIdOrThrow(application.jobId);
+    const documents = this.getApplicationDocumentIds(application.id)
+      .map((documentId) => this.applicationDocumentsById.get(documentId))
+      .filter(Boolean)
+      .sort((left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt));
+    return {
+      application: toApplicationSummary(application, job),
+      items: documents.map((document) => toApplicationDocument(document)),
+      total: documents.length
+    };
+  }
+
+  async listAdminApplicationDocuments({ applicationId }) {
+    const application = this.getApplicationByIdOrThrow(applicationId);
+    const job = this.getJobByIdOrThrow(application.jobId);
+    const applicant = await this.getApplicantById(application.userId);
+    const documents = this.getApplicationDocumentIds(application.id)
+      .map((documentId) => this.applicationDocumentsById.get(documentId))
+      .filter(Boolean)
+      .sort((left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt));
+    return {
+      application: toApplicationSummary(application, job),
+      applicant,
+      items: documents.map((document) => toApplicationDocument(document)),
+      total: documents.length
+    };
+  }
+
+  async reviewAdminApplicationDocument({ applicationId, documentId, reviewStatus, reviewReason, reviewedBy }) {
+    const application = this.getApplicationByIdOrThrow(applicationId);
+    const normalizedDocumentId = normalizeApplicationDocumentId(documentId);
+    const normalizedReviewStatus = normalizeApplicationDocumentReviewStatus(reviewStatus);
+    const normalizedReviewReason = normalizeApplicationReviewReason(reviewReason);
+    const normalizedReviewedBy = normalizeOptionalUpdatedBy(reviewedBy);
+    const document = this.applicationDocumentsById.get(normalizedDocumentId);
+    if (!document || document.applicationId !== application.id) {
+      throw new JobsApiError(404, 'application_document_not_found', 'application document not found');
+    }
+
+    const changed =
+      document.reviewStatus !== normalizedReviewStatus ||
+      document.reviewReason !== normalizedReviewReason ||
+      document.reviewedBy !== normalizedReviewedBy;
+    if (changed) {
+      document.reviewStatus = normalizedReviewStatus;
+      document.reviewReason = normalizedReviewReason;
+      document.reviewedBy = normalizedReviewedBy;
+      document.reviewedAt = new Date().toISOString();
+      document.updatedAt = document.reviewedAt;
+    }
+
+    const job = this.getJobByIdOrThrow(application.jobId);
+    const applicant = await this.getApplicantById(application.userId);
+    return {
+      updated: changed,
+      application: toApplicationSummary(application, job),
+      applicant,
+      document: toApplicationDocument(document)
+    };
+  }
+
+  async issueAdminApplicationDocumentPreviewUrl({ documentId, expiresSec }) {
+    const normalizedDocumentId = normalizeApplicationDocumentId(documentId);
+    const normalizedExpiresSec = normalizeApplicationPreviewExpiresSec(expiresSec);
+    const document = this.applicationDocumentsById.get(normalizedDocumentId);
+    if (!document) {
+      throw new JobsApiError(404, 'application_document_not_found', 'application document not found');
+    }
+    const preview = await this.objectStorage.createDownloadUrl({
+      objectKey: document.objectKey,
+      expiresSec: normalizedExpiresSec
+    });
+    return {
+      documentId: document.id,
+      applicationId: document.applicationId,
+      url: preview.downloadUrl,
+      method: preview.method || 'GET',
+      expiresAt: preview.expiresAt
+    };
+  }
+
+  decideOfferForUser({ userId, applicationId, decision, reason }) {
+    const application = this.getUserApplicationByIdOrThrow({ userId, applicationId });
+    if (application.status !== 'OFFERED') {
+      throw new JobsApiError(
+        409,
+        'offer_not_available',
+        'offer decision is only allowed when application status is OFFERED'
+      );
+    }
+
+    const normalizedDecision = String(decision || '')
+      .trim()
+      .toUpperCase();
+    if (!['ACCEPT', 'DECLINE'].includes(normalizedDecision)) {
+      throw new JobsApiError(400, 'invalid_offer_decision', 'decision must be ACCEPT or DECLINE');
+    }
+    const normalizedReason = normalizeOptionalReason(reason);
+    const now = new Date().toISOString();
+    const nextStatus = normalizedDecision === 'ACCEPT' ? 'HIRED' : 'REJECTED';
+    const journeyEvent = buildStatusJourneyEvent({
+      status: nextStatus,
+      reason: normalizedReason,
+      updatedBy: userId,
+      createdAt: now,
+      actorType: 'USER',
+      actorId: userId,
+      title: normalizedDecision === 'ACCEPT' ? 'Candidate accepted offer' : 'Candidate declined offer',
+      description:
+        normalizedDecision === 'ACCEPT'
+          ? normalizedReason
+            ? `Candidate accepted offer. Reason: ${normalizedReason}`
+            : 'Candidate accepted offer.'
+          : normalizedReason
+            ? `Candidate declined offer. Reason: ${normalizedReason}`
+            : 'Candidate declined offer.'
+    });
+
+    application.status = nextStatus;
+    application.updatedAt = now;
+    application.journey.push(journeyEvent);
+
+    const job = this.getJobByIdOrThrow(application.jobId);
+    return {
+      updated: true,
+      decision: normalizedDecision,
+      application: toApplicationSummary(application, job),
+      journeyEvent
+    };
+  }
+
+  acceptOfferForUser({ userId, applicationId, reason }) {
+    return this.decideOfferForUser({
+      userId,
+      applicationId,
+      decision: 'ACCEPT',
+      reason
+    });
+  }
+
+  declineOfferForUser({ userId, applicationId, reason }) {
+    return this.decideOfferForUser({
+      userId,
+      applicationId,
+      decision: 'DECLINE',
+      reason
+    });
   }
 
   async listAdminApplications({ cursor, limit, status, q, jobId, orgId }) {
@@ -954,14 +1618,7 @@ export class JobsService {
   }
 
   async getAdminApplication({ applicationId }) {
-    const normalizedApplicationId = String(applicationId || '').trim();
-    if (!normalizedApplicationId) {
-      throw new JobsApiError(400, 'invalid_application_id', 'applicationId is required');
-    }
-    const application = this.applicationsById.get(normalizedApplicationId);
-    if (!application) {
-      throw new JobsApiError(404, 'application_not_found', 'application not found');
-    }
+    const application = this.getApplicationByIdOrThrow(applicationId);
     const job = this.getJobByIdOrThrow(application.jobId);
     const applicant = await this.getApplicantById(application.userId);
     return {
@@ -972,14 +1629,7 @@ export class JobsService {
   }
 
   async getAdminApplicationJourney({ applicationId }) {
-    const normalizedApplicationId = String(applicationId || '').trim();
-    if (!normalizedApplicationId) {
-      throw new JobsApiError(400, 'invalid_application_id', 'applicationId is required');
-    }
-    const application = this.applicationsById.get(normalizedApplicationId);
-    if (!application) {
-      throw new JobsApiError(404, 'application_not_found', 'application not found');
-    }
+    const application = this.getApplicationByIdOrThrow(applicationId);
     const job = this.getJobByIdOrThrow(application.jobId);
     const applicant = await this.getApplicantById(application.userId);
     return {
@@ -990,10 +1640,7 @@ export class JobsService {
   }
 
   async updateAdminApplicationStatus({ applicationId, status, reason, updatedBy }) {
-    const normalizedApplicationId = String(applicationId || '').trim();
-    if (!normalizedApplicationId) {
-      throw new JobsApiError(400, 'invalid_application_id', 'applicationId is required');
-    }
+    const normalizedApplicationId = normalizeApplicationId(applicationId);
     const normalizedStatus = normalizeApplicationStatus(status);
     if (!normalizedStatus) {
       throw new JobsApiError(400, 'invalid_application_status', 'status is required');
@@ -1001,9 +1648,16 @@ export class JobsService {
     const normalizedReason = normalizeOptionalReason(reason);
     const normalizedUpdatedBy = normalizeOptionalUpdatedBy(updatedBy);
 
-    const application = this.applicationsById.get(normalizedApplicationId);
-    if (!application) {
-      throw new JobsApiError(404, 'application_not_found', 'application not found');
+    const application = this.getApplicationByIdOrThrow(normalizedApplicationId);
+    if (
+      application.status === 'OFFERED' &&
+      (normalizedStatus === 'HIRED' || normalizedStatus === 'REJECTED')
+    ) {
+      throw new JobsApiError(
+        409,
+        'offer_decision_required',
+        'candidate must accept or decline the offer before final status is set'
+      );
     }
     const changed = ensureTransitionAllowed(application.status, normalizedStatus);
     let journeyEvent = null;
@@ -1015,7 +1669,9 @@ export class JobsService {
         status: normalizedStatus,
         reason: normalizedReason,
         updatedBy: normalizedUpdatedBy,
-        createdAt: now
+        createdAt: now,
+        actorType: 'ADMIN',
+        actorId: normalizedUpdatedBy
       });
       application.journey.push(journeyEvent);
     }
@@ -1051,14 +1707,16 @@ export class JobsService {
 
     const flattened = [];
     for (const application of this.applicationsById.values()) {
-      if (normalizedActorId && application.userId !== normalizedActorId) {
-        continue;
-      }
       const applicant = await this.getApplicantById(application.userId);
       const job = this.getJobByIdOrThrow(application.jobId);
       for (let index = 0; index < application.journey.length; index += 1) {
         const event = application.journey[index];
         const previous = index > 0 ? application.journey[index - 1] : null;
+        const resolvedActorId = event.actorId || application.userId;
+        const resolvedActorType = event.actorType || (event.status === 'SUBMITTED' ? 'USER' : 'ADMIN');
+        if (normalizedActorId && resolvedActorId !== normalizedActorId) {
+          continue;
+        }
         if (normalizedToStatus && event.status !== normalizedToStatus) {
           continue;
         }
@@ -1075,8 +1733,8 @@ export class JobsService {
           action: 'APPLICATION_STATUS_TRANSITION',
           entityType: 'JOB_APPLICATION',
           entityId: application.id,
-          actorType: event.status === 'SUBMITTED' ? 'USER' : 'ADMIN',
-          actorId: application.userId,
+          actorType: resolvedActorType,
+          actorId: resolvedActorId,
           statusFrom: previous ? previous.status : null,
           statusTo: event.status,
           title: event.title,
@@ -1142,7 +1800,30 @@ export class JobsService {
     };
   }
 
-  createJob({ title, employmentType, visaSponsorship, description, requirements, location, employer }) {
+  createJob({ title, employmentType, visaSponsorship, description, requirements, location, employer, lifecycle }) {
+    if (lifecycle !== undefined && (typeof lifecycle !== 'object' || Array.isArray(lifecycle))) {
+      throw new JobsApiError(400, 'invalid_lifecycle', 'lifecycle must be an object');
+    }
+    const lifecycleStatus = normalizeOptionalLifecycleStatus(lifecycle?.status, 'lifecycle.status') || 'PUBLISHED';
+    let publishedAt = normalizeOptionalLifecycleDate(lifecycle?.publishedAt, 'lifecycle.publishedAt');
+    let scheduledAt = normalizeOptionalLifecycleDate(lifecycle?.scheduledAt, 'lifecycle.scheduledAt');
+    if (lifecycleStatus === 'PUBLISHED') {
+      publishedAt = publishedAt || new Date().toISOString();
+      scheduledAt = null;
+    } else if (lifecycleStatus === 'DRAFT') {
+      publishedAt = null;
+      scheduledAt = null;
+    } else {
+      if (!scheduledAt) {
+        throw new JobsApiError(
+          400,
+          'invalid_lifecycle_date',
+          'lifecycle.scheduledAt is required when lifecycle.status is SCHEDULED'
+        );
+      }
+      publishedAt = null;
+    }
+
     const job = {
       id: randomUUID(),
       title: normalizeRequiredTitle(title),
@@ -1151,7 +1832,10 @@ export class JobsService {
       description: normalizeRequiredDescription(description),
       requirements: normalizeRequiredRequirements(requirements),
       location: normalizeRequiredLocation(location),
-      employer: normalizeRequiredEmployer(employer)
+      employer: normalizeRequiredEmployer(employer),
+      lifecycleStatus,
+      publishedAt,
+      scheduledAt
     };
 
     this.jobs.push(job);
@@ -1159,8 +1843,21 @@ export class JobsService {
     return { job: toAdminJob(job) };
   }
 
-  updateJob({ jobId, title, employmentType, visaSponsorship, description, requirements, location, employer }) {
+  updateJob({
+    jobId,
+    title,
+    employmentType,
+    visaSponsorship,
+    description,
+    requirements,
+    location,
+    employer,
+    lifecycle
+  }) {
     const job = this.getJobByIdOrThrow(jobId);
+    if (lifecycle !== undefined && (typeof lifecycle !== 'object' || Array.isArray(lifecycle))) {
+      throw new JobsApiError(400, 'invalid_lifecycle', 'lifecycle must be an object');
+    }
     const patch = {
       title: title === undefined ? undefined : normalizeRequiredTitle(title),
       employmentType: normalizeOptionalEmploymentType(employmentType),
@@ -1168,7 +1865,10 @@ export class JobsService {
       description: normalizeOptionalDescription(description),
       requirements: normalizeOptionalRequirements(requirements),
       location: normalizeOptionalLocation(location),
-      employer: normalizeOptionalEmployer(employer)
+      employer: normalizeOptionalEmployer(employer),
+      lifecycleStatus: normalizeOptionalLifecycleStatus(lifecycle?.status, 'lifecycle.status'),
+      publishedAt: normalizeOptionalLifecycleDate(lifecycle?.publishedAt, 'lifecycle.publishedAt'),
+      scheduledAt: normalizeOptionalLifecycleDate(lifecycle?.scheduledAt, 'lifecycle.scheduledAt')
     };
 
     if (title !== undefined) {
@@ -1192,8 +1892,110 @@ export class JobsService {
     if (patch.employer !== undefined) {
       job.employer = patch.employer;
     }
+    if (lifecycle !== undefined) {
+      let nextStatus = patch.lifecycleStatus === undefined ? job.lifecycleStatus : patch.lifecycleStatus;
+      let nextPublishedAt = patch.publishedAt === undefined ? job.publishedAt : patch.publishedAt;
+      let nextScheduledAt = patch.scheduledAt === undefined ? job.scheduledAt : patch.scheduledAt;
+
+      if (nextStatus === 'PUBLISHED') {
+        nextPublishedAt = nextPublishedAt || new Date().toISOString();
+        nextScheduledAt = null;
+      } else if (nextStatus === 'DRAFT') {
+        nextPublishedAt = null;
+        nextScheduledAt = null;
+      } else {
+        if (!nextScheduledAt) {
+          throw new JobsApiError(
+            400,
+            'invalid_lifecycle_date',
+            'lifecycle.scheduledAt is required when lifecycle.status is SCHEDULED'
+          );
+        }
+        nextPublishedAt = null;
+      }
+
+      job.lifecycleStatus = nextStatus;
+      job.publishedAt = nextPublishedAt;
+      job.scheduledAt = nextScheduledAt;
+    }
 
     return { job: toAdminJob(job) };
+  }
+
+  publishJob({ jobId, publishedAt }) {
+    const job = this.getJobByIdOrThrow(jobId);
+    const normalizedPublishedAt = normalizeOptionalLifecycleDate(publishedAt, 'publishedAt');
+    job.lifecycleStatus = 'PUBLISHED';
+    job.publishedAt = normalizedPublishedAt || new Date().toISOString();
+    job.scheduledAt = null;
+    return { job: toAdminJob(job) };
+  }
+
+  unpublishJob({ jobId }) {
+    const job = this.getJobByIdOrThrow(jobId);
+    job.lifecycleStatus = 'DRAFT';
+    job.publishedAt = null;
+    job.scheduledAt = null;
+    return { job: toAdminJob(job) };
+  }
+
+  scheduleJob({ jobId, scheduledAt }) {
+    const job = this.getJobByIdOrThrow(jobId);
+    const normalizedScheduledAt = normalizeRequiredLifecycleDate(scheduledAt, 'scheduledAt');
+    job.lifecycleStatus = 'SCHEDULED';
+    job.publishedAt = null;
+    job.scheduledAt = normalizedScheduledAt;
+    return { job: toAdminJob(job) };
+  }
+
+  async bulkUpdateJobs({ action, jobIds, scheduledAt, publishedAt }) {
+    const normalizedAction = normalizeBulkAction(action);
+    const normalizedJobIds = normalizeBulkJobIds(jobIds);
+    const results = [];
+
+    for (const jobId of normalizedJobIds) {
+      try {
+        if (normalizedAction === 'PUBLISH') {
+          const result = this.publishJob({ jobId, publishedAt });
+          results.push({ jobId, success: true, lifecycle: result.job.lifecycle });
+          continue;
+        }
+        if (normalizedAction === 'UNPUBLISH') {
+          const result = this.unpublishJob({ jobId });
+          results.push({ jobId, success: true, lifecycle: result.job.lifecycle });
+          continue;
+        }
+        if (normalizedAction === 'SCHEDULE') {
+          const result = this.scheduleJob({ jobId, scheduledAt });
+          results.push({ jobId, success: true, lifecycle: result.job.lifecycle });
+          continue;
+        }
+        const result = this.deleteJob({ jobId });
+        results.push({ jobId, success: true, removed: result.removed });
+      } catch (error) {
+        if (isJobsApiError(error)) {
+          results.push({
+            jobId,
+            success: false,
+            error: {
+              code: error.code,
+              message: error.message
+            }
+          });
+          continue;
+        }
+        throw error;
+      }
+    }
+
+    const successCount = results.filter((item) => item.success).length;
+    return {
+      action: normalizedAction,
+      total: normalizedJobIds.length,
+      successCount,
+      failureCount: normalizedJobIds.length - successCount,
+      results
+    };
   }
 
   deleteJob({ jobId }) {
@@ -1217,6 +2019,11 @@ export class JobsService {
       if (!application) {
         continue;
       }
+      const documentIds = this.getApplicationDocumentIds(application.id);
+      for (const documentId of documentIds) {
+        this.applicationDocumentsById.delete(documentId);
+      }
+      this.applicationDocumentIdsByApplicationId.delete(application.id);
       const userJobKey = makeUserJobKey(application.userId, application.jobId);
       this.applicationIdByUserJob.delete(userJobKey);
       this.applicationsById.delete(applicationId);

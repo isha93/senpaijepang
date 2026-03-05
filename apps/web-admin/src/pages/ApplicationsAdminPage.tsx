@@ -1,14 +1,20 @@
 import { useEffect, useState } from 'react';
 import {
+  AdminApplicationDocumentListResponse,
   AdminApplicationItem,
+  ApplicationDocumentReviewStatus,
   ApplicationStatus,
+  getAdminApplicationDocuments,
   getAdminApplicationJourney,
   getAdminApplications,
+  issueAdminApplicationDocumentPreviewUrl,
+  reviewAdminApplicationDocument,
   updateAdminApplicationStatus
 } from '../lib/adminApi';
 
 const PAGE_SIZE = 20;
 const STATUS_OPTIONS: ApplicationStatus[] = ['SUBMITTED', 'IN_REVIEW', 'INTERVIEW', 'OFFERED', 'HIRED', 'REJECTED'];
+const DOCUMENT_REVIEW_STATUS_OPTIONS: ApplicationDocumentReviewStatus[] = ['PENDING', 'VALID', 'INVALID'];
 
 function parseCursorValue(value: string | number | null | undefined) {
   if (value === null || value === undefined || value === '') {
@@ -27,6 +33,19 @@ function formatDateTime(iso: string) {
     return '-';
   }
   return new Date(timestamp).toLocaleString('en-US');
+}
+
+function formatBytes(bytes: number) {
+  if (!Number.isFinite(bytes) || bytes <= 0) {
+    return '-';
+  }
+  if (bytes < 1024) {
+    return `${bytes} B`;
+  }
+  if (bytes < 1024 * 1024) {
+    return `${(bytes / 1024).toFixed(1)} KB`;
+  }
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 function resolveApplicantLabel(item: AdminApplicationItem) {
@@ -48,6 +67,10 @@ export function ApplicationsAdminPage() {
   const [currentCursor, setCurrentCursor] = useState(0);
   const [nextCursor, setNextCursor] = useState<number | null>(null);
   const [cursorHistory, setCursorHistory] = useState<number[]>([]);
+  const [documentsPanel, setDocumentsPanel] = useState<AdminApplicationDocumentListResponse | null>(null);
+  const [documentsLoading, setDocumentsLoading] = useState(false);
+  const [documentsError, setDocumentsError] = useState<string | null>(null);
+  const [reviewingDocumentId, setReviewingDocumentId] = useState<string | null>(null);
 
   async function loadApplications(activeQuery: string, activeStatus: 'ALL' | ApplicationStatus, cursor = 0) {
     setLoading(true);
@@ -89,6 +112,8 @@ export function ApplicationsAdminPage() {
 
   useEffect(() => {
     setCursorHistory([]);
+    setDocumentsPanel(null);
+    setDocumentsError(null);
     void loadApplications(query, statusFilter, 0);
   }, [query, statusFilter]);
 
@@ -168,6 +193,85 @@ export function ApplicationsAdminPage() {
       setError(message);
     } finally {
       setViewingJourneyId(null);
+    }
+  }
+
+  async function refreshDocumentsPanel(applicationId: string) {
+    const documents = await getAdminApplicationDocuments(applicationId);
+    setDocumentsPanel(documents);
+    return documents;
+  }
+
+  async function handleViewDocuments(item: AdminApplicationItem) {
+    if (documentsLoading) {
+      return;
+    }
+    setDocumentsLoading(true);
+    setDocumentsError(null);
+    try {
+      await refreshDocumentsPanel(item.application.id);
+    } catch (err) {
+      const message =
+        typeof err === 'object' && err && 'message' in err
+          ? String((err as { message: unknown }).message)
+          : 'Failed to load application documents';
+      setDocumentsError(message);
+      setDocumentsPanel(null);
+    } finally {
+      setDocumentsLoading(false);
+    }
+  }
+
+  async function handlePreviewDocument(documentId: string) {
+    setDocumentsError(null);
+    try {
+      const preview = await issueAdminApplicationDocumentPreviewUrl(documentId, { expiresSec: 180 });
+      window.open(preview.url, '_blank', 'noopener,noreferrer');
+    } catch (err) {
+      const message =
+        typeof err === 'object' && err && 'message' in err
+          ? String((err as { message: unknown }).message)
+          : 'Failed to issue document preview URL';
+      setDocumentsError(message);
+    }
+  }
+
+  async function handleReviewDocument(applicationId: string, documentId: string) {
+    if (reviewingDocumentId) {
+      return;
+    }
+    const nextStatusInput = window.prompt(
+      `Review status (${DOCUMENT_REVIEW_STATUS_OPTIONS.join('/')})`,
+      'VALID'
+    );
+    if (!nextStatusInput) {
+      return;
+    }
+    const nextStatus = String(nextStatusInput).trim().toUpperCase() as ApplicationDocumentReviewStatus;
+    if (!DOCUMENT_REVIEW_STATUS_OPTIONS.includes(nextStatus)) {
+      setDocumentsError(`Invalid review status: ${nextStatusInput}`);
+      return;
+    }
+    const reviewReasonInput = window.prompt('Review reason (optional)', '');
+
+    setReviewingDocumentId(documentId);
+    setDocumentsError(null);
+    setActionMessage(null);
+    try {
+      await reviewAdminApplicationDocument(applicationId, documentId, {
+        reviewStatus: nextStatus,
+        reviewReason: reviewReasonInput ? reviewReasonInput.trim() : undefined
+      });
+      await refreshDocumentsPanel(applicationId);
+      setActionMessage(`Document marked as ${nextStatus}.`);
+    } catch (err) {
+      const message =
+        typeof err === 'object' && err && 'message' in err
+          ? String((err as { message: unknown }).message)
+          : 'Failed to review application document';
+      setDocumentsError(message);
+    } finally {
+      setReviewingDocumentId(null);
     }
   }
 
@@ -281,6 +385,15 @@ export function ApplicationsAdminPage() {
                     >
                       {viewingJourneyId === item.application.id ? 'Loading...' : 'View Journey'}
                     </button>
+                    <button
+                      type="button"
+                      onClick={() => void handleViewDocuments(item)}
+                      disabled={documentsLoading}
+                    >
+                      {documentsLoading && documentsPanel?.application.id === item.application.id
+                        ? 'Loading Docs...'
+                        : 'Documents'}
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -293,6 +406,69 @@ export function ApplicationsAdminPage() {
           </table>
         </div>
       </div>
+
+      {documentsError ? <p className="auth-error">{documentsError}</p> : null}
+
+      {documentsPanel ? (
+        <div className="simple-table-card">
+          <header style={{ marginBottom: 12 }}>
+            <div>
+              <h4 style={{ margin: 0 }}>Application Documents</h4>
+              <p style={{ margin: '4px 0 0', color: 'var(--muted)' }}>
+                {documentsPanel.applicant.fullName || documentsPanel.applicant.email || documentsPanel.applicant.id} -{' '}
+                {documentsPanel.application.job.title}
+              </p>
+            </div>
+          </header>
+          <div className="table-wrap">
+            <table className="simple-table">
+              <thead>
+                <tr>
+                  <th>File</th>
+                  <th>Type</th>
+                  <th>Size</th>
+                  <th>Review</th>
+                  <th>Reviewed At</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {documentsPanel.items.map((document) => (
+                  <tr key={document.id}>
+                    <td>{document.fileName}</td>
+                    <td>{document.documentType}</td>
+                    <td>{formatBytes(document.contentLength)}</td>
+                    <td>
+                      <span className="status-chip review">{document.reviewStatus}</span>
+                      {document.reviewReason ? (
+                        <div style={{ color: 'var(--muted)', fontSize: 12, marginTop: 4 }}>{document.reviewReason}</div>
+                      ) : null}
+                    </td>
+                    <td>{document.reviewedAt ? formatDateTime(document.reviewedAt) : '-'}</td>
+                    <td className="action-cell">
+                      <button type="button" onClick={() => void handlePreviewDocument(document.id)}>
+                        Preview
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void handleReviewDocument(documentsPanel.application.id, document.id)}
+                        disabled={reviewingDocumentId === document.id}
+                      >
+                        {reviewingDocumentId === document.id ? 'Saving...' : 'Review'}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+                {documentsPanel.items.length === 0 ? (
+                  <tr>
+                    <td colSpan={6}>No application documents uploaded yet.</td>
+                  </tr>
+                ) : null}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : null}
 
       <div className="table-pagination">
         <span>
