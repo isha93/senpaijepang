@@ -304,6 +304,37 @@ function normalizeQueueCursor(cursor) {
   return Math.floor(normalized);
 }
 
+function normalizePreviewUrlDefaultExpiresSec(value) {
+  const normalized = Number(value);
+  if (!Number.isFinite(normalized) || normalized < 60 || normalized > 3600) {
+    return 120;
+  }
+  return Math.floor(normalized);
+}
+
+function normalizePreviewUrlMaxExpiresSec(value, fallbackDefault) {
+  const normalized = Number(value);
+  if (!Number.isFinite(normalized) || normalized < fallbackDefault || normalized > 3600) {
+    return Math.max(fallbackDefault, 300);
+  }
+  return Math.floor(normalized);
+}
+
+function normalizePreviewExpiresSec(expiresSec, { defaultExpiresSec, maxExpiresSec }) {
+  if (expiresSec === undefined || expiresSec === null || String(expiresSec).trim() === '') {
+    return defaultExpiresSec;
+  }
+  const normalized = Number(expiresSec);
+  if (!Number.isFinite(normalized) || normalized < 60 || normalized > maxExpiresSec) {
+    throw new KycApiError(
+      400,
+      'invalid_expires_sec',
+      `expiresSec must be between 60 and ${maxExpiresSec}`
+    );
+  }
+  return Math.floor(normalized);
+}
+
 function normalizeReviewedBy(reviewedBy) {
   const normalized = String(reviewedBy || '')
     .trim();
@@ -338,7 +369,9 @@ export class KycService {
     providerWebhookSecret,
     providerWebhookIdempotencyTtlMs,
     providerWebhookRequireSignature,
-    providerWebhookMaxSkewMs
+    providerWebhookMaxSkewMs,
+    previewUrlDefaultExpiresSec,
+    previewUrlMaxExpiresSec
   }) {
     this.store = store;
     this.objectStorage = objectStorage;
@@ -349,6 +382,11 @@ export class KycService {
     this.providerWebhookIdempotencyTtlMs = Number(providerWebhookIdempotencyTtlMs || 24 * 60 * 60 * 1000);
     this.providerWebhookRequireSignature = Boolean(providerWebhookRequireSignature);
     this.providerWebhookMaxSkewMs = Number(providerWebhookMaxSkewMs || 5 * 60 * 1000);
+    this.previewUrlDefaultExpiresSec = normalizePreviewUrlDefaultExpiresSec(previewUrlDefaultExpiresSec);
+    this.previewUrlMaxExpiresSec = normalizePreviewUrlMaxExpiresSec(
+      previewUrlMaxExpiresSec,
+      this.previewUrlDefaultExpiresSec
+    );
     this.providerWebhookSeenKeys = new Map();
   }
 
@@ -795,6 +833,46 @@ export class KycService {
     };
   }
 
+  async issueDocumentPreviewUrl({ documentId, expiresSec }) {
+    const normalizedDocumentId = String(documentId || '').trim();
+    if (!normalizedDocumentId) {
+      throw new KycApiError(400, 'invalid_document_id', 'documentId is required');
+    }
+
+    const document = await this.store.findIdentityDocumentById(normalizedDocumentId);
+    if (!document) {
+      throw new KycApiError(404, 'document_not_found', 'identity document not found');
+    }
+
+    const metadata = document.metadataJson || {};
+    const objectKey = normalizeObjectKey(metadata.objectKey);
+    const normalizedExpiresSec = normalizePreviewExpiresSec(expiresSec, {
+      defaultExpiresSec: this.previewUrlDefaultExpiresSec,
+      maxExpiresSec: this.previewUrlMaxExpiresSec
+    });
+
+    const preview = await this.objectStorage.createDownloadUrl({
+      objectKey,
+      expiresSec: normalizedExpiresSec
+    });
+    this.logger.info('audit.kyc.document_preview_issued', {
+      documentId: document.id,
+      kycSessionId: document.kycSessionId,
+      objectKey,
+      expiresSec: normalizedExpiresSec,
+      expiresAt: preview.expiresAt
+    });
+
+    return {
+      documentId: document.id,
+      kycSessionId: document.kycSessionId,
+      objectKey,
+      url: preview.downloadUrl,
+      method: preview.method || 'GET',
+      expiresAt: preview.expiresAt
+    };
+  }
+
   async getHistory({ userId, sessionId }) {
     const targetSession = await this.resolveUserSession({ userId, sessionId });
     if (!targetSession) {
@@ -1069,6 +1147,7 @@ export function createKycService({ store, objectStorage, env = process.env, logg
     typeof store.updateKycSessionProviderData !== 'function' ||
     typeof store.listKycSessionsByStatuses !== 'function' ||
     typeof store.createIdentityDocument !== 'function' ||
+    typeof store.findIdentityDocumentById !== 'function' ||
     typeof store.findIdentityDocumentBySessionAndChecksum !== 'function' ||
     typeof store.listIdentityDocumentsBySessionId !== 'function' ||
     typeof store.createKycStatusEvent !== 'function' ||
@@ -1080,6 +1159,7 @@ export function createKycService({ store, objectStorage, env = process.env, logg
   if (
     typeof resolvedObjectStorage.buildObjectKey !== 'function' ||
     typeof resolvedObjectStorage.createUploadUrl !== 'function' ||
+    typeof resolvedObjectStorage.createDownloadUrl !== 'function' ||
     typeof resolvedObjectStorage.toFileUrl !== 'function'
   ) {
     throw new Error('KYC object storage is missing required methods');
@@ -1116,7 +1196,9 @@ export function createKycService({ store, objectStorage, env = process.env, logg
     providerWebhookSecret: env.KYC_PROVIDER_WEBHOOK_SECRET,
     providerWebhookIdempotencyTtlMs,
     providerWebhookRequireSignature,
-    providerWebhookMaxSkewMs
+    providerWebhookMaxSkewMs,
+    previewUrlDefaultExpiresSec: env.KYC_PREVIEW_URL_DEFAULT_EXPIRES_SEC,
+    previewUrlMaxExpiresSec: env.KYC_PREVIEW_URL_MAX_EXPIRES_SEC
   });
 }
 

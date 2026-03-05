@@ -107,6 +107,25 @@ Format: **Given / When / Then** + edge cases.
 - **When** POST `/v1/users/me/saved-jobs` -> GET `/v1/users/me/saved-jobs` -> DELETE `/v1/users/me/saved-jobs/{jobId}`
 - **Then** semuanya 200 dan state sinkron
 
+### B7 Application documents upload flow
+- **Given** user login dan sudah punya `applicationId`
+- **When** POST `/v1/users/me/applications/{applicationId}/documents/upload-url` lalu POST `/v1/users/me/applications/{applicationId}/documents`
+- **Then** 201 + dokumen tercatat di aplikasi tersebut
+
+**Edge**
+- content type / content length invalid -> 400
+- checksum duplicate pada aplikasi yang sama -> 409 (`duplicate_application_document`)
+- objectKey bukan milik user+application -> 403 (`invalid_object_key_ownership`)
+
+### B8 Candidate offer decision flow
+- **Given** status aplikasi `OFFERED`
+- **When** POST `/v1/users/me/applications/{applicationId}/offer/accept` atau `/offer/decline`
+- **Then** 200 + status berubah ke `HIRED` (accept) atau `REJECTED` (decline)
+
+**Edge**
+- status belum `OFFERED` -> 409 (`offer_not_available`)
+- admin mencoba `OFFERED -> HIRED/REJECTED` via `/admin/applications/{applicationId}/status` -> 409 (`offer_decision_required`)
+
 ---
 
 ## C. FEED & SAVED POSTS
@@ -238,9 +257,16 @@ Format: **Given / When / Then** + edge cases.
 ### G3 Admin users management
 - **When** GET `/v1/admin/users`, POST `/v1/admin/users`, PATCH `/v1/admin/users/{userId}`
 - **Then** 200/201
+- **When** GET `/v1/admin/users/{userId}`
+- **Then** 200 + user detail
+- **When** GET `/v1/admin/users/{userId}/profile`
+- **Then** 200 + profile aggregate target user
+- **When** GET `/v1/admin/users/{userId}/kyc/history?sessionId=<optional>`
+- **Then** 200 + history target user
 
 **Edge**
 - non-`super_admin` untuk create/update admin user -> 403
+- userId tidak ditemukan -> 404
 
 ### G4 Admin applications ops
 - **When** GET `/v1/admin/applications`
@@ -252,16 +278,45 @@ Format: **Given / When / Then** + edge cases.
 - **When** PATCH `/v1/admin/applications/{applicationId}/status`
 - **Then** 200 + transition valid
 
+### G5 Admin monitoring dokumen lamaran
+- **When** GET `/v1/admin/applications/{applicationId}/documents`
+- **Then** 200 + daftar dokumen lamaran kandidat
+- **When** PATCH `/v1/admin/applications/{applicationId}/documents/{documentId}`
+- **Then** 200 + review status (`PENDING/VALID/INVALID`) terupdate
+- **When** POST `/v1/admin/applications/documents/{documentId}/preview-url`
+- **Then** 200 + signed preview URL sementara
+
+**Edge**
+- dokumen tidak ditemukan -> 404 (`application_document_not_found`)
+- `reviewStatus` invalid -> 400 (`invalid_review_status`)
+- `expiresSec` di luar range -> 400 (`invalid_expires_sec`)
+
 **Edge**
 - status transition invalid -> 409
 
 ### G5 Admin jobs CRUD
 - **When** GET/POST/PATCH/DELETE `/v1/admin/jobs...`
 - **Then** 200/201
+- **When** POST `/v1/admin/jobs/{jobId}/publish`
+- **Then** 200 + `job.lifecycle.status=PUBLISHED`
+- **When** POST `/v1/admin/jobs/{jobId}/unpublish`
+- **Then** 200 + `job.lifecycle.status=DRAFT`
+- **When** POST `/v1/admin/jobs/{jobId}/schedule` dengan `scheduledAt`
+- **Then** 200 + `job.lifecycle.status=SCHEDULED`
+- **When** POST `/v1/admin/jobs/bulk` dengan `action` dan `jobIds`
+- **Then** 200 + ringkasan `successCount/failureCount/results`
 
 ### G6 Admin feed CRUD
 - **When** GET/POST/PATCH/DELETE `/v1/admin/feed/posts...`
 - **Then** 200/201
+- **When** POST `/v1/admin/feed/posts/{postId}/publish`
+- **Then** 200 + `post.lifecycle.status=PUBLISHED`
+- **When** POST `/v1/admin/feed/posts/{postId}/unpublish`
+- **Then** 200 + `post.lifecycle.status=DRAFT`
+- **When** POST `/v1/admin/feed/posts/{postId}/schedule` dengan `scheduledAt`
+- **Then** 200 + `post.lifecycle.status=SCHEDULED`
+- **When** POST `/v1/admin/feed/posts/bulk` dengan `action` dan `postIds`
+- **Then** 200 + ringkasan `successCount/failureCount/results`
 
 ### G7 Admin organizations verification
 - **When** GET `/v1/admin/organizations`
@@ -275,19 +330,35 @@ Format: **Given / When / Then** + edge cases.
 - **When** POST `/v1/admin/kyc/review`
 - **Then** 200 + status updated
 
+### G9 Admin KYC document preview URL
+- **When** POST `/v1/admin/kyc/documents/{documentId}/preview-url`
+- **Then** 200 + signed URL + `expiresAt`
+
+**Edge**
+- documentId tidak ditemukan -> 404
+- `expiresSec` di luar batas -> 400 (`invalid_expires_sec`)
+
+### G10 Admin audit events query
+- **When** GET `/v1/admin/audit/events`
+- **Then** 200 + `items` + `filters` + `pageInfo`
+- **When** GET `/v1/admin/audit/events?type=APPLICATION&entityType=JOB_APPLICATION&action=APPLICATION_STATUS_TRANSITION`
+- **Then** 200 + hasil terfilter
+
+**Edge**
+- `actorType` invalid -> 400 (`invalid_actor_type`)
+
 ---
 
-## H. Route Mapping Guardrail (avoid 404 false negatives)
+## H. Legacy Compatibility Aliases
 
-Route berikut **bukan** bagian runtime v0 live saat ini:
-- `/v1/trust/profile`
-- `/v1/admin/cases`
-- `/v1/admin/cases/{caseId}/action`
+Route berikut sekarang tersedia sebagai alias kompatibilitas runtime:
+- `/v1/trust/profile` -> payload sama dengan `/v1/users/me/profile`
+- `/v1/admin/cases` -> alias ke `/v1/admin/kyc/review-queue`
+- `/v1/admin/cases/{caseId}/action` -> alias ke `/v1/admin/kyc/review` (sessionId dari `{caseId}`)
 
-Gunakan route runtime pengganti:
-- `trust/profile` -> `/v1/users/me/profile`
-- `admin/cases` queue -> `/v1/admin/kyc/review-queue`
-- `admin/cases action` -> `/v1/admin/kyc/review`
+Catatan:
+- Tetap prefer route canonical (`/users/me/profile`, `/admin/kyc/review-queue`, `/admin/kyc/review`) untuk integrasi baru.
+- `/v1/admin/cases` menerima status legacy (`OPEN/IN_REVIEW/WAITING_EVIDENCE/RESOLVED/REJECTED`) dan otomatis dimapping ke status KYC runtime.
 
 ---
 

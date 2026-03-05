@@ -7,9 +7,11 @@ class AdminOpsApiError extends Error {
 }
 
 const ACTIVITY_TYPES = new Set(['ALL', 'KYC', 'APPLICATION', 'JOB', 'FEED', 'ORG', 'AUTH']);
+const AUDIT_ACTOR_TYPES = new Set(['ALL', 'USER', 'ADMIN', 'SYSTEM']);
 const DEFAULT_LIMIT = 25;
 const MAX_LIMIT = 100;
 const ACTIVITY_SOURCE_PAGE_LIMIT = 50;
+const MAX_AUDIT_SCAN_ITEMS = 5000;
 
 function normalizeLimit(limit) {
   if (limit === undefined || limit === null || String(limit).trim() === '') {
@@ -57,6 +59,25 @@ function normalizeActivityType(type) {
     );
   }
   return normalized;
+}
+
+function normalizeAuditActorType(actorType) {
+  const normalized = String(actorType || 'ALL')
+    .trim()
+    .toUpperCase();
+  if (!AUDIT_ACTOR_TYPES.has(normalized)) {
+    throw new AdminOpsApiError(
+      400,
+      'invalid_actor_type',
+      `actorType must be one of ${Array.from(AUDIT_ACTOR_TYPES).join(', ')}`
+    );
+  }
+  return normalized;
+}
+
+function normalizeOptionalFilter(value) {
+  const normalized = String(value || '').trim();
+  return normalized || null;
 }
 
 function startOfUtcDayIso(now = new Date()) {
@@ -123,6 +144,38 @@ async function collectActivitySource({ targetCount, pageLimit, fetchPage }) {
   return {
     items,
     total: total === null ? items.length : total
+  };
+}
+
+async function collectAllActivitySource({ pageLimit, fetchPage, maxItems = MAX_AUDIT_SCAN_ITEMS }) {
+  let cursor = 0;
+  let hasMore = true;
+  const items = [];
+  let total = 0;
+
+  while (hasMore && items.length < maxItems) {
+    const page = await fetchPage({ cursor, limit: pageLimit });
+    const pageItems = Array.isArray(page?.items) ? page.items : [];
+    items.push(...pageItems);
+    total = pickPageTotal(page, items.length);
+
+    const nextCursorRaw = page?.pageInfo?.nextCursor;
+    const nextCursor = Number(nextCursorRaw);
+    if (
+      nextCursorRaw === null ||
+      nextCursorRaw === undefined ||
+      !Number.isFinite(nextCursor) ||
+      nextCursor <= cursor
+    ) {
+      hasMore = false;
+    } else {
+      cursor = Math.floor(nextCursor);
+    }
+  }
+
+  return {
+    items: items.slice(0, maxItems),
+    total
   };
 }
 
@@ -254,6 +307,116 @@ export class AdminOpsService {
         nextCursor,
         limit: normalizedLimit,
         total
+      },
+      items
+    };
+  }
+
+  async listAuditEvents({ type, actorType, actorId, entityType, entityId, action, from, to, cursor, limit } = {}) {
+    const normalizedType = normalizeActivityType(type);
+    const normalizedActorType = normalizeAuditActorType(actorType);
+    const normalizedActorId = normalizeOptionalFilter(actorId);
+    const normalizedEntityType = normalizeOptionalFilter(entityType);
+    const normalizedEntityId = normalizeOptionalFilter(entityId);
+    const normalizedAction = normalizeOptionalFilter(action);
+    const normalizedFrom = normalizeOptionalDateTime(from, 'from');
+    const normalizedTo = normalizeOptionalDateTime(to, 'to');
+    const normalizedCursor = normalizeCursor(cursor);
+    const normalizedLimit = normalizeLimit(limit);
+
+    const includeKyc = normalizedType === 'ALL' || normalizedType === 'KYC';
+    const includeApplication = normalizedType === 'ALL' || normalizedType === 'APPLICATION';
+
+    const [kycSource, applicationSource] = await Promise.all([
+      includeKyc
+        ? collectAllActivitySource({
+            pageLimit: ACTIVITY_SOURCE_PAGE_LIMIT,
+            fetchPage: ({ cursor: sourceCursor, limit: sourceLimit }) =>
+              this.kycService.listAdminActivityEvents({
+                cursor: sourceCursor,
+                limit: sourceLimit,
+                actorId: normalizedActorId || undefined,
+                from: normalizedFrom || undefined,
+                to: normalizedTo || undefined
+              })
+          })
+        : Promise.resolve({ items: [], total: 0 }),
+      includeApplication
+        ? collectAllActivitySource({
+            pageLimit: ACTIVITY_SOURCE_PAGE_LIMIT,
+            fetchPage: ({ cursor: sourceCursor, limit: sourceLimit }) =>
+              this.jobsService.listAdminActivityEvents({
+                cursor: sourceCursor,
+                limit: sourceLimit,
+                actorId: normalizedActorId || undefined,
+                from: normalizedFrom || undefined,
+                to: normalizedTo || undefined
+              })
+          })
+        : Promise.resolve({ items: [], total: 0 })
+    ]);
+
+    const fromTime = normalizedFrom ? Date.parse(normalizedFrom) : null;
+    const toTime = normalizedTo ? Date.parse(normalizedTo) : null;
+    const filtered = [...kycSource.items, ...applicationSource.items]
+      .filter((item) => {
+        if (normalizedActorType !== 'ALL') {
+          if (String(item?.actorType || '').trim().toUpperCase() !== normalizedActorType) {
+            return false;
+          }
+        }
+        if (normalizedActorId && String(item?.actorId || '').trim() !== normalizedActorId) {
+          return false;
+        }
+        if (normalizedEntityType) {
+          if (String(item?.entityType || '').trim().toUpperCase() !== normalizedEntityType.toUpperCase()) {
+            return false;
+          }
+        }
+        if (normalizedEntityId && String(item?.entityId || '').trim() !== normalizedEntityId) {
+          return false;
+        }
+        if (normalizedAction) {
+          if (String(item?.action || '').trim().toUpperCase() !== normalizedAction.toUpperCase()) {
+            return false;
+          }
+        }
+        if (fromTime !== null || toTime !== null) {
+          const createdAtTime = Date.parse(item?.createdAt || '');
+          if (!Number.isFinite(createdAtTime)) {
+            return false;
+          }
+          if (fromTime !== null && createdAtTime < fromTime) {
+            return false;
+          }
+          if (toTime !== null && createdAtTime > toTime) {
+            return false;
+          }
+        }
+        return true;
+      })
+      .sort((left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt));
+
+    const items = filtered.slice(normalizedCursor, normalizedCursor + normalizedLimit);
+    const nextCursor = normalizedCursor + items.length < filtered.length ? String(normalizedCursor + items.length) : null;
+
+    return {
+      count: items.length,
+      filters: {
+        type: normalizedType,
+        actorType: normalizedActorType,
+        actorId: normalizedActorId,
+        entityType: normalizedEntityType,
+        entityId: normalizedEntityId,
+        action: normalizedAction,
+        from: normalizedFrom,
+        to: normalizedTo
+      },
+      pageInfo: {
+        cursor: String(normalizedCursor),
+        nextCursor,
+        limit: normalizedLimit,
+        total: filtered.length
       },
       items
     };

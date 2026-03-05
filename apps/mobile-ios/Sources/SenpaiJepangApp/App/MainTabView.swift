@@ -11,6 +11,7 @@ struct MainTabView: View {
     private let jobService: JobServiceProtocol
     private let journeyService: JourneyServiceProtocol
     private let verificationService: VerificationServiceProtocol
+    private let applicationDocumentService: ApplicationDocumentServiceProtocol
     private let feedService: FeedServiceProtocol
 
     init(
@@ -20,6 +21,7 @@ struct MainTabView: View {
         journeyService: JourneyServiceProtocol,
         profileService: ProfileServiceProtocol,
         verificationService: VerificationServiceProtocol,
+        applicationDocumentService: ApplicationDocumentServiceProtocol,
         feedService: FeedServiceProtocol
     ) {
         self._navigation = ObservedObject(wrappedValue: navigation)
@@ -27,6 +29,7 @@ struct MainTabView: View {
         self.jobService = jobService
         self.journeyService = journeyService
         self.verificationService = verificationService
+        self.applicationDocumentService = applicationDocumentService
         self.feedService = feedService
         _feedVM = StateObject(wrappedValue: FeedListViewModel(feedService: feedService, profileService: profileService, navigation: navigation))
         _jobsVM = StateObject(wrappedValue: JobsListViewModel(jobService: jobService, navigation: navigation))
@@ -52,6 +55,7 @@ struct MainTabView: View {
             .tag(0)
             .tabItem {
                 Label("Home".localized(), systemImage: "house")
+                    .accessibilityIdentifier("tab_feed")
             }
 
             // Jobs Tab
@@ -65,6 +69,7 @@ struct MainTabView: View {
             .tag(1)
             .tabItem {
                 Label("Jobs".localized(), systemImage: "briefcase")
+                    .accessibilityIdentifier("tab_jobs")
             }
 
             // Journey Tab
@@ -78,6 +83,7 @@ struct MainTabView: View {
             .tag(2)
             .tabItem {
                 Label("Journey".localized(), systemImage: "map")
+                    .accessibilityIdentifier("tab_journey")
             }
 
             // Profile Tab
@@ -91,6 +97,7 @@ struct MainTabView: View {
             .tag(3)
             .tabItem {
                 Label("Profile".localized(), systemImage: "person")
+                    .accessibilityIdentifier("tab_profile")
             }
         }
         .tint(AppTheme.accent)
@@ -103,6 +110,7 @@ struct MainTabView: View {
                 viewModel: JobApplicationViewModel(
                     job: job,
                     journeyService: journeyService,
+                    applicationDocumentService: applicationDocumentService,
                     navigation: navigation
                 )
             )

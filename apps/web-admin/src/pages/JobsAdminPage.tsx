@@ -1,10 +1,15 @@
 import { FormEvent, useEffect, useState } from 'react';
 import {
+  AdminBulkAction,
   AdminJob,
   AdminJobUpsertInput,
+  bulkUpdateAdminJobs,
   createAdminJob,
   deleteAdminJob,
   getAdminJobs,
+  publishAdminJob,
+  scheduleAdminJob,
+  unpublishAdminJob,
   updateAdminJob
 } from '../lib/adminApi';
 
@@ -58,6 +63,16 @@ function employmentChip(type: AdminJob['employmentType']) {
   if (type === 'FULL_TIME') return 'Full Time';
   if (type === 'PART_TIME') return 'Part Time';
   return 'Contract';
+}
+
+function lifecycleLabel(job: AdminJob) {
+  return job.lifecycle?.effectiveStatus || job.lifecycle?.status || 'PUBLISHED';
+}
+
+function lifecycleClass(status: string) {
+  if (status === 'PUBLISHED') return 'verified';
+  if (status === 'SCHEDULED') return 'review';
+  return 'neutral';
 }
 
 function parseCursorValue(value: string | number | null | undefined) {
@@ -169,6 +184,8 @@ export function JobsAdminPage() {
   const [error, setError] = useState<string | null>(null);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [selectedJobIds, setSelectedJobIds] = useState<string[]>([]);
+  const [bulkActionLoading, setBulkActionLoading] = useState<AdminBulkAction | null>(null);
   const [modalMode, setModalMode] = useState<'create' | 'edit' | null>(null);
   const [editingJobId, setEditingJobId] = useState<string | null>(null);
   const [form, setForm] = useState<JobFormState>(DEFAULT_FORM);
@@ -189,6 +206,7 @@ export function JobsAdminPage() {
         limit: PAGE_SIZE
       });
       setRows(result.items);
+      setSelectedJobIds([]);
       setTotal(result.pageInfo.total);
       const resolvedCursor = parseCursorValue(result.pageInfo.cursor) ?? cursor;
       setCurrentCursor(resolvedCursor);
@@ -200,6 +218,7 @@ export function JobsAdminPage() {
           : 'Failed to load jobs';
       setError(message);
       setRows([]);
+      setSelectedJobIds([]);
       setTotal(0);
       setCurrentCursor(cursor);
       setNextCursor(null);
@@ -318,6 +337,115 @@ export function JobsAdminPage() {
     }
   }
 
+  function toggleSelectJob(jobId: string) {
+    setSelectedJobIds((prev) => (prev.includes(jobId) ? prev.filter((id) => id !== jobId) : [...prev, jobId]));
+  }
+
+  function toggleSelectAllVisible(checked: boolean) {
+    if (!checked) {
+      setSelectedJobIds([]);
+      return;
+    }
+    setSelectedJobIds(rows.map((item) => item.id));
+  }
+
+  async function handleBulkAction(action: AdminBulkAction) {
+    if (bulkActionLoading || selectedJobIds.length === 0) {
+      return;
+    }
+    let scheduledAt: string | undefined;
+    if (action === 'DELETE') {
+      const confirmed = window.confirm(`Delete ${selectedJobIds.length} selected jobs?`);
+      if (!confirmed) {
+        return;
+      }
+    }
+    if (action === 'SCHEDULE') {
+      const input = window.prompt('Input schedule datetime (ISO), e.g. 2026-03-20T08:00:00.000Z');
+      if (!input) {
+        return;
+      }
+      scheduledAt = input.trim();
+    }
+
+    setBulkActionLoading(action);
+    setActionMessage(null);
+    setError(null);
+    try {
+      const result = await bulkUpdateAdminJobs({
+        action,
+        jobIds: selectedJobIds,
+        scheduledAt
+      });
+      setActionMessage(`${action}: ${result.successCount}/${result.total} success`);
+      await loadJobs(query, currentCursor);
+    } catch (err) {
+      const message =
+        typeof err === 'object' && err && 'message' in err
+          ? String((err as { message: unknown }).message)
+          : 'Failed to run bulk action';
+      setActionMessage(message);
+    } finally {
+      setBulkActionLoading(null);
+    }
+  }
+
+  async function handlePublish(job: AdminJob) {
+    setActionMessage(null);
+    setError(null);
+    try {
+      await publishAdminJob(job.id);
+      setActionMessage(`Published "${job.title}".`);
+      await loadJobs(query, currentCursor);
+    } catch (err) {
+      const message =
+        typeof err === 'object' && err && 'message' in err
+          ? String((err as { message: unknown }).message)
+          : 'Failed to publish job';
+      setActionMessage(message);
+    }
+  }
+
+  async function handleUnpublish(job: AdminJob) {
+    setActionMessage(null);
+    setError(null);
+    try {
+      await unpublishAdminJob(job.id);
+      setActionMessage(`Unpublished "${job.title}".`);
+      await loadJobs(query, currentCursor);
+    } catch (err) {
+      const message =
+        typeof err === 'object' && err && 'message' in err
+          ? String((err as { message: unknown }).message)
+          : 'Failed to unpublish job';
+      setActionMessage(message);
+    }
+  }
+
+  async function handleSchedule(job: AdminJob) {
+    const input = window.prompt('Input schedule datetime (ISO), e.g. 2026-03-20T08:00:00.000Z');
+    if (!input) {
+      return;
+    }
+    setActionMessage(null);
+    setError(null);
+    try {
+      await scheduleAdminJob(job.id, {
+        scheduledAt: input.trim()
+      });
+      setActionMessage(`Scheduled "${job.title}".`);
+      await loadJobs(query, currentCursor);
+    } catch (err) {
+      const message =
+        typeof err === 'object' && err && 'message' in err
+          ? String((err as { message: unknown }).message)
+          : 'Failed to schedule job';
+      setActionMessage(message);
+    }
+  }
+
+  const allVisibleSelected = rows.length > 0 && rows.every((row) => selectedJobIds.includes(row.id));
+
   return (
     <section className="surface-card page-section">
       <header>
@@ -346,6 +474,38 @@ export function JobsAdminPage() {
           <button type="button" className="btn-primary" onClick={openCreateModal}>
             Create Job
           </button>
+          <button
+            type="button"
+            className="btn-secondary"
+            onClick={() => void handleBulkAction('PUBLISH')}
+            disabled={selectedJobIds.length === 0 || bulkActionLoading !== null}
+          >
+            {bulkActionLoading === 'PUBLISH' ? 'Publishing...' : `Publish Selected (${selectedJobIds.length})`}
+          </button>
+          <button
+            type="button"
+            className="btn-secondary"
+            onClick={() => void handleBulkAction('UNPUBLISH')}
+            disabled={selectedJobIds.length === 0 || bulkActionLoading !== null}
+          >
+            {bulkActionLoading === 'UNPUBLISH' ? 'Unpublishing...' : 'Unpublish Selected'}
+          </button>
+          <button
+            type="button"
+            className="btn-secondary"
+            onClick={() => void handleBulkAction('SCHEDULE')}
+            disabled={selectedJobIds.length === 0 || bulkActionLoading !== null}
+          >
+            {bulkActionLoading === 'SCHEDULE' ? 'Scheduling...' : 'Schedule Selected'}
+          </button>
+          <button
+            type="button"
+            className="btn-danger"
+            onClick={() => void handleBulkAction('DELETE')}
+            disabled={selectedJobIds.length === 0 || bulkActionLoading !== null}
+          >
+            {bulkActionLoading === 'DELETE' ? 'Deleting...' : 'Delete Selected'}
+          </button>
         </div>
       </header>
 
@@ -357,17 +517,34 @@ export function JobsAdminPage() {
           <table className="simple-table">
             <thead>
               <tr>
+                <th>
+                  <input
+                    type="checkbox"
+                    checked={allVisibleSelected}
+                    onChange={(event) => toggleSelectAllVisible(event.target.checked)}
+                    aria-label="Select all jobs"
+                  />
+                </th>
                 <th>Title</th>
                 <th>Employer</th>
                 <th>Type</th>
                 <th>Location</th>
                 <th>Visa</th>
+                <th>Status</th>
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody>
               {rows.map((row) => (
                 <tr key={row.id}>
+                  <td>
+                    <input
+                      type="checkbox"
+                      checked={selectedJobIds.includes(row.id)}
+                      onChange={() => toggleSelectJob(row.id)}
+                      aria-label={`Select ${row.title}`}
+                    />
+                  </td>
                   <td>{row.title}</td>
                   <td>{row.employer.name}</td>
                   <td>
@@ -379,9 +556,21 @@ export function JobsAdminPage() {
                       {row.visaSponsorship ? 'Sponsored' : 'No'}
                     </span>
                   </td>
+                  <td>
+                    <span className={`status-chip ${lifecycleClass(lifecycleLabel(row))}`}>{lifecycleLabel(row)}</span>
+                  </td>
                   <td className="action-cell">
                     <button type="button" onClick={() => openEditModal(row)} disabled={Boolean(deletingId)}>
                       Edit
+                    </button>
+                    <button type="button" onClick={() => void handlePublish(row)} disabled={Boolean(deletingId)}>
+                      Publish
+                    </button>
+                    <button type="button" onClick={() => void handleUnpublish(row)} disabled={Boolean(deletingId)}>
+                      Unpublish
+                    </button>
+                    <button type="button" onClick={() => void handleSchedule(row)} disabled={Boolean(deletingId)}>
+                      Schedule
                     </button>
                     <button
                       type="button"
@@ -396,7 +585,7 @@ export function JobsAdminPage() {
               ))}
               {!loading && rows.length === 0 ? (
                 <tr>
-                  <td colSpan={6}>No jobs found.</td>
+                  <td colSpan={8}>No jobs found.</td>
                 </tr>
               ) : null}
             </tbody>

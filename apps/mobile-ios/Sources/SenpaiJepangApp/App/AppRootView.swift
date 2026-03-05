@@ -9,6 +9,7 @@ struct AppRootView: View {
     private let journeyService: JourneyServiceProtocol
     private let profileService: ProfileServiceProtocol
     private let verificationService: VerificationServiceProtocol
+    private let applicationDocumentService: ApplicationDocumentServiceProtocol
     private let feedService: FeedServiceProtocol
 
     init(
@@ -17,6 +18,7 @@ struct AppRootView: View {
         journeyService: JourneyServiceProtocol,
         profileService: ProfileServiceProtocol,
         verificationService: VerificationServiceProtocol,
+        applicationDocumentService: ApplicationDocumentServiceProtocol,
         feedService: FeedServiceProtocol
     ) {
         _navigation = StateObject(wrappedValue: NavigationManager())
@@ -25,6 +27,7 @@ struct AppRootView: View {
         self.journeyService = journeyService
         self.profileService = profileService
         self.verificationService = verificationService
+        self.applicationDocumentService = applicationDocumentService
         self.feedService = feedService
     }
 
@@ -40,6 +43,7 @@ struct AppRootView: View {
                     journeyService: journeyService,
                     profileService: profileService,
                     verificationService: verificationService,
+                    applicationDocumentService: applicationDocumentService,
                     feedService: feedService
                 )
             } else {

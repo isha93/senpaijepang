@@ -1,6 +1,6 @@
 # API Implementation Status (Runtime v0)
 
-Date: 2026-03-03
+Date: 2026-03-05
 
 ## 1. Purpose
 - Menjadi referensi kondisi API yang benar-benar sudah hidup di codebase saat ini.
@@ -40,6 +40,11 @@ Jobs:
 - `DELETE /users/me/saved-jobs/{jobId}`
 - `GET /users/me/applications`
 - `GET /users/me/applications/{applicationId}/journey`
+- `POST /users/me/applications/{applicationId}/documents/upload-url`
+- `POST /users/me/applications/{applicationId}/documents`
+- `GET /users/me/applications/{applicationId}/documents`
+- `POST /users/me/applications/{applicationId}/offer/accept`
+- `POST /users/me/applications/{applicationId}/offer/decline`
 
 Feed:
 - `GET /feed/posts`
@@ -50,6 +55,7 @@ Feed:
 Profile:
 - `GET /users/me/profile`
 - `PATCH /users/me/profile`
+- `GET /trust/profile` (legacy compatibility alias -> `/users/me/profile`)
 - `GET /users/me/verification-documents`
 - `POST /users/me/verification/final-request`
 
@@ -66,25 +72,43 @@ Identity/KYC:
 Admin:
 - `GET /admin/users` (Bearer super_admin role, fallback header `x-admin-api-key`)
 - `POST /admin/users` (Bearer super_admin role, fallback header `x-admin-api-key`)
+- `GET /admin/users/{userId}` (admin investigation read endpoint)
+- `GET /admin/users/{userId}/profile` (admin investigation read endpoint)
+- `GET /admin/users/{userId}/kyc/history` (admin investigation read endpoint)
 - `PATCH /admin/users/{userId}` (Bearer super_admin role, fallback header `x-admin-api-key`)
 - `GET /admin/overview/summary` (Bearer admin role, fallback header `x-admin-api-key`)
 - `GET /admin/activity-events` (Bearer admin role, fallback header `x-admin-api-key`, supports `type/actorId/from/to/cursor/limit`)
+- `GET /admin/audit/events` (Bearer admin role, fallback header `x-admin-api-key`, supports `type/actorType/actorId/entityType/entityId/action/from/to/cursor/limit`)
 - `GET /admin/applications` (Bearer admin role, fallback header `x-admin-api-key`, supports `status/q/jobId/orgId/cursor/limit`)
 - `GET /admin/applications/{applicationId}` (Bearer admin role, fallback header `x-admin-api-key`)
 - `GET /admin/applications/{applicationId}/journey` (Bearer admin role, fallback header `x-admin-api-key`)
 - `PATCH /admin/applications/{applicationId}/status` (Bearer admin role, fallback header `x-admin-api-key`, status transition guarded)
+- `GET /admin/applications/{applicationId}/documents` (Bearer admin role, fallback header `x-admin-api-key`)
+- `PATCH /admin/applications/{applicationId}/documents/{documentId}` (Bearer admin role, fallback header `x-admin-api-key`)
+- `POST /admin/applications/documents/{documentId}/preview-url` (Bearer admin role, fallback header `x-admin-api-key`, short-lived signed preview URL)
 - `GET /admin/jobs` (Bearer admin role, fallback header `x-admin-api-key`)
 - `POST /admin/jobs` (Bearer admin role, fallback header `x-admin-api-key`)
+- `POST /admin/jobs/bulk` (bulk `PUBLISH/UNPUBLISH/SCHEDULE/DELETE`)
 - `PATCH /admin/jobs/{jobId}` (Bearer admin role, fallback header `x-admin-api-key`)
 - `DELETE /admin/jobs/{jobId}` (Bearer admin role, fallback header `x-admin-api-key`)
+- `POST /admin/jobs/{jobId}/publish`
+- `POST /admin/jobs/{jobId}/unpublish`
+- `POST /admin/jobs/{jobId}/schedule`
 - `GET /admin/feed/posts` (Bearer admin role, fallback header `x-admin-api-key`)
 - `POST /admin/feed/posts` (Bearer admin role, fallback header `x-admin-api-key`)
+- `POST /admin/feed/posts/bulk` (bulk `PUBLISH/UNPUBLISH/SCHEDULE/DELETE`)
 - `PATCH /admin/feed/posts/{postId}` (Bearer admin role, fallback header `x-admin-api-key`)
 - `DELETE /admin/feed/posts/{postId}` (Bearer admin role, fallback header `x-admin-api-key`)
+- `POST /admin/feed/posts/{postId}/publish`
+- `POST /admin/feed/posts/{postId}/unpublish`
+- `POST /admin/feed/posts/{postId}/schedule`
 - `GET /admin/organizations` (Bearer admin role, fallback header `x-admin-api-key`)
 - `PATCH /admin/organizations/{orgId}/verification` (Bearer admin role, fallback header `x-admin-api-key`)
 - `POST /admin/kyc/review` (Bearer admin role, fallback header `x-admin-api-key`)
 - `GET /admin/kyc/review-queue` (Bearer admin role, fallback header `x-admin-api-key`, supports `status/cursor/limit`, returns `pageInfo`)
+- `POST /admin/kyc/documents/{documentId}/preview-url` (Bearer admin role, fallback header `x-admin-api-key`, short-lived signed preview URL)
+- `GET /admin/cases` (legacy compatibility alias -> `/admin/kyc/review-queue`, termasuk mapping status `OPEN/IN_REVIEW/WAITING_EVIDENCE/RESOLVED`)
+- `POST /admin/cases/{caseId}/action` (legacy compatibility alias -> `/admin/kyc/review`, support `action` mapping atau `decision` passthrough)
 
 ## 5. Implemented Data Model (Migration-backed)
 - `001_auth_tables.sql`:
@@ -116,6 +140,12 @@ Admin:
   - `user_saved_posts`
   - `job_applications`
   - `job_application_journey_events`
+- `010_content_lifecycle.sql`:
+  - `jobs.lifecycle_status/published_at/scheduled_publish_at`
+  - `feed_posts.lifecycle_status/scheduled_publish_at`
+- `011_application_documents_and_offer_audit.sql`:
+  - `job_application_journey_events.actor_type/actor_id`
+  - `job_application_documents`
 
 ## 6. KYC Status Model
 Raw session statuses:

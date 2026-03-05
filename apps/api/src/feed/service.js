@@ -10,10 +10,13 @@ export class FeedApiError extends Error {
 
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 50;
+const MAX_BULK_ITEMS = 100;
 const MAX_TITLE_LENGTH = 180;
 const MAX_EXCERPT_LENGTH = 600;
 const MAX_CATEGORY_LENGTH = 64;
 const MAX_AUTHOR_LENGTH = 120;
+const FEED_LIFECYCLE_STATUSES = new Set(['DRAFT', 'PUBLISHED', 'SCHEDULED']);
+const FEED_BULK_ACTIONS = new Set(['PUBLISH', 'UNPUBLISH', 'SCHEDULE', 'DELETE']);
 
 export const POST_SEED_DATA = [
   {
@@ -52,7 +55,11 @@ export const POST_SEED_DATA = [
     imageUrl: null,
     publishedAt: '2026-02-22T09:00:00.000Z'
   }
-];
+].map((post) => ({
+  ...post,
+  lifecycleStatus: 'PUBLISHED',
+  scheduledAt: null
+}));
 
 function normalizeLimit(limit) {
   if (limit === undefined || limit === null || String(limit).trim() === '') {
@@ -190,6 +197,111 @@ function normalizePublishedAt(publishedAt) {
   return new Date(parsed).toISOString();
 }
 
+function normalizeRequiredLifecycleStatus(status, fieldName = 'status') {
+  const normalized = String(status || '')
+    .trim()
+    .toUpperCase();
+  if (!FEED_LIFECYCLE_STATUSES.has(normalized)) {
+    throw new FeedApiError(
+      400,
+      'invalid_lifecycle_status',
+      `${fieldName} must be one of ${Array.from(FEED_LIFECYCLE_STATUSES).join(', ')}`
+    );
+  }
+  return normalized;
+}
+
+function normalizeOptionalLifecycleStatus(status, fieldName = 'status') {
+  if (status === undefined) {
+    return undefined;
+  }
+  return normalizeRequiredLifecycleStatus(status, fieldName);
+}
+
+function normalizeRequiredLifecycleDate(value, fieldName) {
+  const normalized = String(value || '').trim();
+  const timestamp = Date.parse(normalized);
+  if (!Number.isFinite(timestamp)) {
+    throw new FeedApiError(400, 'invalid_lifecycle_date', `${fieldName} must be valid ISO date-time`);
+  }
+  return new Date(timestamp).toISOString();
+}
+
+function normalizeOptionalLifecycleDate(value, fieldName) {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (value === null || String(value).trim() === '') {
+    return null;
+  }
+  return normalizeRequiredLifecycleDate(value, fieldName);
+}
+
+function normalizeBulkAction(action) {
+  const normalized = String(action || '')
+    .trim()
+    .toUpperCase();
+  if (!FEED_BULK_ACTIONS.has(normalized)) {
+    throw new FeedApiError(
+      400,
+      'invalid_bulk_action',
+      `action must be one of ${Array.from(FEED_BULK_ACTIONS).join(', ')}`
+    );
+  }
+  return normalized;
+}
+
+function normalizeBulkPostIds(postIds) {
+  if (!Array.isArray(postIds) || postIds.length === 0) {
+    throw new FeedApiError(400, 'invalid_post_ids', 'postIds must be a non-empty array');
+  }
+  if (postIds.length > MAX_BULK_ITEMS) {
+    throw new FeedApiError(400, 'invalid_post_ids', `postIds must not exceed ${MAX_BULK_ITEMS} items`);
+  }
+  const normalized = [];
+  const seen = new Set();
+  for (const value of postIds) {
+    const id = String(value || '').trim();
+    if (!id) {
+      throw new FeedApiError(400, 'invalid_post_ids', 'postIds must contain non-empty ids');
+    }
+    if (!seen.has(id)) {
+      seen.add(id);
+      normalized.push(id);
+    }
+  }
+  return normalized;
+}
+
+function resolveEffectiveLifecycleStatus({ lifecycleStatus, scheduledAt }) {
+  if (lifecycleStatus === 'SCHEDULED') {
+    if (!scheduledAt) {
+      return 'DRAFT';
+    }
+    return Date.parse(scheduledAt) <= Date.now() ? 'PUBLISHED' : 'SCHEDULED';
+  }
+  return lifecycleStatus;
+}
+
+function isPostPubliclyVisible(post) {
+  return resolveEffectiveLifecycleStatus(post) === 'PUBLISHED';
+}
+
+function toLifecycleState(post) {
+  return {
+    status: post.lifecycleStatus,
+    effectiveStatus: resolveEffectiveLifecycleStatus(post),
+    publishedAt: post.publishedAt || null,
+    scheduledAt: post.scheduledAt || null
+  };
+}
+
+function sortByPublishedAtDesc(left, right) {
+  const leftTime = left.publishedAt ? Date.parse(left.publishedAt) : Number.NEGATIVE_INFINITY;
+  const rightTime = right.publishedAt ? Date.parse(right.publishedAt) : Number.NEGATIVE_INFINITY;
+  return rightTime - leftTime;
+}
+
 function toFeedPost(post, { authenticated, saved }) {
   return {
     id: post.id,
@@ -199,6 +311,7 @@ function toFeedPost(post, { authenticated, saved }) {
     author: post.author,
     imageUrl: post.imageUrl,
     publishedAt: post.publishedAt,
+    lifecycle: toLifecycleState(post),
     viewerState: {
       authenticated,
       saved
@@ -214,13 +327,21 @@ function toAdminPost(post) {
     category: post.category,
     author: post.author,
     imageUrl: post.imageUrl,
-    publishedAt: post.publishedAt
+    publishedAt: post.publishedAt,
+    lifecycle: toLifecycleState(post)
   };
 }
 
 export class FeedService {
   constructor({ posts = POST_SEED_DATA } = {}) {
-    this.posts = Array.from(posts).sort((left, right) => Date.parse(right.publishedAt) - Date.parse(left.publishedAt));
+    this.posts = Array.from(posts)
+      .map((post) => ({
+        ...post,
+        lifecycleStatus: normalizeRequiredLifecycleStatus(post.lifecycleStatus || 'PUBLISHED', 'lifecycle.status'),
+        publishedAt: post.publishedAt ? normalizeRequiredLifecycleDate(post.publishedAt, 'publishedAt') : null,
+        scheduledAt: post.scheduledAt ? normalizeRequiredLifecycleDate(post.scheduledAt, 'scheduledAt') : null
+      }))
+      .sort(sortByPublishedAtDesc);
     this.postById = new Map(this.posts.map((post) => [post.id, post]));
     this.savedPostMapByUserId = new Map();
   }
@@ -259,6 +380,9 @@ export class FeedService {
     const authenticated = Boolean(userId);
 
     const filtered = this.posts.filter((post) => {
+      if (!isPostPubliclyVisible(post)) {
+        return false;
+      }
       if (normalizedCategory && post.category !== normalizedCategory) {
         return false;
       }
@@ -321,6 +445,9 @@ export class FeedService {
 
   savePost({ userId, postId }) {
     const post = this.getPostByIdOrThrow(postId);
+    if (!isPostPubliclyVisible(post)) {
+      throw new FeedApiError(404, 'post_not_found', 'post not found');
+    }
     const savedMap = this.getSavedMapForUser(userId);
     const created = !savedMap.has(post.id);
     if (created) {
@@ -376,7 +503,33 @@ export class FeedService {
     };
   }
 
-  createPost({ title, excerpt, category, author, imageUrl, publishedAt }) {
+  createPost({ title, excerpt, category, author, imageUrl, publishedAt, lifecycle }) {
+    if (lifecycle !== undefined && (typeof lifecycle !== 'object' || Array.isArray(lifecycle))) {
+      throw new FeedApiError(400, 'invalid_lifecycle', 'lifecycle must be an object');
+    }
+    const lifecycleStatus = normalizeOptionalLifecycleStatus(lifecycle?.status, 'lifecycle.status') || 'PUBLISHED';
+    let normalizedPublishedAt = normalizeOptionalLifecycleDate(
+      lifecycle?.publishedAt ?? publishedAt,
+      'lifecycle.publishedAt'
+    );
+    let normalizedScheduledAt = normalizeOptionalLifecycleDate(lifecycle?.scheduledAt, 'lifecycle.scheduledAt');
+    if (lifecycleStatus === 'PUBLISHED') {
+      normalizedPublishedAt = normalizedPublishedAt || new Date().toISOString();
+      normalizedScheduledAt = null;
+    } else if (lifecycleStatus === 'DRAFT') {
+      normalizedPublishedAt = null;
+      normalizedScheduledAt = null;
+    } else {
+      if (!normalizedScheduledAt) {
+        throw new FeedApiError(
+          400,
+          'invalid_lifecycle_date',
+          'lifecycle.scheduledAt is required when lifecycle.status is SCHEDULED'
+        );
+      }
+      normalizedPublishedAt = normalizedScheduledAt;
+    }
+
     const post = {
       id: randomUUID(),
       title: normalizeRequiredTitle(title),
@@ -384,24 +537,34 @@ export class FeedService {
       category: normalizeRequiredCategory(category),
       author: normalizeRequiredAuthor(author),
       imageUrl: normalizeOptionalImageUrl(imageUrl) ?? null,
-      publishedAt: normalizePublishedAt(publishedAt)
+      publishedAt: normalizedPublishedAt,
+      lifecycleStatus,
+      scheduledAt: normalizedScheduledAt
     };
 
     this.posts.push(post);
-    this.posts.sort((left, right) => Date.parse(right.publishedAt) - Date.parse(left.publishedAt));
+    this.posts.sort(sortByPublishedAtDesc);
     this.postById.set(post.id, post);
     return { post: toAdminPost(post) };
   }
 
-  updatePost({ postId, title, excerpt, category, author, imageUrl, publishedAt }) {
+  updatePost({ postId, title, excerpt, category, author, imageUrl, publishedAt, lifecycle }) {
     const post = this.getPostByIdOrThrow(postId);
+    if (lifecycle !== undefined && (typeof lifecycle !== 'object' || Array.isArray(lifecycle))) {
+      throw new FeedApiError(400, 'invalid_lifecycle', 'lifecycle must be an object');
+    }
     const patch = {
       title: normalizeOptionalTitle(title),
       excerpt: normalizeOptionalExcerpt(excerpt),
       category: normalizeOptionalCategory(category),
       author: normalizeOptionalAuthor(author),
       imageUrl: normalizeOptionalImageUrl(imageUrl),
-      publishedAt: publishedAt === undefined ? undefined : normalizePublishedAt(publishedAt)
+      publishedAt: normalizeOptionalLifecycleDate(
+        lifecycle?.publishedAt ?? (publishedAt === undefined ? undefined : normalizePublishedAt(publishedAt)),
+        'lifecycle.publishedAt'
+      ),
+      lifecycleStatus: normalizeOptionalLifecycleStatus(lifecycle?.status, 'lifecycle.status'),
+      scheduledAt: normalizeOptionalLifecycleDate(lifecycle?.scheduledAt, 'lifecycle.scheduledAt')
     };
 
     if (patch.title !== undefined) {
@@ -422,9 +585,111 @@ export class FeedService {
     if (patch.publishedAt !== undefined) {
       post.publishedAt = patch.publishedAt;
     }
+    if (lifecycle !== undefined) {
+      let nextStatus = patch.lifecycleStatus === undefined ? post.lifecycleStatus : patch.lifecycleStatus;
+      let nextPublishedAt = patch.publishedAt === undefined ? post.publishedAt : patch.publishedAt;
+      let nextScheduledAt = patch.scheduledAt === undefined ? post.scheduledAt : patch.scheduledAt;
+      if (nextStatus === 'PUBLISHED') {
+        nextPublishedAt = nextPublishedAt || new Date().toISOString();
+        nextScheduledAt = null;
+      } else if (nextStatus === 'DRAFT') {
+        nextPublishedAt = null;
+        nextScheduledAt = null;
+      } else {
+        if (!nextScheduledAt) {
+          throw new FeedApiError(
+            400,
+            'invalid_lifecycle_date',
+            'lifecycle.scheduledAt is required when lifecycle.status is SCHEDULED'
+          );
+        }
+        nextPublishedAt = nextScheduledAt;
+      }
+      post.lifecycleStatus = nextStatus;
+      post.publishedAt = nextPublishedAt;
+      post.scheduledAt = nextScheduledAt;
+    }
 
-    this.posts.sort((left, right) => Date.parse(right.publishedAt) - Date.parse(left.publishedAt));
+    this.posts.sort(sortByPublishedAtDesc);
     return { post: toAdminPost(post) };
+  }
+
+  publishPost({ postId, publishedAt }) {
+    const post = this.getPostByIdOrThrow(postId);
+    post.lifecycleStatus = 'PUBLISHED';
+    post.publishedAt = normalizeOptionalLifecycleDate(publishedAt, 'publishedAt') || new Date().toISOString();
+    post.scheduledAt = null;
+    this.posts.sort(sortByPublishedAtDesc);
+    return { post: toAdminPost(post) };
+  }
+
+  unpublishPost({ postId }) {
+    const post = this.getPostByIdOrThrow(postId);
+    post.lifecycleStatus = 'DRAFT';
+    post.publishedAt = null;
+    post.scheduledAt = null;
+    this.posts.sort(sortByPublishedAtDesc);
+    return { post: toAdminPost(post) };
+  }
+
+  schedulePost({ postId, scheduledAt }) {
+    const post = this.getPostByIdOrThrow(postId);
+    const normalizedScheduledAt = normalizeRequiredLifecycleDate(scheduledAt, 'scheduledAt');
+    post.lifecycleStatus = 'SCHEDULED';
+    post.publishedAt = normalizedScheduledAt;
+    post.scheduledAt = normalizedScheduledAt;
+    this.posts.sort(sortByPublishedAtDesc);
+    return { post: toAdminPost(post) };
+  }
+
+  bulkUpdatePosts({ action, postIds, scheduledAt, publishedAt }) {
+    const normalizedAction = normalizeBulkAction(action);
+    const normalizedPostIds = normalizeBulkPostIds(postIds);
+    const results = [];
+
+    for (const postId of normalizedPostIds) {
+      try {
+        if (normalizedAction === 'PUBLISH') {
+          const result = this.publishPost({ postId, publishedAt });
+          results.push({ postId, success: true, lifecycle: result.post.lifecycle });
+          continue;
+        }
+        if (normalizedAction === 'UNPUBLISH') {
+          const result = this.unpublishPost({ postId });
+          results.push({ postId, success: true, lifecycle: result.post.lifecycle });
+          continue;
+        }
+        if (normalizedAction === 'SCHEDULE') {
+          const result = this.schedulePost({ postId, scheduledAt });
+          results.push({ postId, success: true, lifecycle: result.post.lifecycle });
+          continue;
+        }
+        const result = this.deletePost({ postId });
+        results.push({ postId, success: true, removed: result.removed });
+      } catch (error) {
+        if (isFeedApiError(error)) {
+          results.push({
+            postId,
+            success: false,
+            error: {
+              code: error.code,
+              message: error.message
+            }
+          });
+          continue;
+        }
+        throw error;
+      }
+    }
+
+    const successCount = results.filter((item) => item.success).length;
+    return {
+      action: normalizedAction,
+      total: normalizedPostIds.length,
+      successCount,
+      failureCount: normalizedPostIds.length - successCount,
+      results
+    };
   }
 
   deletePost({ postId }) {

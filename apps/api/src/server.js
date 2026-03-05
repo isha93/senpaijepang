@@ -119,6 +119,27 @@ function matchApplicationJourneyRoute(pathname) {
   return match ? match[1] : null;
 }
 
+function matchUserApplicationDocumentsRoute(pathname) {
+  const match = String(pathname || '').match(/^\/users\/me\/applications\/([^/]+)\/documents$/);
+  return match ? match[1] : null;
+}
+
+function matchUserApplicationDocumentUploadUrlRoute(pathname) {
+  const match = String(pathname || '').match(/^\/users\/me\/applications\/([^/]+)\/documents\/upload-url$/);
+  return match ? match[1] : null;
+}
+
+function matchUserApplicationOfferRoute(pathname) {
+  const match = String(pathname || '').match(/^\/users\/me\/applications\/([^/]+)\/offer\/(accept|decline)$/);
+  if (!match) {
+    return null;
+  }
+  return {
+    applicationId: match[1],
+    action: match[2]
+  };
+}
+
 function matchSavedPostRoute(pathname) {
   const match = String(pathname || '').match(/^\/users\/me\/saved-posts\/([^/]+)$/);
   return match ? match[1] : null;
@@ -139,9 +160,31 @@ function matchAdminJobRoute(pathname) {
   return match ? match[1] : null;
 }
 
+function matchAdminJobLifecycleRoute(pathname) {
+  const match = String(pathname || '').match(/^\/admin\/jobs\/([^/]+)\/(publish|unpublish|schedule)$/);
+  if (!match) {
+    return null;
+  }
+  return {
+    jobId: match[1],
+    action: match[2]
+  };
+}
+
 function matchAdminFeedPostRoute(pathname) {
   const match = String(pathname || '').match(/^\/admin\/feed\/posts\/([^/]+)$/);
   return match ? match[1] : null;
+}
+
+function matchAdminFeedPostLifecycleRoute(pathname) {
+  const match = String(pathname || '').match(/^\/admin\/feed\/posts\/([^/]+)\/(publish|unpublish|schedule)$/);
+  if (!match) {
+    return null;
+  }
+  return {
+    postId: match[1],
+    action: match[2]
+  };
 }
 
 function matchAdminOrganizationVerificationRoute(pathname) {
@@ -149,8 +192,28 @@ function matchAdminOrganizationVerificationRoute(pathname) {
   return match ? match[1] : null;
 }
 
+function matchAdminKycDocumentPreviewRoute(pathname) {
+  const match = String(pathname || '').match(/^\/admin\/kyc\/documents\/([^/]+)\/preview-url$/);
+  return match ? match[1] : null;
+}
+
+function matchAdminCaseActionRoute(pathname) {
+  const match = String(pathname || '').match(/^\/admin\/cases\/([^/]+)\/action$/);
+  return match ? match[1] : null;
+}
+
 function matchAdminUserRoute(pathname) {
   const match = String(pathname || '').match(/^\/admin\/users\/([^/]+)$/);
+  return match ? match[1] : null;
+}
+
+function matchAdminUserProfileRoute(pathname) {
+  const match = String(pathname || '').match(/^\/admin\/users\/([^/]+)\/profile$/);
+  return match ? match[1] : null;
+}
+
+function matchAdminUserKycHistoryRoute(pathname) {
+  const match = String(pathname || '').match(/^\/admin\/users\/([^/]+)\/kyc\/history$/);
   return match ? match[1] : null;
 }
 
@@ -166,6 +229,27 @@ function matchAdminApplicationJourneyRoute(pathname) {
 
 function matchAdminApplicationStatusRoute(pathname) {
   const match = String(pathname || '').match(/^\/admin\/applications\/([^/]+)\/status$/);
+  return match ? match[1] : null;
+}
+
+function matchAdminApplicationDocumentsRoute(pathname) {
+  const match = String(pathname || '').match(/^\/admin\/applications\/([^/]+)\/documents$/);
+  return match ? match[1] : null;
+}
+
+function matchAdminApplicationDocumentRoute(pathname) {
+  const match = String(pathname || '').match(/^\/admin\/applications\/([^/]+)\/documents\/([^/]+)$/);
+  if (!match) {
+    return null;
+  }
+  return {
+    applicationId: match[1],
+    documentId: match[2]
+  };
+}
+
+function matchAdminApplicationDocumentPreviewRoute(pathname) {
+  const match = String(pathname || '').match(/^\/admin\/applications\/documents\/([^/]+)\/preview-url$/);
   return match ? match[1] : null;
 }
 
@@ -321,6 +405,42 @@ function requireSuperAdminForAdminUserManagement(res, adminAuth) {
     }
   });
   return false;
+}
+
+function mapLegacyAdminCaseStatus(status) {
+  const normalized = String(status || '')
+    .trim()
+    .toUpperCase();
+  if (!normalized) {
+    return undefined;
+  }
+
+  const statusMap = {
+    OPEN: 'SUBMITTED',
+    IN_REVIEW: 'MANUAL_REVIEW',
+    WAITING_EVIDENCE: 'CREATED',
+    RESOLVED: 'VERIFIED',
+    REJECTED: 'REJECTED'
+  };
+  return statusMap[normalized] || normalized;
+}
+
+function mapLegacyAdminCaseActionToDecision(action) {
+  const normalized = String(action || '')
+    .trim()
+    .toUpperCase();
+  if (!normalized) {
+    return null;
+  }
+
+  const actionMap = {
+    REQUEST_EVIDENCE: 'MANUAL_REVIEW',
+    ESCALATE: 'MANUAL_REVIEW',
+    RESOLVE_VALID: 'VERIFIED',
+    RESOLVE_INVALID: 'REJECTED',
+    BLACKLIST_ENTITY: 'REJECTED'
+  };
+  return actionMap[normalized] || null;
 }
 
 async function handleRequest(
@@ -688,6 +808,17 @@ async function handleRequest(
     return;
   }
 
+  if (req.method === 'GET' && pathname === '/trust/profile') {
+    const user = await authenticateRequest(req, res, authService);
+    if (!user) {
+      return;
+    }
+
+    const result = await profileService.getProfile({ userId: user.id });
+    sendJson(res, 200, result);
+    return;
+  }
+
   if (req.method === 'PATCH' && pathname === '/users/me/profile') {
     const user = await authenticateRequest(req, res, authService);
     if (!user) {
@@ -776,6 +907,92 @@ async function handleRequest(
     return;
   }
 
+  const userApplicationDocumentsUploadUrlId =
+    req.method === 'POST' ? matchUserApplicationDocumentUploadUrlRoute(pathname) : null;
+  if (req.method === 'POST' && userApplicationDocumentsUploadUrlId) {
+    const user = await authenticateRequest(req, res, authService);
+    if (!user) {
+      return;
+    }
+
+    const body = await readJsonBody(req);
+    const result = await jobsService.createUserApplicationDocumentUploadUrl({
+      userId: user.id,
+      applicationId: userApplicationDocumentsUploadUrlId,
+      documentType: body.documentType,
+      fileName: body.fileName,
+      contentType: body.contentType,
+      contentLength: body.contentLength,
+      checksumSha256: body.checksumSha256
+    });
+    sendJson(res, 201, result);
+    return;
+  }
+
+  const userApplicationDocumentsId =
+    ['GET', 'POST'].includes(req.method || '') ? matchUserApplicationDocumentsRoute(pathname) : null;
+  if (req.method === 'GET' && userApplicationDocumentsId) {
+    const user = await authenticateRequest(req, res, authService);
+    if (!user) {
+      return;
+    }
+
+    const result = await jobsService.listUserApplicationDocuments({
+      userId: user.id,
+      applicationId: userApplicationDocumentsId
+    });
+    sendJson(res, 200, result);
+    return;
+  }
+
+  if (req.method === 'POST' && userApplicationDocumentsId) {
+    const user = await authenticateRequest(req, res, authService);
+    if (!user) {
+      return;
+    }
+
+    const body = await readJsonBody(req);
+    const result = await jobsService.registerUserApplicationDocument({
+      userId: user.id,
+      applicationId: userApplicationDocumentsId,
+      documentType: body.documentType,
+      fileName: body.fileName,
+      contentType: body.contentType,
+      contentLength: body.contentLength,
+      objectKey: body.objectKey,
+      checksumSha256: body.checksumSha256
+    });
+    sendJson(res, 201, result);
+    return;
+  }
+
+  const userApplicationOfferAction =
+    req.method === 'POST' ? matchUserApplicationOfferRoute(pathname) : null;
+  if (req.method === 'POST' && userApplicationOfferAction) {
+    const user = await authenticateRequest(req, res, authService);
+    if (!user) {
+      return;
+    }
+
+    const body = await readJsonBody(req);
+    let result;
+    if (userApplicationOfferAction.action === 'accept') {
+      result = await jobsService.acceptOfferForUser({
+        userId: user.id,
+        applicationId: userApplicationOfferAction.applicationId,
+        reason: body.reason
+      });
+    } else {
+      result = await jobsService.declineOfferForUser({
+        userId: user.id,
+        applicationId: userApplicationOfferAction.applicationId,
+        reason: body.reason
+      });
+    }
+    sendJson(res, 200, result);
+    return;
+  }
+
   if (req.method === 'POST' && pathname === '/users/me/saved-jobs') {
     const user = await authenticateRequest(req, res, authService);
     if (!user) {
@@ -853,6 +1070,28 @@ async function handleRequest(
     return;
   }
 
+  if (req.method === 'GET' && pathname === '/admin/audit/events') {
+    const adminAuth = await authenticateAdminRequest(req, res, authService, adminApiKey, adminRoleCodes);
+    if (!adminAuth) {
+      return;
+    }
+
+    const result = await adminOpsService.listAuditEvents({
+      type: url.searchParams.get('type') || undefined,
+      actorType: url.searchParams.get('actorType') || undefined,
+      actorId: url.searchParams.get('actorId') || undefined,
+      entityType: url.searchParams.get('entityType') || undefined,
+      entityId: url.searchParams.get('entityId') || undefined,
+      action: url.searchParams.get('action') || undefined,
+      from: url.searchParams.get('from') || undefined,
+      to: url.searchParams.get('to') || undefined,
+      cursor: url.searchParams.get('cursor') || undefined,
+      limit: url.searchParams.get('limit') || undefined
+    });
+    sendJson(res, 200, result);
+    return;
+  }
+
   if (req.method === 'POST' && pathname === '/admin/users') {
     const adminAuth = await authenticateAdminRequest(req, res, authService, adminApiKey, adminRoleCodes);
     if (!adminAuth) {
@@ -873,8 +1112,48 @@ async function handleRequest(
     return;
   }
 
-  const adminUserId = req.method === 'PATCH' ? matchAdminUserRoute(pathname) : null;
-  if (req.method === 'PATCH' && adminUserId) {
+  const adminUserId = req.method === 'GET' ? matchAdminUserRoute(pathname) : null;
+  if (req.method === 'GET' && adminUserId) {
+    const adminAuth = await authenticateAdminRequest(req, res, authService, adminApiKey, adminRoleCodes);
+    if (!adminAuth) {
+      return;
+    }
+
+    const result = await authService.getAdminUser({ userId: adminUserId });
+    sendJson(res, 200, result);
+    return;
+  }
+
+  const adminUserProfileUserId = req.method === 'GET' ? matchAdminUserProfileRoute(pathname) : null;
+  if (req.method === 'GET' && adminUserProfileUserId) {
+    const adminAuth = await authenticateAdminRequest(req, res, authService, adminApiKey, adminRoleCodes);
+    if (!adminAuth) {
+      return;
+    }
+
+    const result = await profileService.getProfile({ userId: adminUserProfileUserId });
+    sendJson(res, 200, result);
+    return;
+  }
+
+  const adminUserKycHistoryUserId = req.method === 'GET' ? matchAdminUserKycHistoryRoute(pathname) : null;
+  if (req.method === 'GET' && adminUserKycHistoryUserId) {
+    const adminAuth = await authenticateAdminRequest(req, res, authService, adminApiKey, adminRoleCodes);
+    if (!adminAuth) {
+      return;
+    }
+
+    await authService.getAdminUser({ userId: adminUserKycHistoryUserId });
+    const result = await kycService.getHistory({
+      userId: adminUserKycHistoryUserId,
+      sessionId: url.searchParams.get('sessionId') || undefined
+    });
+    sendJson(res, 200, result);
+    return;
+  }
+
+  const adminUserPatchId = req.method === 'PATCH' ? matchAdminUserRoute(pathname) : null;
+  if (req.method === 'PATCH' && adminUserPatchId) {
     const adminAuth = await authenticateAdminRequest(req, res, authService, adminApiKey, adminRoleCodes);
     if (!adminAuth) {
       return;
@@ -885,7 +1164,7 @@ async function handleRequest(
 
     const body = await readJsonBody(req);
     const result = await authService.updateAdminUser({
-      userId: adminUserId,
+      userId: adminUserPatchId,
       fullName: body.fullName,
       password: body.password,
       roles: body.roles
@@ -944,6 +1223,58 @@ async function handleRequest(
     return;
   }
 
+  const adminApplicationDocumentsId =
+    req.method === 'GET' ? matchAdminApplicationDocumentsRoute(pathname) : null;
+  if (req.method === 'GET' && adminApplicationDocumentsId) {
+    const adminAuth = await authenticateAdminRequest(req, res, authService, adminApiKey, adminRoleCodes);
+    if (!adminAuth) {
+      return;
+    }
+
+    const result = await jobsService.listAdminApplicationDocuments({
+      applicationId: adminApplicationDocumentsId
+    });
+    sendJson(res, 200, result);
+    return;
+  }
+
+  const adminApplicationDocumentTarget =
+    req.method === 'PATCH' ? matchAdminApplicationDocumentRoute(pathname) : null;
+  if (req.method === 'PATCH' && adminApplicationDocumentTarget) {
+    const adminAuth = await authenticateAdminRequest(req, res, authService, adminApiKey, adminRoleCodes);
+    if (!adminAuth) {
+      return;
+    }
+
+    const body = await readJsonBody(req);
+    const result = await jobsService.reviewAdminApplicationDocument({
+      applicationId: adminApplicationDocumentTarget.applicationId,
+      documentId: adminApplicationDocumentTarget.documentId,
+      reviewStatus: body.reviewStatus,
+      reviewReason: body.reviewReason,
+      reviewedBy: body.reviewedBy || adminAuth.user?.email || null
+    });
+    sendJson(res, 200, result);
+    return;
+  }
+
+  const adminApplicationDocumentPreviewId =
+    req.method === 'POST' ? matchAdminApplicationDocumentPreviewRoute(pathname) : null;
+  if (req.method === 'POST' && adminApplicationDocumentPreviewId) {
+    const adminAuth = await authenticateAdminRequest(req, res, authService, adminApiKey, adminRoleCodes);
+    if (!adminAuth) {
+      return;
+    }
+
+    const body = await readJsonBody(req);
+    const result = await jobsService.issueAdminApplicationDocumentPreviewUrl({
+      documentId: adminApplicationDocumentPreviewId,
+      expiresSec: body.expiresSec
+    });
+    sendJson(res, 200, result);
+    return;
+  }
+
   const adminApplicationId = req.method === 'GET' ? matchAdminApplicationRoute(pathname) : null;
   if (req.method === 'GET' && adminApplicationId) {
     const adminAuth = await authenticateAdminRequest(req, res, authService, adminApiKey, adminRoleCodes);
@@ -982,6 +1313,52 @@ async function handleRequest(
     const body = await readJsonBody(req);
     const result = await jobsService.createJob(body);
     sendJson(res, 201, result);
+    return;
+  }
+
+  if (req.method === 'POST' && pathname === '/admin/jobs/bulk') {
+    const adminAuth = await authenticateAdminRequest(req, res, authService, adminApiKey, adminRoleCodes);
+    if (!adminAuth) {
+      return;
+    }
+
+    const body = await readJsonBody(req);
+    const result = await jobsService.bulkUpdateJobs({
+      action: body.action,
+      jobIds: body.jobIds,
+      scheduledAt: body.scheduledAt,
+      publishedAt: body.publishedAt
+    });
+    sendJson(res, 200, result);
+    return;
+  }
+
+  const adminJobLifecycle =
+    req.method === 'POST' ? matchAdminJobLifecycleRoute(pathname) : null;
+  if (req.method === 'POST' && adminJobLifecycle) {
+    const adminAuth = await authenticateAdminRequest(req, res, authService, adminApiKey, adminRoleCodes);
+    if (!adminAuth) {
+      return;
+    }
+
+    const body = await readJsonBody(req);
+    let result;
+    if (adminJobLifecycle.action === 'publish') {
+      result = await jobsService.publishJob({
+        jobId: adminJobLifecycle.jobId,
+        publishedAt: body.publishedAt
+      });
+    } else if (adminJobLifecycle.action === 'unpublish') {
+      result = await jobsService.unpublishJob({
+        jobId: adminJobLifecycle.jobId
+      });
+    } else {
+      result = await jobsService.scheduleJob({
+        jobId: adminJobLifecycle.jobId,
+        scheduledAt: body.scheduledAt
+      });
+    }
+    sendJson(res, 200, result);
     return;
   }
 
@@ -1039,6 +1416,52 @@ async function handleRequest(
     const body = await readJsonBody(req);
     const result = await feedService.createPost(body);
     sendJson(res, 201, result);
+    return;
+  }
+
+  if (req.method === 'POST' && pathname === '/admin/feed/posts/bulk') {
+    const adminAuth = await authenticateAdminRequest(req, res, authService, adminApiKey, adminRoleCodes);
+    if (!adminAuth) {
+      return;
+    }
+
+    const body = await readJsonBody(req);
+    const result = await feedService.bulkUpdatePosts({
+      action: body.action,
+      postIds: body.postIds,
+      scheduledAt: body.scheduledAt,
+      publishedAt: body.publishedAt
+    });
+    sendJson(res, 200, result);
+    return;
+  }
+
+  const adminFeedLifecycle =
+    req.method === 'POST' ? matchAdminFeedPostLifecycleRoute(pathname) : null;
+  if (req.method === 'POST' && adminFeedLifecycle) {
+    const adminAuth = await authenticateAdminRequest(req, res, authService, adminApiKey, adminRoleCodes);
+    if (!adminAuth) {
+      return;
+    }
+
+    const body = await readJsonBody(req);
+    let result;
+    if (adminFeedLifecycle.action === 'publish') {
+      result = await feedService.publishPost({
+        postId: adminFeedLifecycle.postId,
+        publishedAt: body.publishedAt
+      });
+    } else if (adminFeedLifecycle.action === 'unpublish') {
+      result = await feedService.unpublishPost({
+        postId: adminFeedLifecycle.postId
+      });
+    } else {
+      result = await feedService.schedulePost({
+        postId: adminFeedLifecycle.postId,
+        scheduledAt: body.scheduledAt
+      });
+    }
+    sendJson(res, 200, result);
     return;
   }
 
@@ -1119,6 +1542,72 @@ async function handleRequest(
       status,
       cursor,
       limit
+    });
+    sendJson(res, 200, result);
+    return;
+  }
+
+  const adminKycPreviewDocumentId =
+    req.method === 'POST' ? matchAdminKycDocumentPreviewRoute(pathname) : null;
+  if (req.method === 'POST' && adminKycPreviewDocumentId) {
+    const adminAuth = await authenticateAdminRequest(req, res, authService, adminApiKey, adminRoleCodes);
+    if (!adminAuth) {
+      return;
+    }
+
+    const body = await readJsonBody(req);
+    const result = await kycService.issueDocumentPreviewUrl({
+      documentId: adminKycPreviewDocumentId,
+      expiresSec: body.expiresSec
+    });
+    sendJson(res, 200, result);
+    return;
+  }
+
+  if (req.method === 'GET' && pathname === '/admin/cases') {
+    const adminAuth = await authenticateAdminRequest(req, res, authService, adminApiKey, adminRoleCodes);
+    if (!adminAuth) {
+      return;
+    }
+
+    const status = mapLegacyAdminCaseStatus(url.searchParams.get('status'));
+    const cursor = url.searchParams.get('cursor') || undefined;
+    const limit = url.searchParams.get('limit') || undefined;
+    const result = await kycService.listReviewQueue({
+      status,
+      cursor,
+      limit
+    });
+    sendJson(res, 200, result);
+    return;
+  }
+
+  const adminCaseActionCaseId = req.method === 'POST' ? matchAdminCaseActionRoute(pathname) : null;
+  if (req.method === 'POST' && adminCaseActionCaseId) {
+    const adminAuth = await authenticateAdminRequest(req, res, authService, adminApiKey, adminRoleCodes);
+    if (!adminAuth) {
+      return;
+    }
+
+    const body = await readJsonBody(req);
+    const mappedDecision = mapLegacyAdminCaseActionToDecision(body.action);
+    if (body.action && !mappedDecision) {
+      sendJson(res, 400, {
+        error: {
+          code: 'unsupported_case_action',
+          message:
+            'action must be one of REQUEST_EVIDENCE, ESCALATE, RESOLVE_VALID, RESOLVE_INVALID, BLACKLIST_ENTITY'
+        }
+      });
+      return;
+    }
+
+    const reviewedBy = body.reviewedBy || adminAuth.user?.email || 'legacy_admin_case_action';
+    const result = await kycService.reviewSession({
+      sessionId: adminCaseActionCaseId,
+      decision: body.decision || mappedDecision,
+      reviewedBy,
+      reason: body.reason || body.note
     });
     sendJson(res, 200, result);
     return;

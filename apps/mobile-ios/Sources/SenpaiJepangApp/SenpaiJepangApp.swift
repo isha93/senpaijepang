@@ -19,6 +19,7 @@ struct SenpaiJepangApp: App {
                 journeyService: container.journeyService,
                 profileService: container.profileService,
                 verificationService: container.verificationService,
+                applicationDocumentService: container.applicationDocumentService,
                 feedService: container.feedService
             )
         }
@@ -36,6 +37,7 @@ private final class AppContainer: ObservableObject {
     let journeyService: JourneyService
     let profileService: ProfileService
     let verificationService: VerificationService
+    let applicationDocumentService: ApplicationDocumentService
     let feedService: FeedService
 
     init() {
@@ -197,6 +199,51 @@ private final class AppContainer: ObservableObject {
             }
         )
 
+        self.applicationDocumentService = ApplicationDocumentService(
+            uploadHandler: { [client] request in
+                let checksum = request.data.sha256HexDigest()
+                let uploadResponse = try await client.request(
+                    ApplicationDocumentEndpoint.createUploadURL(
+                        applicationId: request.applicationId,
+                        documentType: request.documentType,
+                        fileName: request.fileName,
+                        contentType: request.contentType,
+                        contentLength: request.data.count,
+                        checksumSha256: checksum
+                    ),
+                    responseType: ApplicationDocumentUploadURLResponseDTO.self
+                )
+
+                try await uploadToPresignedURL(
+                    data: request.data,
+                    descriptor: uploadResponse.upload,
+                    fallbackContentType: request.contentType
+                )
+
+                let registerResponse = try await client.request(
+                    ApplicationDocumentEndpoint.registerDocument(
+                        applicationId: request.applicationId,
+                        documentType: request.documentType,
+                        fileName: request.fileName,
+                        contentType: request.contentType,
+                        contentLength: request.data.count,
+                        objectKey: uploadResponse.upload.objectKey,
+                        checksumSha256: checksum
+                    ),
+                    responseType: ApplicationDocumentRegisterResponseDTO.self
+                )
+
+                return registerResponse.document.toApplicationDocument()
+            },
+            listHandler: { [client] applicationId in
+                let response = try await client.request(
+                    ApplicationDocumentEndpoint.listDocuments(applicationId: applicationId),
+                    responseType: ApplicationDocumentListResponseDTO.self
+                )
+                return response.items.map { $0.toApplicationDocument() }
+            }
+        )
+
         self.feedService = FeedService(
             fetchHandler: { [client] in
                 let dto = try await client.request(
@@ -236,6 +283,40 @@ private final class AppContainer: ObservableObject {
 private func uploadToPresignedURL(
     data: Data,
     descriptor: KycUploadDescriptorDTO,
+    fallbackContentType: String
+) async throws {
+    guard let url = URL(string: descriptor.uploadUrl) else {
+        throw AppError.invalidUploadURL
+    }
+
+    var request = URLRequest(url: url)
+    request.httpMethod = descriptor.method.isEmpty ? "PUT" : descriptor.method
+    request.httpBody = data
+
+    var hasContentType = false
+    for (key, value) in descriptor.headers {
+        if key.lowercased() == "content-type" {
+            hasContentType = true
+        }
+        request.setValue(value, forHTTPHeaderField: key)
+    }
+    if !hasContentType {
+        request.setValue(fallbackContentType, forHTTPHeaderField: "Content-Type")
+    }
+
+    let (responseData, response) = try await URLSession.shared.data(for: request)
+    guard let httpResponse = response as? HTTPURLResponse else {
+        throw AppError.uploadFailed(statusCode: -1, responseBody: nil)
+    }
+    guard (200...299).contains(httpResponse.statusCode) else {
+        let body = String(data: responseData, encoding: .utf8)
+        throw AppError.uploadFailed(statusCode: httpResponse.statusCode, responseBody: body)
+    }
+}
+
+private func uploadToPresignedURL(
+    data: Data,
+    descriptor: ApplicationDocumentUploadDescriptorDTO,
     fallbackContentType: String
 ) async throws {
     guard let url = URL(string: descriptor.uploadUrl) else {

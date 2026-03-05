@@ -51,6 +51,7 @@ struct JobDetailView: View {
                                 .font(.title2.bold())
                                 .foregroundStyle(AppTheme.textPrimary)
                                 .multilineTextAlignment(.center)
+                                .accessibilityIdentifier("job_detail_title")
 
                             Text(detail.job.companyName)
                                 .font(.subheadline.weight(.medium))
@@ -194,15 +195,18 @@ struct JobDetailView: View {
             .background(AppTheme.backgroundPrimary)
 
             // Sticky CTA
-            VStack {
-                PrimaryButton(title: "Lamar Pekerjaan") {
-                    viewModel.applyJob()
+            if viewModel.detail != nil {
+                VStack {
+                    PrimaryButton(title: "Lamar Pekerjaan") {
+                        viewModel.applyJob()
+                    }
+                    .accessibilityIdentifier("job_apply_button")
+                    .padding(.horizontal, AppTheme.spacingL)
                 }
-                .padding(.horizontal, AppTheme.spacingL)
+                .padding(.vertical, AppTheme.spacingL)
+                .background(.ultraThinMaterial)
+                .transition(.move(edge: .bottom).combined(with: .opacity))
             }
-            .padding(.vertical, AppTheme.spacingL)
-            .background(.ultraThinMaterial)
-            .transition(.move(edge: .bottom).combined(with: .opacity))
         }
         .navigationTitle(langManager.localize(key: "Job Details"))
         #if os(iOS)
@@ -214,6 +218,7 @@ struct JobDetailView: View {
                     Image(systemName: "bookmark")
                         .foregroundStyle(AppTheme.textPrimary)
                 }
+                .accessibilityIdentifier("job_save_button")
             }
         }
         .overlay {

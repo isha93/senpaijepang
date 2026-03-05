@@ -117,6 +117,23 @@ cd apps/mobile-android
 ./gradlew assembleDebug
 ```
 
+### API Base URL
+
+- Default Android sekarang sama seperti iOS: `https://senpai-api-app-production.up.railway.app/`.
+- Endpoint Android pakai prefix `/v1/*` untuk parity dengan iOS.
+
+Override untuk local/dev (contoh emulator ke local API):
+
+```bash
+./gradlew assembleDebug -PAPI_BASE_URL=http://10.0.2.2:4000/
+```
+
+Atau set di `~/.gradle/gradle.properties`:
+
+```properties
+API_BASE_URL=http://10.0.2.2:4000/
+```
+
 Run unit tests:
 
 ```bash

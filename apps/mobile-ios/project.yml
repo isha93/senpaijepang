@@ -12,5 +12,32 @@ targets:
         INFOPLIST_FILE: Info.plist
         GENERATE_INFOPLIST_FILE: NO
         DEVELOPMENT_TEAM: "" # Can be empty for local simulator builds
+    dependencies:
+      - package: netfox
     sources:
       - path: Sources/SenpaiJepangApp
+      - path: Sources/SenpaiMobileCore/Core/Network
+      - path: Sources/SenpaiMobileCore/Features/Auth/Data
+        includes:
+          - AuthEndpoint.swift
+          - AuthDTO.swift
+      - path: Sources/SenpaiMobileCore/Features/Jobs/Data
+        includes:
+          - JobEndpoint.swift
+          - JobDTO.swift
+      - path: Sources/SenpaiMobileCore/Features/Journey/Data
+        includes:
+          - ApplicationDTO.swift
+      - path: Sources/SenpaiMobileCore/Features/Profile/Data
+        includes:
+          - ProfileEndpoint.swift
+          - ProfileDTO.swift
+      - path: Sources/SenpaiMobileCore/Features/Feed/Data
+        includes:
+          - FeedEndpoint.swift
+          - FeedDTO.swift
+
+packages:
+  netfox:
+    url: https://github.com/kasketis/netfox
+    from: 1.21.0

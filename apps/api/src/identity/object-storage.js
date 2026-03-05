@@ -88,6 +88,19 @@ export class InMemoryObjectStorage {
     };
   }
 
+  async createDownloadUrl({ objectKey, expiresSec }) {
+    const ttlSec = Number.isFinite(Number(expiresSec)) ? Math.max(1, Math.floor(Number(expiresSec))) : this.presignExpiresSec;
+    const expiresAt = new Date(Date.now() + ttlSec * 1000).toISOString();
+    const expiresTs = Math.floor(Date.now() / 1000) + ttlSec;
+    const downloadUrl = `${this.baseUrl}/${this.bucket}/${objectKey}?mockPresigned=1&method=GET&expires=${expiresTs}`;
+
+    return {
+      downloadUrl,
+      method: 'GET',
+      expiresAt
+    };
+  }
+
   toFileUrl(objectKey) {
     return `s3://${this.bucket}/${objectKey}`;
   }
@@ -156,6 +169,25 @@ class S3ObjectStorage {
         'x-amz-checksum-sha256': hexSha256ToBase64(checksumSha256),
         'x-amz-meta-checksum-sha256': checksumSha256
       },
+      expiresAt
+    };
+  }
+
+  async createDownloadUrl({ objectKey, expiresSec }) {
+    const { GetObjectCommand } = await loadAwsSdk();
+    const ttlSec = Number.isFinite(Number(expiresSec)) ? Math.max(1, Math.floor(Number(expiresSec))) : this.presignExpiresSec;
+    const expiresAt = new Date(Date.now() + ttlSec * 1000).toISOString();
+    const command = new GetObjectCommand({
+      Bucket: this.bucket,
+      Key: objectKey
+    });
+    const downloadUrl = await this.getSignedUrl(this.client, command, {
+      expiresIn: ttlSec
+    });
+
+    return {
+      downloadUrl,
+      method: 'GET',
       expiresAt
     };
   }

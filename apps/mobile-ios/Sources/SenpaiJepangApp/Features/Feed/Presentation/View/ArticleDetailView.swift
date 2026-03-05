@@ -31,6 +31,7 @@ struct ArticleDetailView: View {
             // Top Navigation Bar
             topNavigationBar
         }
+        .accessibilityIdentifier("article_detail_view")
         .navigationBarHidden(true)
         .preferredColorScheme(.light) // Or respect system, but design wants clean look
     }
@@ -106,6 +107,9 @@ struct ArticleDetailView: View {
                     .background(Color.white.opacity(0.9))
                     .clipShape(Circle())
             }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("Back")
+            .accessibilityIdentifier("article_detail_back_button")
             
             Spacer()
             
@@ -121,6 +125,7 @@ struct ArticleDetailView: View {
                         .clipShape(Circle())
                 }
                 .disabled(viewModel.isSaving)
+                .accessibilityIdentifier("article_detail_save_button")
                 
                 Button(action: {
                     // Share action placeholder

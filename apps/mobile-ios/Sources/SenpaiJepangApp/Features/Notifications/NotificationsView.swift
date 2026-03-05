@@ -19,6 +19,8 @@ struct NotificationsView: View {
             // Notification list
             notificationList
         }
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("notifications_view")
         .background(AppTheme.backgroundCard)
         .navigationBarBackButtonHidden(true)
         #if os(iOS)
@@ -38,10 +40,12 @@ struct NotificationsView: View {
                         .foregroundStyle(AppTheme.textSecondary)
                         .frame(width: 40, height: 40)
                 }
+                .accessibilityIdentifier("notifications_back_button")
 
                 Text("Notifications")
                     .font(.system(size: 20, weight: .bold))
                     .foregroundStyle(AppTheme.textPrimary)
+                    .accessibilityIdentifier("notifications_header_title")
 
                 Spacer()
 
@@ -53,6 +57,8 @@ struct NotificationsView: View {
                     }
                 }
             }
+            .accessibilityElement(children: .contain)
+            .accessibilityIdentifier("notifications_header")
             .padding(.horizontal, 16)
             .padding(.top, 8)
             .padding(.bottom, 12)

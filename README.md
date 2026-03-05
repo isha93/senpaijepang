@@ -70,6 +70,27 @@ Berikut visual flow utama app iOS biar stakeholder non-tech bisa langsung kebaya
 |---|---|
 | ![Profile KYC](docs/assets/ios/profile-kyc.png) | ![Feed](docs/assets/ios/feed.png) |
 
+## Preview Android (Draft Saat Ini)
+Berikut visual flow utama app Android (Jetpack Compose, Material 3) — arsitektur disamakan dengan iOS (MVVM + Clean):
+
+| Login | Jobs List | Job Detail |
+|---|---|---|
+| ![Login](docs/assets/android/login.png) | ![Jobs List](docs/assets/android/jobs-list.png) | ![Job Detail](docs/assets/android/job-detail.png) |
+
+## Preview Web Admin Dashboard
+Dashboard internal React untuk ops/admin — mengelola jobs, feed, KYC review, applications, dan monitoring system health:
+
+| Dashboard Overview | Jobs Management |
+|---|---|
+| ![Dashboard Overview](docs/assets/web-admin/dashboard-overview.png) | ![Jobs Management](docs/assets/web-admin/jobs-management.png) |
+
+## Preview API Backend (Swagger/OpenAPI)
+Dokumentasi endpoint API runtime — kontrak utama yang dikonsumsi oleh iOS, Android, dan Web Admin:
+
+| API Documentation |
+|---|
+| ![Swagger Docs](docs/assets/api/swagger-docs.png) |
+
 ## Status Integrasi Android
 - Android app native sudah dibuat di `apps/mobile-android` (Jetpack Compose).
 - Arsitektur target disamakan dengan style iOS:

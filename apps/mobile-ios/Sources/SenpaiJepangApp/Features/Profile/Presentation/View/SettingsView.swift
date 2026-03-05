@@ -51,10 +51,12 @@ struct SettingsView: View {
                             .foregroundStyle(.red)
                     }
                 }
+                .accessibilityIdentifier("profile_logout_button")
             } header: {
                 LText("Account")
             }
         }
+        .accessibilityIdentifier("settings_view")
         .navigationTitle(langManager.localize(key: "Settings"))
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)

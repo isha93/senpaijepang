@@ -1,18 +1,31 @@
 import { randomUUID } from 'node:crypto';
 import { JOB_SEED_DATA, JobsApiError, createJobsService } from './service.js';
+import { createInMemoryObjectStorage } from '../identity/object-storage.js';
 
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 50;
+const MAX_BULK_ITEMS = 100;
 const EMPLOYMENT_TYPES = new Set(['FULL_TIME', 'PART_TIME', 'CONTRACT']);
+const JOB_LIFECYCLE_STATUSES = new Set(['DRAFT', 'PUBLISHED', 'SCHEDULED']);
+const JOB_BULK_ACTIONS = new Set(['PUBLISH', 'UNPUBLISH', 'SCHEDULE', 'DELETE']);
 const APPLICATION_STATUSES = new Set(['SUBMITTED', 'IN_REVIEW', 'INTERVIEW', 'OFFERED', 'HIRED', 'REJECTED']);
+const APPLICATION_DOCUMENT_REVIEW_STATUSES = new Set(['PENDING', 'VALID', 'INVALID']);
 const APPLICATION_STATUS_TRANSITIONS = {
   SUBMITTED: new Set(['IN_REVIEW', 'INTERVIEW', 'OFFERED', 'HIRED', 'REJECTED']),
   IN_REVIEW: new Set(['INTERVIEW', 'OFFERED', 'HIRED', 'REJECTED']),
   INTERVIEW: new Set(['OFFERED', 'HIRED', 'REJECTED']),
-  OFFERED: new Set(['HIRED', 'REJECTED']),
+  OFFERED: new Set(),
   HIRED: new Set(),
   REJECTED: new Set()
 };
+const MAX_APPLICATION_DOCUMENT_TYPE_LENGTH = 64;
+const MAX_APPLICATION_FILE_NAME_LENGTH = 180;
+const MAX_APPLICATION_OBJECT_KEY_LENGTH = 1024;
+const MAX_APPLICATION_REVIEW_REASON_LENGTH = 500;
+const DEFAULT_APPLICATION_ALLOWED_CONTENT_TYPES = new Set(['application/pdf', 'image/jpeg', 'image/png']);
+const DEFAULT_APPLICATION_MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
+const APPLICATION_PREVIEW_DEFAULT_EXPIRES_SEC = 120;
+const APPLICATION_PREVIEW_MAX_EXPIRES_SEC = 900;
 const APPLICATION_STATUS_EVENT_TITLES = {
   SUBMITTED: 'Application submitted',
   IN_REVIEW: 'Application in review',
@@ -138,6 +151,208 @@ function normalizeOptionalUpdatedBy(updatedBy) {
   return normalized;
 }
 
+function normalizeApplicationDocumentId(documentId) {
+  const normalized = String(documentId || '').trim();
+  if (!normalized) {
+    throw new JobsApiError(400, 'invalid_document_id', 'documentId is required');
+  }
+  return normalized;
+}
+
+function normalizeApplicationDocumentType(documentType) {
+  const normalized = String(documentType || '')
+    .trim()
+    .toUpperCase();
+  if (!normalized) {
+    throw new JobsApiError(400, 'invalid_document_type', 'documentType is required');
+  }
+  if (normalized.length > MAX_APPLICATION_DOCUMENT_TYPE_LENGTH) {
+    throw new JobsApiError(
+      400,
+      'invalid_document_type',
+      `documentType must be <= ${MAX_APPLICATION_DOCUMENT_TYPE_LENGTH} characters`
+    );
+  }
+  return normalized;
+}
+
+function normalizeApplicationFileName(fileName) {
+  const normalized = String(fileName || '').trim();
+  if (!normalized) {
+    throw new JobsApiError(400, 'invalid_file_name', 'fileName is required');
+  }
+  if (normalized.length > MAX_APPLICATION_FILE_NAME_LENGTH) {
+    throw new JobsApiError(
+      400,
+      'invalid_file_name',
+      `fileName must be <= ${MAX_APPLICATION_FILE_NAME_LENGTH} characters`
+    );
+  }
+  return normalized;
+}
+
+function normalizeApplicationObjectKey(objectKey) {
+  const normalized = String(objectKey || '').trim();
+  if (!normalized) {
+    throw new JobsApiError(400, 'invalid_object_key', 'objectKey is required');
+  }
+  if (normalized.length > MAX_APPLICATION_OBJECT_KEY_LENGTH) {
+    throw new JobsApiError(
+      400,
+      'invalid_object_key',
+      `objectKey must be <= ${MAX_APPLICATION_OBJECT_KEY_LENGTH} characters`
+    );
+  }
+  if (normalized.startsWith('/') || normalized.includes('..')) {
+    throw new JobsApiError(400, 'invalid_object_key', 'objectKey is invalid');
+  }
+  if (!/^[a-zA-Z0-9/_\-.]+$/.test(normalized)) {
+    throw new JobsApiError(400, 'invalid_object_key', 'objectKey contains unsupported characters');
+  }
+  return normalized;
+}
+
+function normalizeApplicationContentType(contentType) {
+  const normalized = String(contentType || '')
+    .trim()
+    .toLowerCase();
+  if (!normalized) {
+    throw new JobsApiError(400, 'invalid_content_type', 'contentType is required');
+  }
+  if (!DEFAULT_APPLICATION_ALLOWED_CONTENT_TYPES.has(normalized)) {
+    throw new JobsApiError(
+      400,
+      'invalid_content_type',
+      `contentType must be one of ${Array.from(DEFAULT_APPLICATION_ALLOWED_CONTENT_TYPES).join(', ')}`
+    );
+  }
+  return normalized;
+}
+
+function normalizeApplicationContentLength(contentLength) {
+  const normalized = Number(contentLength);
+  if (!Number.isFinite(normalized) || normalized <= 0) {
+    throw new JobsApiError(400, 'invalid_content_length', 'contentLength must be a positive number');
+  }
+  if (normalized > DEFAULT_APPLICATION_MAX_UPLOAD_BYTES) {
+    throw new JobsApiError(
+      400,
+      'invalid_content_length',
+      `contentLength must be <= ${DEFAULT_APPLICATION_MAX_UPLOAD_BYTES} bytes`
+    );
+  }
+  return Math.floor(normalized);
+}
+
+function normalizeApplicationChecksumSha256(checksumSha256) {
+  const normalized = String(checksumSha256 || '')
+    .trim()
+    .toLowerCase();
+  if (!/^[a-f0-9]{64}$/.test(normalized)) {
+    throw new JobsApiError(400, 'invalid_checksum_sha256', 'checksumSha256 must be 64 hex characters');
+  }
+  return normalized;
+}
+
+function normalizeApplicationDocumentReviewStatus(reviewStatus) {
+  const normalized = String(reviewStatus || '')
+    .trim()
+    .toUpperCase();
+  if (!APPLICATION_DOCUMENT_REVIEW_STATUSES.has(normalized)) {
+    throw new JobsApiError(
+      400,
+      'invalid_review_status',
+      `reviewStatus must be one of ${Array.from(APPLICATION_DOCUMENT_REVIEW_STATUSES).join(', ')}`
+    );
+  }
+  return normalized;
+}
+
+function normalizeApplicationReviewReason(reviewReason) {
+  if (reviewReason === undefined || reviewReason === null) {
+    return null;
+  }
+  const normalized = String(reviewReason).trim();
+  if (!normalized) {
+    return null;
+  }
+  if (normalized.length > MAX_APPLICATION_REVIEW_REASON_LENGTH) {
+    throw new JobsApiError(
+      400,
+      'invalid_review_reason',
+      `reviewReason must be <= ${MAX_APPLICATION_REVIEW_REASON_LENGTH} characters`
+    );
+  }
+  return normalized;
+}
+
+function normalizeApplicationPreviewExpiresSec(expiresSec) {
+  if (expiresSec === undefined || expiresSec === null || String(expiresSec).trim() === '') {
+    return APPLICATION_PREVIEW_DEFAULT_EXPIRES_SEC;
+  }
+  const normalized = Number(expiresSec);
+  if (!Number.isFinite(normalized) || normalized < 60 || normalized > APPLICATION_PREVIEW_MAX_EXPIRES_SEC) {
+    throw new JobsApiError(
+      400,
+      'invalid_expires_sec',
+      `expiresSec must be between 60 and ${APPLICATION_PREVIEW_MAX_EXPIRES_SEC}`
+    );
+  }
+  return Math.floor(normalized);
+}
+
+function normalizeJourneyActorType(actorType) {
+  const normalized = String(actorType || '')
+    .trim()
+    .toUpperCase();
+  if (!['USER', 'ADMIN', 'SYSTEM'].includes(normalized)) {
+    throw new JobsApiError(400, 'invalid_actor_type', 'actorType must be USER, ADMIN, or SYSTEM');
+  }
+  return normalized;
+}
+
+function normalizeJourneyActorId(actorId) {
+  if (actorId === undefined || actorId === null) {
+    return null;
+  }
+  const normalized = String(actorId).trim();
+  if (!normalized) {
+    return null;
+  }
+  if (normalized.length > 180) {
+    throw new JobsApiError(400, 'invalid_actor_id', 'actorId must be <= 180 characters');
+  }
+  return normalized;
+}
+
+function sanitizeFileToken(value, fallback) {
+  const normalized = String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  return normalized || fallback;
+}
+
+function buildApplicationDocumentObjectKey({ userId, applicationId, documentType, fileName }) {
+  const timestampToken = new Date().toISOString().replace(/[-:.TZ]/g, '');
+  const safeFileName = sanitizeFileToken(fileName, 'document.bin');
+  const safeDocumentType = sanitizeFileToken(documentType, 'document');
+  return `applications/${userId}/${applicationId}/${timestampToken}-${safeDocumentType}-${randomUUID()}-${safeFileName}`;
+}
+
+function assertApplicationObjectKeyOwnership({ userId, applicationId, objectKey }) {
+  const expectedPrefix = `applications/${userId}/${applicationId}/`;
+  if (!String(objectKey || '').startsWith(expectedPrefix)) {
+    throw new JobsApiError(
+      403,
+      'invalid_object_key_ownership',
+      'objectKey is not allowed for this application'
+    );
+  }
+}
+
 function normalizeOptionalDateTime(value, fieldName) {
   if (value === undefined || value === null || String(value).trim() === '') {
     return null;
@@ -148,6 +363,84 @@ function normalizeOptionalDateTime(value, fieldName) {
     throw new JobsApiError(400, 'invalid_date_filter', `${fieldName} must be valid ISO date-time`);
   }
   return new Date(timestamp).toISOString();
+}
+
+function normalizeRequiredLifecycleDate(value, fieldName) {
+  const normalized = String(value || '').trim();
+  const timestamp = Date.parse(normalized);
+  if (!Number.isFinite(timestamp)) {
+    throw new JobsApiError(400, 'invalid_lifecycle_date', `${fieldName} must be valid ISO date-time`);
+  }
+  return new Date(timestamp).toISOString();
+}
+
+function normalizeOptionalLifecycleDate(value, fieldName) {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (value === null || String(value).trim() === '') {
+    return null;
+  }
+  return normalizeRequiredLifecycleDate(value, fieldName);
+}
+
+function normalizeBulkAction(action) {
+  const normalized = String(action || '')
+    .trim()
+    .toUpperCase();
+  if (!JOB_BULK_ACTIONS.has(normalized)) {
+    throw new JobsApiError(
+      400,
+      'invalid_bulk_action',
+      `action must be one of ${Array.from(JOB_BULK_ACTIONS).join(', ')}`
+    );
+  }
+  return normalized;
+}
+
+function normalizeBulkJobIds(jobIds) {
+  if (!Array.isArray(jobIds) || jobIds.length === 0) {
+    throw new JobsApiError(400, 'invalid_job_ids', 'jobIds must be a non-empty array');
+  }
+  if (jobIds.length > MAX_BULK_ITEMS) {
+    throw new JobsApiError(400, 'invalid_job_ids', `jobIds must not exceed ${MAX_BULK_ITEMS} items`);
+  }
+  const normalized = [];
+  const seen = new Set();
+  for (const value of jobIds) {
+    const id = String(value || '').trim();
+    if (!id) {
+      throw new JobsApiError(400, 'invalid_job_ids', 'jobIds must contain non-empty ids');
+    }
+    if (!seen.has(id)) {
+      seen.add(id);
+      normalized.push(id);
+    }
+  }
+  return normalized;
+}
+
+function resolveEffectiveLifecycleStatus({ lifecycleStatus, scheduledAt }) {
+  if (lifecycleStatus === 'SCHEDULED') {
+    if (!scheduledAt) {
+      return 'DRAFT';
+    }
+    return Date.parse(scheduledAt) <= Date.now() ? 'PUBLISHED' : 'SCHEDULED';
+  }
+  return lifecycleStatus;
+}
+
+function isJobPubliclyVisible(job) {
+  return resolveEffectiveLifecycleStatus(job) === 'PUBLISHED';
+}
+
+function toLifecycleState(job) {
+  return {
+    status: job.lifecycleStatus,
+    effectiveStatus: resolveEffectiveLifecycleStatus(job),
+    publishedAt: job.publishedAt || null,
+    scheduledAt: job.scheduledAt || null
+  };
 }
 
 function normalizeJobId(jobId) {
@@ -181,22 +474,39 @@ function ensureTransitionAllowed(fromStatus, toStatus) {
   return true;
 }
 
-function buildStatusJourneyEvent({ status, reason, updatedBy, createdAt }) {
-  const title = APPLICATION_STATUS_EVENT_TITLES[status] || `Application status ${status}`;
+function buildStatusJourneyEvent({
+  status,
+  reason,
+  updatedBy,
+  createdAt,
+  actorType = 'ADMIN',
+  actorId = null,
+  title,
+  description
+}) {
+  const resolvedTitle = title || APPLICATION_STATUS_EVENT_TITLES[status] || `Application status ${status}`;
   const reasonSuffix = reason ? ` Reason: ${reason}` : '';
   const actor = updatedBy ? ` by ${updatedBy}` : '';
-  const description = `Application status updated to ${status}${actor}.${reasonSuffix}`.trim();
+  const resolvedDescription = (description || `Application status updated to ${status}${actor}.${reasonSuffix}`).trim();
   return {
     id: randomUUID(),
     status,
-    title,
-    description,
+    title: resolvedTitle,
+    description: resolvedDescription,
+    actorType: normalizeJourneyActorType(actorType),
+    actorId: normalizeJourneyActorId(actorId),
     createdAt
   };
 }
 
 function mapJobRow(row) {
   if (!row) return null;
+  const lifecycleStatus = String(row.lifecycle_status || 'PUBLISHED')
+    .trim()
+    .toUpperCase();
+  const normalizedLifecycleStatus = JOB_LIFECYCLE_STATUSES.has(lifecycleStatus) ? lifecycleStatus : 'PUBLISHED';
+  const publishedAt = row.published_at ? new Date(row.published_at).toISOString() : null;
+  const scheduledAt = row.scheduled_publish_at ? new Date(row.scheduled_publish_at).toISOString() : null;
   return {
     id: row.id,
     title: row.title,
@@ -205,7 +515,10 @@ function mapJobRow(row) {
     description: row.description,
     requirements: Array.isArray(row.requirements_json) ? row.requirements_json : [],
     location: row.location_json || {},
-    employer: row.employer_json || {}
+    employer: row.employer_json || {},
+    lifecycleStatus: normalizedLifecycleStatus,
+    publishedAt,
+    scheduledAt
   };
 }
 
@@ -229,7 +542,30 @@ function mapJourneyRow(row) {
     status: row.status,
     title: row.title,
     description: row.description,
+    actorType: row.actor_type || null,
+    actorId: row.actor_id || null,
     createdAt: new Date(row.created_at).toISOString()
+  };
+}
+
+function mapApplicationDocumentRow(row) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    applicationId: row.application_id,
+    userId: row.user_id,
+    documentType: row.document_type,
+    fileName: row.file_name,
+    contentType: row.content_type,
+    contentLength: Number(row.content_length),
+    objectKey: row.object_key,
+    checksumSha256: row.checksum_sha256,
+    reviewStatus: row.review_status,
+    reviewReason: row.review_reason,
+    reviewedBy: row.reviewed_by,
+    reviewedAt: row.reviewed_at ? new Date(row.reviewed_at).toISOString() : null,
+    createdAt: new Date(row.created_at).toISOString(),
+    updatedAt: new Date(row.updated_at).toISOString()
   };
 }
 
@@ -268,6 +604,7 @@ function toJobSummary(job, viewerState) {
       logoUrl: job.employer.logoUrl,
       isVerifiedEmployer: job.employer.isVerifiedEmployer
     },
+    lifecycle: toLifecycleState(job),
     viewerState
   };
 }
@@ -293,7 +630,8 @@ function toJobDetail(job, viewerState) {
         name: job.employer.name,
         logoUrl: job.employer.logoUrl,
         isVerifiedEmployer: job.employer.isVerifiedEmployer
-      }
+      },
+      lifecycle: toLifecycleState(job)
     },
     viewerState
   };
@@ -327,6 +665,50 @@ function toApplicationSummary(application, job) {
   };
 }
 
+function toApplicationDocument(document) {
+  return {
+    id: document.id,
+    applicationId: document.applicationId,
+    userId: document.userId,
+    documentType: document.documentType,
+    fileName: document.fileName,
+    contentType: document.contentType,
+    contentLength: document.contentLength,
+    checksumSha256: document.checksumSha256,
+    reviewStatus: document.reviewStatus,
+    reviewReason: document.reviewReason,
+    reviewedAt: document.reviewedAt,
+    reviewedBy: document.reviewedBy,
+    createdAt: document.createdAt,
+    updatedAt: document.updatedAt
+  };
+}
+
+function toAdminJob(job) {
+  return {
+    id: job.id,
+    title: job.title,
+    employmentType: job.employmentType,
+    visaSponsorship: job.visaSponsorship,
+    description: job.description,
+    requirements: Array.from(job.requirements || []),
+    location: {
+      countryCode: job.location.countryCode,
+      city: job.location.city,
+      displayLabel: job.location.displayLabel,
+      latitude: job.location.latitude,
+      longitude: job.location.longitude
+    },
+    employer: {
+      id: job.employer.id,
+      name: job.employer.name,
+      logoUrl: job.employer.logoUrl,
+      isVerifiedEmployer: job.employer.isVerifiedEmployer
+    },
+    lifecycle: toLifecycleState(job)
+  };
+}
+
 async function upsertJobToDb(pool, job) {
   await pool.query(
     `
@@ -338,9 +720,12 @@ async function upsertJobToDb(pool, job) {
         description,
         requirements_json,
         location_json,
-        employer_json
+        employer_json,
+        lifecycle_status,
+        published_at,
+        scheduled_publish_at
       )
-      VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7::jsonb, $8::jsonb)
+      VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7::jsonb, $8::jsonb, $9, $10::timestamptz, $11::timestamptz)
       ON CONFLICT (id)
       DO UPDATE SET
         title = EXCLUDED.title,
@@ -350,6 +735,9 @@ async function upsertJobToDb(pool, job) {
         requirements_json = EXCLUDED.requirements_json,
         location_json = EXCLUDED.location_json,
         employer_json = EXCLUDED.employer_json,
+        lifecycle_status = EXCLUDED.lifecycle_status,
+        published_at = EXCLUDED.published_at,
+        scheduled_publish_at = EXCLUDED.scheduled_publish_at,
         updated_at = NOW()
     `,
     [
@@ -360,7 +748,12 @@ async function upsertJobToDb(pool, job) {
       job.description,
       JSON.stringify(Array.isArray(job.requirements) ? job.requirements : []),
       JSON.stringify(job.location || {}),
-      JSON.stringify(job.employer || {})
+      JSON.stringify(job.employer || {}),
+      JOB_LIFECYCLE_STATUSES.has(String(job.lifecycleStatus || '').toUpperCase())
+        ? String(job.lifecycleStatus).toUpperCase()
+        : 'PUBLISHED',
+      job.publishedAt || null,
+      job.scheduledAt || null
     ]
   );
 }
@@ -393,9 +786,10 @@ async function withTransaction(pool, fn) {
 }
 
 export class PostgresJobsService {
-  constructor({ pool }) {
+  constructor({ pool, objectStorage = null }) {
     this.pool = pool;
-    this.adminCreateValidator = createJobsService({ jobs: [] });
+    this.objectStorage = objectStorage || createInMemoryObjectStorage();
+    this.adminCreateValidator = createJobsService({ jobs: [], objectStorage: this.objectStorage });
   }
 
   async getJobByIdOrThrow(jobId, { queryable = this.pool, lockClause = '' } = {}) {
@@ -411,7 +805,10 @@ export class PostgresJobsService {
           description,
           requirements_json,
           location_json,
-          employer_json
+          employer_json,
+          lifecycle_status,
+          published_at,
+          scheduled_publish_at
         FROM jobs
         WHERE id = $1
         LIMIT 1
@@ -426,6 +823,37 @@ export class PostgresJobsService {
     return job;
   }
 
+  async getApplicationByIdOrThrow(applicationId, { queryable = this.pool, lockClause = '' } = {}) {
+    const normalizedApplicationId = normalizeApplicationId(applicationId);
+    const normalizedLockClause = String(lockClause || '').trim();
+    const result = await queryable.query(
+      `
+        SELECT id, user_id, job_id, status, note, created_at, updated_at
+        FROM job_applications
+        WHERE id = $1
+        LIMIT 1
+        ${normalizedLockClause}
+      `,
+      [normalizedApplicationId]
+    );
+    const application = mapApplicationRow(result.rows[0]);
+    if (!application) {
+      throw new JobsApiError(404, 'application_not_found', 'application not found');
+    }
+    return application;
+  }
+
+  async getUserApplicationByIdOrThrow({ userId, applicationId, queryable = this.pool, lockClause = '' } = {}) {
+    const application = await this.getApplicationByIdOrThrow(applicationId, {
+      queryable,
+      lockClause
+    });
+    if (application.userId !== userId) {
+      throw new JobsApiError(404, 'application_not_found', 'application not found');
+    }
+    return application;
+  }
+
   async listJobs({ q, employmentType, visaSponsored, location, cursor, limit, userId }) {
     const normalizedQuery = normalizeSearchQuery(q);
     const normalizedEmploymentType = normalizeEmploymentType(employmentType);
@@ -435,7 +863,9 @@ export class PostgresJobsService {
     const normalizedLimit = normalizeLimit(limit);
     const authenticated = Boolean(userId);
 
-    const whereParts = [];
+    const whereParts = [
+      `(lifecycle_status = 'PUBLISHED' OR (lifecycle_status = 'SCHEDULED' AND scheduled_publish_at IS NOT NULL AND scheduled_publish_at <= NOW()))`
+    ];
     const params = [];
     if (normalizedEmploymentType) {
       params.push(normalizedEmploymentType);
@@ -486,7 +916,10 @@ export class PostgresJobsService {
           description,
           requirements_json,
           location_json,
-          employer_json
+          employer_json,
+          lifecycle_status,
+          published_at,
+          scheduled_publish_at
         FROM jobs
         ${whereClause}
         ORDER BY created_at ASC
@@ -535,6 +968,9 @@ export class PostgresJobsService {
 
   async getJobDetail({ jobId, userId }) {
     const job = await this.getJobByIdOrThrow(jobId);
+    if (!isJobPubliclyVisible(job)) {
+      throw new JobsApiError(404, 'job_not_found', 'job not found');
+    }
     const authenticated = Boolean(userId);
     let saved = false;
 
@@ -579,7 +1015,10 @@ export class PostgresJobsService {
           j.description,
           j.requirements_json,
           j.location_json,
-          j.employer_json
+          j.employer_json,
+          j.lifecycle_status,
+          j.published_at,
+          j.scheduled_publish_at
         FROM user_saved_jobs usj
         JOIN jobs j ON j.id = usj.job_id
         WHERE usj.user_id = $1
@@ -618,6 +1057,9 @@ export class PostgresJobsService {
         queryable: client,
         lockClause: 'FOR UPDATE'
       });
+      if (!isJobPubliclyVisible(job)) {
+        throw new JobsApiError(404, 'job_not_found', 'job not found');
+      }
       const result = await client.query(
         `
           INSERT INTO user_saved_jobs (id, user_id, job_id)
@@ -658,6 +1100,9 @@ export class PostgresJobsService {
         queryable: client,
         lockClause: 'FOR UPDATE'
       });
+      if (!isJobPubliclyVisible(job)) {
+        throw new JobsApiError(404, 'job_not_found', 'job not found');
+      }
       const now = new Date().toISOString();
 
       const insertResult = await client.query(
@@ -677,6 +1122,8 @@ export class PostgresJobsService {
           status: 'SUBMITTED',
           title: 'Application submitted',
           description: normalizedNote || 'Application was submitted by candidate',
+          actorType: 'USER',
+          actorId: userId,
           createdAt: now
         };
         await client.query(
@@ -687,11 +1134,22 @@ export class PostgresJobsService {
               status,
               title,
               description,
+              actor_type,
+              actor_id,
               created_at
             )
-            VALUES ($1, $2, $3, $4, $5, $6::timestamptz)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8::timestamptz)
           `,
-          [event.id, application.id, event.status, event.title, event.description, event.createdAt]
+          [
+            event.id,
+            application.id,
+            event.status,
+            event.title,
+            event.description,
+            event.actorType,
+            event.actorId,
+            event.createdAt
+          ]
         );
 
         return {
@@ -777,7 +1235,10 @@ export class PostgresJobsService {
             description,
             requirements_json,
             location_json,
-            employer_json
+            employer_json,
+            lifecycle_status,
+            published_at,
+            scheduled_publish_at
           FROM jobs
           WHERE id = ANY($1::text[])
         `,
@@ -806,25 +1267,12 @@ export class PostgresJobsService {
   }
 
   async getApplicationJourney({ userId, applicationId }) {
-    const normalizedApplicationId = normalizeApplicationId(applicationId);
-    const applicationResult = await this.pool.query(
-      `
-        SELECT id, user_id, job_id, status, note, created_at, updated_at
-        FROM job_applications
-        WHERE id = $1 AND user_id = $2
-        LIMIT 1
-      `,
-      [normalizedApplicationId, userId]
-    );
-    const application = mapApplicationRow(applicationResult.rows[0]);
-    if (!application) {
-      throw new JobsApiError(404, 'application_not_found', 'application not found');
-    }
+    const application = await this.getUserApplicationByIdOrThrow({ userId, applicationId });
 
     const job = await this.getJobByIdOrThrow(application.jobId);
     const journeyResult = await this.pool.query(
       `
-        SELECT id, status, title, description, created_at
+        SELECT id, status, title, description, actor_type, actor_id, created_at
         FROM job_application_journey_events
         WHERE application_id = $1
         ORDER BY created_at ASC
@@ -836,6 +1284,478 @@ export class PostgresJobsService {
       application: toApplicationSummary(application, job),
       journey: journeyResult.rows.map((row) => mapJourneyRow(row))
     };
+  }
+
+  async createUserApplicationDocumentUploadUrl({
+    userId,
+    applicationId,
+    documentType,
+    fileName,
+    contentType,
+    contentLength,
+    checksumSha256
+  }) {
+    const application = await this.getUserApplicationByIdOrThrow({ userId, applicationId });
+    const normalizedDocumentType = normalizeApplicationDocumentType(documentType);
+    const normalizedFileName = normalizeApplicationFileName(fileName);
+    const normalizedContentType = normalizeApplicationContentType(contentType);
+    const normalizedContentLength = normalizeApplicationContentLength(contentLength);
+    const normalizedChecksumSha256 = normalizeApplicationChecksumSha256(checksumSha256);
+    const objectKey = buildApplicationDocumentObjectKey({
+      userId,
+      applicationId: application.id,
+      documentType: normalizedDocumentType,
+      fileName: normalizedFileName
+    });
+    const upload = await this.objectStorage.createUploadUrl({
+      objectKey,
+      contentType: normalizedContentType,
+      contentLength: normalizedContentLength,
+      checksumSha256: normalizedChecksumSha256
+    });
+    return {
+      applicationId: application.id,
+      upload: {
+        objectKey,
+        uploadUrl: upload.uploadUrl,
+        method: upload.method || 'PUT',
+        headers: upload.headers || {},
+        expiresAt: upload.expiresAt
+      }
+    };
+  }
+
+  async registerUserApplicationDocument({
+    userId,
+    applicationId,
+    documentType,
+    fileName,
+    contentType,
+    contentLength,
+    objectKey,
+    checksumSha256
+  }) {
+    return withTransaction(this.pool, async (client) => {
+      const application = await this.getUserApplicationByIdOrThrow({
+        userId,
+        applicationId,
+        queryable: client,
+        lockClause: 'FOR UPDATE'
+      });
+      const normalizedDocumentType = normalizeApplicationDocumentType(documentType);
+      const normalizedFileName = normalizeApplicationFileName(fileName);
+      const normalizedContentType = normalizeApplicationContentType(contentType);
+      const normalizedContentLength = normalizeApplicationContentLength(contentLength);
+      const normalizedObjectKey = normalizeApplicationObjectKey(objectKey);
+      const normalizedChecksumSha256 = normalizeApplicationChecksumSha256(checksumSha256);
+      assertApplicationObjectKeyOwnership({
+        userId,
+        applicationId: application.id,
+        objectKey: normalizedObjectKey
+      });
+
+      let inserted;
+      try {
+        const insertResult = await client.query(
+          `
+            INSERT INTO job_application_documents (
+              id,
+              application_id,
+              user_id,
+              document_type,
+              file_name,
+              content_type,
+              content_length,
+              object_key,
+              checksum_sha256,
+              file_url,
+              review_status,
+              review_reason,
+              reviewed_by,
+              reviewed_at,
+              created_at,
+              updated_at
+            )
+            VALUES (
+              $1,
+              $2,
+              $3,
+              $4,
+              $5,
+              $6,
+              $7,
+              $8,
+              $9,
+              $10,
+              'PENDING',
+              NULL,
+              NULL,
+              NULL,
+              NOW(),
+              NOW()
+            )
+            RETURNING
+              id,
+              application_id,
+              user_id,
+              document_type,
+              file_name,
+              content_type,
+              content_length,
+              object_key,
+              checksum_sha256,
+              review_status,
+              review_reason,
+              reviewed_by,
+              reviewed_at,
+              created_at,
+              updated_at
+          `,
+          [
+            randomUUID(),
+            application.id,
+            userId,
+            normalizedDocumentType,
+            normalizedFileName,
+            normalizedContentType,
+            normalizedContentLength,
+            normalizedObjectKey,
+            normalizedChecksumSha256,
+            this.objectStorage.toFileUrl(normalizedObjectKey)
+          ]
+        );
+        inserted = mapApplicationDocumentRow(insertResult.rows[0]);
+      } catch (error) {
+        if (String(error?.code || '') === '23505') {
+          throw new JobsApiError(409, 'duplicate_application_document', 'document with same checksum already exists');
+        }
+        throw error;
+      }
+
+      return {
+        applicationId: application.id,
+        document: toApplicationDocument(inserted)
+      };
+    });
+  }
+
+  async listUserApplicationDocuments({ userId, applicationId }) {
+    const application = await this.getUserApplicationByIdOrThrow({ userId, applicationId });
+    const [job, documentsResult] = await Promise.all([
+      this.getJobByIdOrThrow(application.jobId),
+      this.pool.query(
+        `
+          SELECT
+            id,
+            application_id,
+            user_id,
+            document_type,
+            file_name,
+            content_type,
+            content_length,
+            object_key,
+            checksum_sha256,
+            review_status,
+            review_reason,
+            reviewed_by,
+            reviewed_at,
+            created_at,
+            updated_at
+          FROM job_application_documents
+          WHERE application_id = $1
+          ORDER BY created_at DESC
+        `,
+        [application.id]
+      )
+    ]);
+    const items = documentsResult.rows.map((row) => toApplicationDocument(mapApplicationDocumentRow(row)));
+    return {
+      application: toApplicationSummary(application, job),
+      items,
+      total: items.length
+    };
+  }
+
+  async listAdminApplicationDocuments({ applicationId }) {
+    const application = await this.getApplicationByIdOrThrow(applicationId);
+    const [job, applicant, documentsResult] = await Promise.all([
+      this.getJobByIdOrThrow(application.jobId),
+      this.getApplicantById(application.userId),
+      this.pool.query(
+        `
+          SELECT
+            id,
+            application_id,
+            user_id,
+            document_type,
+            file_name,
+            content_type,
+            content_length,
+            object_key,
+            checksum_sha256,
+            review_status,
+            review_reason,
+            reviewed_by,
+            reviewed_at,
+            created_at,
+            updated_at
+          FROM job_application_documents
+          WHERE application_id = $1
+          ORDER BY created_at DESC
+        `,
+        [application.id]
+      )
+    ]);
+    const items = documentsResult.rows.map((row) => toApplicationDocument(mapApplicationDocumentRow(row)));
+    return {
+      application: toApplicationSummary(application, job),
+      applicant,
+      items,
+      total: items.length
+    };
+  }
+
+  async reviewAdminApplicationDocument({ applicationId, documentId, reviewStatus, reviewReason, reviewedBy }) {
+    const normalizedDocumentId = normalizeApplicationDocumentId(documentId);
+    const normalizedReviewStatus = normalizeApplicationDocumentReviewStatus(reviewStatus);
+    const normalizedReviewReason = normalizeApplicationReviewReason(reviewReason);
+    const normalizedReviewedBy = normalizeOptionalUpdatedBy(reviewedBy);
+
+    return withTransaction(this.pool, async (client) => {
+      const application = await this.getApplicationByIdOrThrow(applicationId, {
+        queryable: client,
+        lockClause: 'FOR UPDATE'
+      });
+      const documentResult = await client.query(
+        `
+          SELECT
+            id,
+            application_id,
+            user_id,
+            document_type,
+            file_name,
+            content_type,
+            content_length,
+            object_key,
+            checksum_sha256,
+            review_status,
+            review_reason,
+            reviewed_by,
+            reviewed_at,
+            created_at,
+            updated_at
+          FROM job_application_documents
+          WHERE id = $1 AND application_id = $2
+          LIMIT 1
+          FOR UPDATE
+        `,
+        [normalizedDocumentId, application.id]
+      );
+      const existing = mapApplicationDocumentRow(documentResult.rows[0]);
+      if (!existing) {
+        throw new JobsApiError(404, 'application_document_not_found', 'application document not found');
+      }
+
+      const changed =
+        existing.reviewStatus !== normalizedReviewStatus ||
+        existing.reviewReason !== normalizedReviewReason ||
+        existing.reviewedBy !== normalizedReviewedBy;
+
+      let document = existing;
+      if (changed) {
+        const updateResult = await client.query(
+          `
+            UPDATE job_application_documents
+            SET
+              review_status = $2,
+              review_reason = $3,
+              reviewed_by = $4,
+              reviewed_at = NOW(),
+              updated_at = NOW()
+            WHERE id = $1
+            RETURNING
+              id,
+              application_id,
+              user_id,
+              document_type,
+              file_name,
+              content_type,
+              content_length,
+              object_key,
+              checksum_sha256,
+              review_status,
+              review_reason,
+              reviewed_by,
+              reviewed_at,
+              created_at,
+              updated_at
+          `,
+          [existing.id, normalizedReviewStatus, normalizedReviewReason, normalizedReviewedBy]
+        );
+        document = mapApplicationDocumentRow(updateResult.rows[0]);
+      }
+
+      const [job, applicant] = await Promise.all([
+        this.getJobByIdOrThrow(application.jobId, { queryable: client }),
+        this.getApplicantById(application.userId, { queryable: client })
+      ]);
+      return {
+        updated: changed,
+        application: toApplicationSummary(application, job),
+        applicant,
+        document: toApplicationDocument(document)
+      };
+    });
+  }
+
+  async issueAdminApplicationDocumentPreviewUrl({ documentId, expiresSec }) {
+    const normalizedDocumentId = normalizeApplicationDocumentId(documentId);
+    const normalizedExpiresSec = normalizeApplicationPreviewExpiresSec(expiresSec);
+    const result = await this.pool.query(
+      `
+        SELECT
+          id,
+          application_id,
+          user_id,
+          document_type,
+          file_name,
+          content_type,
+          content_length,
+          object_key,
+          checksum_sha256,
+          review_status,
+          review_reason,
+          reviewed_by,
+          reviewed_at,
+          created_at,
+          updated_at
+        FROM job_application_documents
+        WHERE id = $1
+        LIMIT 1
+      `,
+      [normalizedDocumentId]
+    );
+    const document = mapApplicationDocumentRow(result.rows[0]);
+    if (!document) {
+      throw new JobsApiError(404, 'application_document_not_found', 'application document not found');
+    }
+    const preview = await this.objectStorage.createDownloadUrl({
+      objectKey: document.objectKey,
+      expiresSec: normalizedExpiresSec
+    });
+    return {
+      documentId: document.id,
+      applicationId: document.applicationId,
+      url: preview.downloadUrl,
+      method: preview.method || 'GET',
+      expiresAt: preview.expiresAt
+    };
+  }
+
+  async decideOfferForUser({ userId, applicationId, decision, reason }) {
+    const normalizedDecision = String(decision || '')
+      .trim()
+      .toUpperCase();
+    if (!['ACCEPT', 'DECLINE'].includes(normalizedDecision)) {
+      throw new JobsApiError(400, 'invalid_offer_decision', 'decision must be ACCEPT or DECLINE');
+    }
+    const normalizedReason = normalizeOptionalReason(reason);
+
+    return withTransaction(this.pool, async (client) => {
+      const application = await this.getUserApplicationByIdOrThrow({
+        userId,
+        applicationId,
+        queryable: client,
+        lockClause: 'FOR UPDATE'
+      });
+      if (application.status !== 'OFFERED') {
+        throw new JobsApiError(
+          409,
+          'offer_not_available',
+          'offer decision is only allowed when application status is OFFERED'
+        );
+      }
+      const now = new Date().toISOString();
+      const nextStatus = normalizedDecision === 'ACCEPT' ? 'HIRED' : 'REJECTED';
+      const updatedResult = await client.query(
+        `
+          UPDATE job_applications
+          SET status = $2, updated_at = $3::timestamptz
+          WHERE id = $1
+          RETURNING id, user_id, job_id, status, note, created_at, updated_at
+        `,
+        [application.id, nextStatus, now]
+      );
+      const updatedApplication = mapApplicationRow(updatedResult.rows[0]);
+      const journeyEvent = buildStatusJourneyEvent({
+        status: nextStatus,
+        reason: normalizedReason,
+        updatedBy: userId,
+        createdAt: now,
+        actorType: 'USER',
+        actorId: userId,
+        title: normalizedDecision === 'ACCEPT' ? 'Candidate accepted offer' : 'Candidate declined offer',
+        description:
+          normalizedDecision === 'ACCEPT'
+            ? normalizedReason
+              ? `Candidate accepted offer. Reason: ${normalizedReason}`
+              : 'Candidate accepted offer.'
+            : normalizedReason
+              ? `Candidate declined offer. Reason: ${normalizedReason}`
+              : 'Candidate declined offer.'
+      });
+      await client.query(
+        `
+          INSERT INTO job_application_journey_events (
+            id,
+            application_id,
+            status,
+            title,
+            description,
+            actor_type,
+            actor_id,
+            created_at
+          )
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8::timestamptz)
+        `,
+        [
+          journeyEvent.id,
+          updatedApplication.id,
+          journeyEvent.status,
+          journeyEvent.title,
+          journeyEvent.description,
+          journeyEvent.actorType,
+          journeyEvent.actorId,
+          journeyEvent.createdAt
+        ]
+      );
+
+      const job = await this.getJobByIdOrThrow(updatedApplication.jobId, { queryable: client });
+      return {
+        updated: true,
+        decision: normalizedDecision,
+        application: toApplicationSummary(updatedApplication, job),
+        journeyEvent
+      };
+    });
+  }
+
+  async acceptOfferForUser({ userId, applicationId, reason }) {
+    return this.decideOfferForUser({
+      userId,
+      applicationId,
+      decision: 'ACCEPT',
+      reason
+    });
+  }
+
+  async declineOfferForUser({ userId, applicationId, reason }) {
+    return this.decideOfferForUser({
+      userId,
+      applicationId,
+      decision: 'DECLINE',
+      reason
+    });
   }
 
   async getApplicantById(userId, { queryable = this.pool } = {}) {
@@ -929,6 +1849,9 @@ export class PostgresJobsService {
           j.requirements_json AS job_requirements_json,
           j.location_json AS job_location_json,
           j.employer_json AS job_employer_json,
+          j.lifecycle_status AS job_lifecycle_status,
+          j.published_at AS job_published_at,
+          j.scheduled_publish_at AS job_scheduled_publish_at,
           u.id AS applicant_id,
           u.full_name AS applicant_full_name,
           u.email AS applicant_email,
@@ -936,12 +1859,14 @@ export class PostgresJobsService {
           je.status AS last_event_status,
           je.title AS last_event_title,
           je.description AS last_event_description,
+          je.actor_type AS last_event_actor_type,
+          je.actor_id AS last_event_actor_id,
           je.created_at AS last_event_created_at
         FROM job_applications a
         JOIN jobs j ON j.id = a.job_id
         JOIN users u ON u.id = a.user_id
         LEFT JOIN LATERAL (
-          SELECT id, status, title, description, created_at
+          SELECT id, status, title, description, actor_type, actor_id, created_at
           FROM job_application_journey_events
           WHERE application_id = a.id
           ORDER BY created_at DESC
@@ -973,7 +1898,10 @@ export class PostgresJobsService {
         description: row.job_description,
         requirements_json: row.job_requirements_json,
         location_json: row.job_location_json,
-        employer_json: row.job_employer_json
+        employer_json: row.job_employer_json,
+        lifecycle_status: row.job_lifecycle_status,
+        published_at: row.job_published_at,
+        scheduled_publish_at: row.job_scheduled_publish_at
       });
       const applicant = {
         id: row.applicant_id,
@@ -986,6 +1914,8 @@ export class PostgresJobsService {
             status: row.last_event_status,
             title: row.last_event_title,
             description: row.last_event_description,
+            actor_type: row.last_event_actor_type,
+            actor_id: row.last_event_actor_id,
             created_at: row.last_event_created_at
           })
         : null;
@@ -1031,7 +1961,7 @@ export class PostgresJobsService {
       this.getApplicantById(application.userId),
       this.pool.query(
         `
-          SELECT id, status, title, description, created_at
+          SELECT id, status, title, description, actor_type, actor_id, created_at
           FROM job_application_journey_events
           WHERE application_id = $1
           ORDER BY created_at DESC
@@ -1069,7 +1999,7 @@ export class PostgresJobsService {
       this.getApplicantById(application.userId),
       this.pool.query(
         `
-          SELECT id, status, title, description, created_at
+          SELECT id, status, title, description, actor_type, actor_id, created_at
           FROM job_application_journey_events
           WHERE application_id = $1
           ORDER BY created_at ASC
@@ -1095,19 +2025,19 @@ export class PostgresJobsService {
     const normalizedUpdatedBy = normalizeOptionalUpdatedBy(updatedBy);
 
     return withTransaction(this.pool, async (client) => {
-      const applicationResult = await client.query(
-        `
-          SELECT id, user_id, job_id, status, note, created_at, updated_at
-          FROM job_applications
-          WHERE id = $1
-          LIMIT 1
-          FOR UPDATE
-        `,
-        [normalizedApplicationId]
-      );
-      const application = mapApplicationRow(applicationResult.rows[0]);
-      if (!application) {
-        throw new JobsApiError(404, 'application_not_found', 'application not found');
+      const application = await this.getApplicationByIdOrThrow(normalizedApplicationId, {
+        queryable: client,
+        lockClause: 'FOR UPDATE'
+      });
+      if (
+        application.status === 'OFFERED' &&
+        (normalizedStatus === 'HIRED' || normalizedStatus === 'REJECTED')
+      ) {
+        throw new JobsApiError(
+          409,
+          'offer_decision_required',
+          'candidate must accept or decline the offer before final status is set'
+        );
       }
 
       const changed = ensureTransitionAllowed(application.status, normalizedStatus);
@@ -1135,7 +2065,9 @@ export class PostgresJobsService {
           status: normalizedStatus,
           reason: normalizedReason,
           updatedBy: normalizedUpdatedBy,
-          createdAt: now
+          createdAt: now,
+          actorType: 'ADMIN',
+          actorId: normalizedUpdatedBy
         });
         await client.query(
           `
@@ -1145,9 +2077,11 @@ export class PostgresJobsService {
               status,
               title,
               description,
+              actor_type,
+              actor_id,
               created_at
             )
-            VALUES ($1, $2, $3, $4, $5, $6::timestamptz)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8::timestamptz)
           `,
           [
             journeyEvent.id,
@@ -1155,6 +2089,8 @@ export class PostgresJobsService {
             journeyEvent.status,
             journeyEvent.title,
             journeyEvent.description,
+            journeyEvent.actorType,
+            journeyEvent.actorId,
             journeyEvent.createdAt
           ]
         );
@@ -1197,7 +2133,7 @@ export class PostgresJobsService {
     const params = [];
     if (normalizedActorId) {
       params.push(normalizedActorId);
-      whereParts.push(`a.user_id = $${params.length}`);
+      whereParts.push(`COALESCE(je.actor_id, a.user_id::text) = $${params.length}`);
     }
     if (normalizedFrom) {
       params.push(normalizedFrom);
@@ -1233,6 +2169,8 @@ export class PostgresJobsService {
           je.status,
           je.title,
           je.description,
+          je.actor_type,
+          je.actor_id,
           je.created_at,
           a.user_id,
           a.job_id,
@@ -1262,8 +2200,8 @@ export class PostgresJobsService {
         action: 'APPLICATION_STATUS_TRANSITION',
         entityType: 'JOB_APPLICATION',
         entityId: row.application_id,
-        actorType: row.status === 'SUBMITTED' ? 'USER' : 'ADMIN',
-        actorId: row.user_id,
+        actorType: row.actor_type || (row.status === 'SUBMITTED' ? 'USER' : 'ADMIN'),
+        actorId: row.actor_id || row.user_id,
         statusFrom: row.from_status || null,
         statusTo: row.status,
         title: row.title,
@@ -1332,7 +2270,10 @@ export class PostgresJobsService {
           description,
           requirements_json,
           location_json,
-          employer_json
+          employer_json,
+          lifecycle_status,
+          published_at,
+          scheduled_publish_at
         FROM jobs
         ${whereClause}
         ORDER BY created_at ASC
@@ -1346,27 +2287,7 @@ export class PostgresJobsService {
     const nextCursor = nextOffset < total ? String(nextOffset) : null;
 
     return {
-      items: jobs.map((job) => ({
-        id: job.id,
-        title: job.title,
-        employmentType: job.employmentType,
-        visaSponsorship: job.visaSponsorship,
-        description: job.description,
-        requirements: Array.from(job.requirements || []),
-        location: {
-          countryCode: job.location.countryCode,
-          city: job.location.city,
-          displayLabel: job.location.displayLabel,
-          latitude: job.location.latitude,
-          longitude: job.location.longitude
-        },
-        employer: {
-          id: job.employer.id,
-          name: job.employer.name,
-          logoUrl: job.employer.logoUrl,
-          isVerifiedEmployer: job.employer.isVerifiedEmployer
-        }
-      })),
+      items: jobs.map((job) => toAdminJob(job)),
       pageInfo: {
         cursor: String(normalizedCursor),
         nextCursor,
@@ -1396,6 +2317,109 @@ export class PostgresJobsService {
     });
   }
 
+  async publishJob({ jobId, publishedAt }) {
+    return withTransaction(this.pool, async (client) => {
+      const existing = await this.getJobByIdOrThrow(jobId, {
+        queryable: client,
+        lockClause: 'FOR UPDATE'
+      });
+      const normalizedPublishedAt = normalizeOptionalLifecycleDate(publishedAt, 'publishedAt') || new Date().toISOString();
+      const next = {
+        ...existing,
+        lifecycleStatus: 'PUBLISHED',
+        publishedAt: normalizedPublishedAt,
+        scheduledAt: null
+      };
+      await upsertJobToDb(client, next);
+      return { job: toAdminJob(next) };
+    });
+  }
+
+  async unpublishJob({ jobId }) {
+    return withTransaction(this.pool, async (client) => {
+      const existing = await this.getJobByIdOrThrow(jobId, {
+        queryable: client,
+        lockClause: 'FOR UPDATE'
+      });
+      const next = {
+        ...existing,
+        lifecycleStatus: 'DRAFT',
+        publishedAt: null,
+        scheduledAt: null
+      };
+      await upsertJobToDb(client, next);
+      return { job: toAdminJob(next) };
+    });
+  }
+
+  async scheduleJob({ jobId, scheduledAt }) {
+    const normalizedScheduledAt = normalizeRequiredLifecycleDate(scheduledAt, 'scheduledAt');
+    return withTransaction(this.pool, async (client) => {
+      const existing = await this.getJobByIdOrThrow(jobId, {
+        queryable: client,
+        lockClause: 'FOR UPDATE'
+      });
+      const next = {
+        ...existing,
+        lifecycleStatus: 'SCHEDULED',
+        publishedAt: null,
+        scheduledAt: normalizedScheduledAt
+      };
+      await upsertJobToDb(client, next);
+      return { job: toAdminJob(next) };
+    });
+  }
+
+  async bulkUpdateJobs({ action, jobIds, scheduledAt, publishedAt }) {
+    const normalizedAction = normalizeBulkAction(action);
+    const normalizedJobIds = normalizeBulkJobIds(jobIds);
+    const results = [];
+
+    for (const jobId of normalizedJobIds) {
+      try {
+        if (normalizedAction === 'PUBLISH') {
+          const result = await this.publishJob({ jobId, publishedAt });
+          results.push({ jobId, success: true, lifecycle: result.job.lifecycle });
+          continue;
+        }
+        if (normalizedAction === 'UNPUBLISH') {
+          const result = await this.unpublishJob({ jobId });
+          results.push({ jobId, success: true, lifecycle: result.job.lifecycle });
+          continue;
+        }
+        if (normalizedAction === 'SCHEDULE') {
+          const result = await this.scheduleJob({ jobId, scheduledAt });
+          results.push({ jobId, success: true, lifecycle: result.job.lifecycle });
+          continue;
+        }
+        const result = await this.deleteJob({ jobId });
+        results.push({ jobId, success: true, removed: result.removed });
+      } catch (error) {
+        if (error instanceof JobsApiError) {
+          results.push({
+            jobId,
+            success: false,
+            error: {
+              code: error.code,
+              message: error.message
+            }
+          });
+          continue;
+        }
+        throw error;
+      }
+    }
+
+    const successCount = results.filter((item) => item.success).length;
+    return {
+      action: normalizedAction,
+      total: normalizedJobIds.length,
+      successCount,
+      failureCount: normalizedJobIds.length - successCount,
+      results
+    };
+  }
+
   async deleteJob({ jobId }) {
     const normalizedJobId = normalizeJobId(jobId);
     const result = await this.pool.query(
@@ -1416,11 +2440,11 @@ export class PostgresJobsService {
   }
 }
 
-export async function createPostgresJobsService({ pool }) {
+export async function createPostgresJobsService({ pool, objectStorage = null }) {
   if (!pool || typeof pool.query !== 'function') {
     throw new Error('Postgres jobs service requires a pg pool');
   }
 
   await seedJobsIfEmpty(pool);
-  return new PostgresJobsService({ pool });
+  return new PostgresJobsService({ pool, objectStorage });
 }

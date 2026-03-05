@@ -1,4 +1,5 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct JobApplicationView: View {
     @StateObject private var viewModel: JobApplicationViewModel
@@ -6,6 +7,7 @@ struct JobApplicationView: View {
     // For bouncing success animation
     @State private var successScale: CGFloat = 0.5
     @State private var successOpacity: Double = 0
+    @State private var isCVFileImporterPresented = false
     
     init(viewModel: JobApplicationViewModel) {
         _viewModel = StateObject(wrappedValue: viewModel)
@@ -39,6 +41,7 @@ struct JobApplicationView: View {
                 bottomAction
             }
         }
+        .accessibilityIdentifier("job_application_view")
         .background(AppTheme.backgroundPrimary)
         .onAppear {
             // Trigger haptic feedback for initial load
@@ -59,6 +62,19 @@ struct JobApplicationView: View {
                 }
             }
         }
+        .fileImporter(
+            isPresented: $isCVFileImporterPresented,
+            allowedContentTypes: [.pdf, .png, .jpeg],
+            allowsMultipleSelection: false
+        ) { result in
+            switch result {
+            case .success(let urls):
+                guard let firstURL = urls.first else { return }
+                viewModel.uploadCV(from: firstURL)
+            case .failure(let error):
+                viewModel.setErrorMessage(error.localizedDescription)
+            }
+        }
     }
     
     // MARK: - Header
@@ -73,12 +89,14 @@ struct JobApplicationView: View {
                     .frame(width: 40, height: 40)
                     .background(Circle().fill(AppTheme.grayLight).opacity(0.5))
             }
+            .accessibilityIdentifier("job_application_back_button")
             
             Spacer()
             
             Text(viewModel.currentStep == 0 ? "Melamar Pekerjaan" : "Lamar Pekerjaan (\(viewModel.currentStep + 1)/3)")
                 .font(.system(size: 18, weight: .bold))
                 .foregroundStyle(AppTheme.textPrimary)
+                .accessibilityIdentifier("job_application_header_title")
             
             Spacer()
             
@@ -196,36 +214,64 @@ struct JobApplicationView: View {
                             .font(.system(size: 18, weight: .bold))
                             .foregroundStyle(AppTheme.textPrimary)
                         Spacer()
-                        Button("Ganti CV") { }
+                        Button(viewModel.hasUploadedCV ? "Ganti CV" : "Upload CV") {
+                            isCVFileImporterPresented = true
+                        }
                             .font(.system(size: 14, weight: .bold))
                             .foregroundStyle(AppTheme.accent)
+                            .disabled(viewModel.isUploadingCV)
+                            .accessibilityIdentifier("job_application_cv_upload_button")
                     }
                     
                     HStack(spacing: 16) {
                         RoundedRectangle(cornerRadius: 12)
-                            .fill(Color.red.opacity(0.1))
+                            .fill((viewModel.hasUploadedCV ? AppTheme.accent : Color.red).opacity(0.1))
                             .frame(width: 48, height: 48)
-                            .overlay(Image(systemName: "doc.text.fill").foregroundStyle(.red).font(.system(size: 24)))
+                            .overlay(
+                                Image(systemName: "doc.text.fill")
+                                    .foregroundStyle(viewModel.hasUploadedCV ? AppTheme.accent : .red)
+                                    .font(.system(size: 24))
+                            )
                         
                         VStack(alignment: .leading, spacing: 4) {
-                            Text("CV_Budi_Setiawan_2024.pdf")
+                            Text(viewModel.cvFileName)
                                 .font(.system(size: 14, weight: .medium))
                                 .foregroundStyle(AppTheme.textPrimary)
                                 .lineLimit(1)
-                            Text("2.4 MB • Terakhir diperbarui 2 hari yang lalu")
+                                .accessibilityIdentifier("job_application_cv_file_name")
+                            Text(viewModel.cvMetaDescription)
                                 .font(.system(size: 12))
                                 .foregroundStyle(AppTheme.textSecondary)
+                                .accessibilityIdentifier("job_application_cv_meta")
                         }
                         
                         Spacer()
                         
-                        Image(systemName: "checkmark.circle.fill")
-                            .foregroundStyle(Color(.systemGray3))
+                        if viewModel.isUploadingCV {
+                            ProgressView()
+                                .tint(AppTheme.accent)
+                        } else {
+                            Image(systemName: viewModel.hasUploadedCV ? "checkmark.circle.fill" : "minus.circle")
+                                .foregroundStyle(viewModel.hasUploadedCV ? AppTheme.accent : Color(.systemGray3))
+                        }
                     }
                     .padding(16)
                     .background(AppTheme.backgroundPrimary)
                     .clipShape(RoundedRectangle(cornerRadius: 16))
                     .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color(.systemGray4), style: StrokeStyle(lineWidth: 2, dash: [6])))
+
+                    if let reviewReason = viewModel.cvReviewReason, !reviewReason.isEmpty {
+                        HStack(alignment: .top, spacing: 8) {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .foregroundStyle(Color.orange)
+                            Text(reviewReason)
+                                .font(.system(size: 12))
+                                .foregroundStyle(AppTheme.textSecondary)
+                        }
+                        .padding(12)
+                        .background(Color.orange.opacity(0.08))
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                    }
                 }
             }
             .padding(24)
@@ -253,6 +299,7 @@ struct JobApplicationView: View {
                         .background(AppTheme.grayLight)
                         .clipShape(RoundedRectangle(cornerRadius: 16))
                         .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color(.systemGray5), lineWidth: 1))
+                        .accessibilityIdentifier("job_application_cover_letter_input")
                         .onChange(of: viewModel.coverLetterText) { newValue, _ in
                             if newValue.count > 500 {
                                 viewModel.coverLetterText = String(newValue.prefix(500))
@@ -310,7 +357,7 @@ struct JobApplicationView: View {
                 
                 VStack(spacing: 16) {
                     confirmRow(icon: "person.fill", title: "Profil Lengkap", subtitle: "Data diri & Pengalaman Kerja", color: AppTheme.accent)
-                    confirmRow(icon: "doc.text.fill", title: "Curriculum Vitae (CV)", subtitle: "CV_Budi_Setiawan_2024.pdf", color: AppTheme.accent)
+                    confirmRow(icon: "doc.text.fill", title: "Curriculum Vitae (CV)", subtitle: viewModel.cvFileName, color: AppTheme.accent)
                     if !viewModel.coverLetterText.isEmpty {
                         confirmRow(icon: "text.bubble.fill", title: "Pesan Tambahan", subtitle: "\"\(viewModel.coverLetterText)\"", color: AppTheme.accent)
                     }
@@ -351,6 +398,15 @@ struct JobApplicationView: View {
     // MARK: - Bottom Action Container
     private var bottomAction: some View {
         VStack(spacing: 16) {
+            if let errorMessage = viewModel.errorMessage, !errorMessage.isEmpty {
+                Text(errorMessage)
+                    .font(.system(size: 12))
+                    .foregroundStyle(Color.red)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 8)
+                    .accessibilityIdentifier("job_application_error_message")
+            }
+
             Button {
                 if viewModel.currentStep == viewModel.totalSteps - 1 {
                     viewModel.submitApplication()
@@ -379,7 +435,8 @@ struct JobApplicationView: View {
                 .shadow(color: AppTheme.accent.opacity(0.3), radius: 10, y: 5)
             }
             .buttonStyle(PressableButtonStyle())
-            .disabled(viewModel.isSubmitting)
+            .disabled(viewModel.isPrimaryActionDisabled)
+            .accessibilityIdentifier("job_application_primary_button")
             
             if viewModel.currentStep == viewModel.totalSteps - 1 {
                 Text("Dengan menekan tombol di atas, Anda menyetujui Syarat & Ketentuan dari Senpai Jepang.")
@@ -429,6 +486,7 @@ struct JobApplicationView: View {
                 .font(.system(size: 24, weight: .bold))
                 .foregroundStyle(AppTheme.textPrimary)
                 .opacity(successOpacity)
+                .accessibilityIdentifier("job_application_success_title")
             
             Text("Terima kasih telah melamar. Perusahaan akan meninjau profil Anda dan menghubungi melalui email atau WhatsApp.")
                 .font(.system(size: 14))
@@ -453,6 +511,7 @@ struct JobApplicationView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 16))
                 }
                 .buttonStyle(PressableButtonStyle())
+                .accessibilityIdentifier("job_application_success_home_button")
                 
                 Button {
                     viewModel.finishFlow()
@@ -463,10 +522,12 @@ struct JobApplicationView: View {
                         .frame(maxWidth: .infinity)
                         .frame(height: 56)
                 }
+                .accessibilityIdentifier("job_application_success_status_button")
             }
             .padding(.horizontal, 24)
             .padding(.bottom, 32)
             .opacity(successOpacity)
         }
+        .accessibilityIdentifier("job_application_success_view")
     }
 }

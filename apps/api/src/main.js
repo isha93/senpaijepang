@@ -59,7 +59,10 @@ async function main() {
   let feedService;
 
   if (authStore.mode === 'postgres') {
-    jobsService = await createPostgresJobsService({ pool: authStore.store.pool });
+    jobsService = await createPostgresJobsService({
+      pool: authStore.store.pool,
+      objectStorage: objectStorage.storage
+    });
     feedService = await createPostgresFeedService({ pool: authStore.store.pool });
   }
 

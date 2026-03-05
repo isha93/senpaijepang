@@ -59,6 +59,7 @@ struct FeedListView: View {
                         .font(.headline.bold())
                         .foregroundStyle(AppTheme.textPrimary)
                         .contentTransition(.numericText())
+                        .accessibilityIdentifier("feed_header_title")
                     Spacer()
                     Text(String(format: "%@ articles".localized(), "\(viewModel.posts.count)"))
                         .font(.caption)
@@ -81,14 +82,13 @@ struct FeedListView: View {
                 } else {
                     LazyVStack(spacing: AppTheme.spacingL) {
                         ForEach(Array(viewModel.posts.enumerated()), id: \.element.id) { index, post in
-                            Button {
-                                viewModel.navigateToArticle(post)
-                            } label: {
-                                FeedPostCard(post: post) {
+                            FeedPostCard(
+                                post: post,
+                                onTap: { viewModel.navigateToArticle(post) },
+                                onSave: {
                                     Task { await viewModel.toggleSave(post) }
                                 }
-                            }
-                            .buttonStyle(.plain)
+                            )
                             .cardStyle()
                             .transition(.asymmetric(
                                 insertion: .opacity.combined(with: .offset(y: 12)),
@@ -105,6 +105,7 @@ struct FeedListView: View {
         .animation(AppTheme.animationSoft, value: viewModel.selectedCategory)
         .animation(AppTheme.animationSoft, value: viewModel.searchText)
         .background(AppTheme.backgroundPrimary)
+        .accessibilityIdentifier("feed_list")
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
@@ -120,6 +121,7 @@ struct FeedListView: View {
                         Image(systemName: "bell")
                             .foregroundStyle(AppTheme.textSecondary)
                     }
+                    .accessibilityIdentifier("home_notification_button")
                     Button { 
                         onNavigateToProfile() 
                     } label: {
@@ -132,6 +134,7 @@ struct FeedListView: View {
                                     .foregroundStyle(AppTheme.accent)
                             }
                     }
+                    .accessibilityIdentifier("home_profile_button")
                 }
             }
         }
