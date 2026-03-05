@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   AdminOrganizationListItem,
   OrganizationVerificationStatus,
@@ -59,7 +59,7 @@ export function OrganizationsAdminPage() {
   const [nextCursor, setNextCursor] = useState<number | null>(null);
   const [cursorHistory, setCursorHistory] = useState<number[]>([]);
 
-  async function loadOrganizations(cursor = 0) {
+  const loadOrganizations = useCallback(async (cursor = 0) => {
     setLoading(true);
     setError(null);
     try {
@@ -87,12 +87,12 @@ export function OrganizationsAdminPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [orgType, verificationStatus]);
 
   useEffect(() => {
     setCursorHistory([]);
     void loadOrganizations(0);
-  }, [orgType, verificationStatus]);
+  }, [loadOrganizations]);
 
   function goToPreviousPage() {
     if (cursorHistory.length === 0 || loading) {

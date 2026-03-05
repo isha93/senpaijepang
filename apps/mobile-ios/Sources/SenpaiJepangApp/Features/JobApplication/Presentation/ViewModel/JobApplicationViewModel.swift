@@ -8,11 +8,13 @@ final class JobApplicationViewModel: ObservableObject {
     @Published var coverLetterText: String = ""
     @Published var isSubmitting: Bool = false
     @Published var submissionSuccess: Bool = false
+    @Published var errorMessage: String? = nil
 
     let totalSteps = 3
     let job: Job
     private let journeyService: JourneyServiceProtocol
     private let navigation: NavigationHandling
+    private var submittedApplicationId: String?
 
     var onDismiss: (() -> Void)?
 
@@ -42,11 +44,14 @@ final class JobApplicationViewModel: ObservableObject {
 
     func submitApplication() {
         isSubmitting = true
+        errorMessage = nil
         Task {
             do {
-                _ = try await journeyService.applyJob(jobId: job.id)
+                let journey = try await journeyService.applyJob(jobId: job.id)
+                submittedApplicationId = journey.applicationId
             } catch {
-                // Continue to success screen even on error; journey view will handle state
+                submittedApplicationId = nil
+                errorMessage = error.localizedDescription
             }
             isSubmitting = false
             withAnimation(AppTheme.animationDefault) {
@@ -57,6 +62,8 @@ final class JobApplicationViewModel: ObservableObject {
 
     func finishFlow() {
         navigation.dismissApplication()
-        navigation.push(.applicationJourney(applicationId: job.id))
+        navigation.push(
+            .applicationJourney(applicationId: submittedApplicationId ?? job.id)
+        )
     }
 }

@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import {
   AdminFeedPost,
   AdminFeedPostUpsertInput,
@@ -178,15 +178,10 @@ export function FeedAdminPage() {
   const [formError, setFormError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  async function loadData({
-    adminCursor: adminCursorInput,
-    publicCursor: publicCursorInput
-  }: {
-    adminCursor?: number;
-    publicCursor?: number;
-  } = {}) {
-    const targetAdminCursor = adminCursorInput ?? adminCursor;
-    const targetPublicCursor = publicCursorInput ?? publicCursor;
+  const loadData = useCallback(async ({ adminCursor: targetAdminCursor, publicCursor: targetPublicCursor }: {
+    adminCursor: number;
+    publicCursor: number;
+  }) => {
     setLoading(true);
     setError(null);
 
@@ -218,7 +213,7 @@ export function FeedAdminPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
 
   useEffect(() => {
     setAdminCursorHistory([]);
@@ -227,7 +222,7 @@ export function FeedAdminPage() {
       adminCursor: 0,
       publicCursor: 0
     });
-  }, [activeFilter]);
+  }, [activeFilter, loadData]);
 
   const managementRows = useMemo(
     () => adminPosts.filter((item) => matchesFilter(item.category, activeFilter)),
@@ -291,7 +286,10 @@ export function FeedAdminPage() {
       }
       setModalMode(null);
       setEditingPostId(null);
-      await loadData();
+      await loadData({
+        adminCursor,
+        publicCursor
+      });
     } catch (err) {
       const message =
         typeof err === 'object' && err && 'message' in err
@@ -319,7 +317,10 @@ export function FeedAdminPage() {
     try {
       await deleteAdminFeedPost(post.id);
       setActionMessage('Post deleted successfully.');
-      await loadData();
+      await loadData({
+        adminCursor,
+        publicCursor
+      });
     } catch (err) {
       const message =
         typeof err === 'object' && err && 'message' in err
@@ -342,7 +343,10 @@ export function FeedAdminPage() {
       }
       const targetCursor = adminCursorHistory[adminCursorHistory.length - 1];
       setAdminCursorHistory((prev) => prev.slice(0, -1));
-      void loadData({ adminCursor: targetCursor });
+      void loadData({
+        adminCursor: targetCursor,
+        publicCursor
+      });
       return;
     }
 
@@ -351,7 +355,10 @@ export function FeedAdminPage() {
     }
     const targetCursor = publicCursorHistory[publicCursorHistory.length - 1];
     setPublicCursorHistory((prev) => prev.slice(0, -1));
-    void loadData({ publicCursor: targetCursor });
+    void loadData({
+      adminCursor,
+      publicCursor: targetCursor
+    });
   }
 
   function goToNextPage() {
@@ -364,7 +371,10 @@ export function FeedAdminPage() {
         return;
       }
       setAdminCursorHistory((prev) => [...prev, adminCursor]);
-      void loadData({ adminCursor: adminNextCursor });
+      void loadData({
+        adminCursor: adminNextCursor,
+        publicCursor
+      });
       return;
     }
 
@@ -372,7 +382,10 @@ export function FeedAdminPage() {
       return;
     }
     setPublicCursorHistory((prev) => [...prev, publicCursor]);
-    void loadData({ publicCursor: publicNextCursor });
+    void loadData({
+      adminCursor,
+      publicCursor: publicNextCursor
+    });
   }
 
   const activeCursor = activeTab === 'management' ? adminCursor : publicCursor;

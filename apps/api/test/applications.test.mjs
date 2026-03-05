@@ -120,6 +120,40 @@ test('job application is idempotent per user and job', async () => {
   });
 });
 
+test('application endpoints validate note and status filters', async () => {
+  await withServer(async (baseUrl) => {
+    const register = await postJson(baseUrl, '/auth/register', {
+      fullName: 'Applicant Validation',
+      email: 'applicant-validation@example.com',
+      password: 'pass1234'
+    });
+    assert.equal(register.res.status, 201);
+    const accessToken = register.body.accessToken;
+
+    const invalidNote = await postJson(
+      baseUrl,
+      '/jobs/job_tokyo_senior_welder_001/applications',
+      { note: 'x'.repeat(1001) },
+      { accessToken }
+    );
+    assert.equal(invalidNote.res.status, 400);
+    assert.equal(invalidNote.body.error.code, 'invalid_note');
+
+    const apply = await postJson(
+      baseUrl,
+      '/jobs/job_tokyo_senior_welder_001/applications',
+      { note: 'Ready to relocate immediately.' },
+      { accessToken }
+    );
+    assert.equal(apply.res.status, 201);
+    assert.equal(apply.body.application.status, 'SUBMITTED');
+
+    const invalidStatus = await getJson(baseUrl, '/users/me/applications?status=NOT_VALID', { accessToken });
+    assert.equal(invalidStatus.res.status, 400);
+    assert.equal(invalidStatus.body.error.code, 'invalid_application_status');
+  });
+});
+
 test('application endpoints enforce auth and ownership', async () => {
   await withServer(async (baseUrl) => {
     const guestApply = await postJson(baseUrl, '/jobs/job_tokyo_senior_welder_001/applications', {});

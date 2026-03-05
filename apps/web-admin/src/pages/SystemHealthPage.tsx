@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import {
   AdminUser,
   HealthResponse,
@@ -9,6 +9,7 @@ import {
   getMetrics,
   updateAdminUser
 } from '../lib/adminApi';
+import { buildMetricSignals } from '../lib/monitoringSignals';
 
 type HealthState = {
   health: HealthResponse | null;
@@ -85,9 +86,12 @@ export function SystemHealthPage() {
   const [adminActionMessage, setAdminActionMessage] = useState<string | null>(null);
   const [createAdminForm, setCreateAdminForm] = useState<CreateAdminFormState>(DEFAULT_CREATE_ADMIN_FORM);
   const [isCreatingAdmin, setIsCreatingAdmin] = useState(false);
+  const [lastUpdatedAt, setLastUpdatedAt] = useState<string | null>(null);
 
-  async function loadSystemHealth() {
-    setLoading(true);
+  const loadSystemHealth = useCallback(async (silent = false) => {
+    if (!silent) {
+      setLoading(true);
+    }
     setError(null);
 
     try {
@@ -96,6 +100,7 @@ export function SystemHealthPage() {
         health,
         metrics
       });
+      setLastUpdatedAt(new Date().toISOString());
     } catch (err) {
       const message = toErrorMessage(err, 'Failed to load system metrics');
       setError(message);
@@ -104,11 +109,13 @@ export function SystemHealthPage() {
         metrics: null
       });
     } finally {
-      setLoading(false);
+      if (!silent) {
+        setLoading(false);
+      }
     }
-  }
+  }, []);
 
-  async function loadAdminAccounts() {
+  const loadAdminAccounts = useCallback(async () => {
     setLoadingAdmins(true);
     setAdminError(null);
 
@@ -123,11 +130,11 @@ export function SystemHealthPage() {
     } finally {
       setLoadingAdmins(false);
     }
-  }
+  }, []);
 
-  async function refreshAll() {
+  const refreshAll = useCallback(async () => {
     await Promise.all([loadSystemHealth(), loadAdminAccounts()]);
-  }
+  }, [loadAdminAccounts, loadSystemHealth]);
 
   async function submitCreateAdmin(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -195,7 +202,13 @@ export function SystemHealthPage() {
 
   useEffect(() => {
     void refreshAll();
-  }, []);
+
+    const timer = window.setInterval(() => {
+      void loadSystemHealth(true);
+    }, 15000);
+
+    return () => window.clearInterval(timer);
+  }, [loadSystemHealth, refreshAll]);
 
   const errorRate = useMemo(() => {
     if (!state.metrics || state.metrics.totalRequests <= 0) {
@@ -212,6 +225,8 @@ export function SystemHealthPage() {
     [state.metrics]
   );
 
+  const metricSignals = useMemo(() => buildMetricSignals(state.metrics), [state.metrics]);
+
   return (
     <div className="page-grid">
       <section className="surface-card page-section">
@@ -219,6 +234,7 @@ export function SystemHealthPage() {
           <div>
             <h3>API Health</h3>
             <p>Runtime status from /health and /metrics</p>
+            <small>Updated {formatDateTime(lastUpdatedAt || '')}</small>
           </div>
           <button type="button" className="btn-primary" onClick={() => void refreshAll()}>
             Refresh
@@ -248,6 +264,32 @@ export function SystemHealthPage() {
             <strong>{state.metrics ? formatUptime(state.metrics.uptimeSec) : '...'}</strong>
             <span>{state.health?.version ? `v${state.health.version}` : 'runtime'}</span>
           </article>
+        </div>
+      </section>
+
+      <section className="surface-card page-section">
+        <header>
+          <div>
+            <h3>Runtime Alerts</h3>
+            <p>Latency and error-rate based health signals for API runtime.</p>
+          </div>
+        </header>
+
+        <div className="signal-grid">
+          {(metricSignals.length > 0 ? metricSignals : [
+            {
+              id: 'runtime-normal',
+              severity: 'info',
+              title: 'Runtime Stable',
+              description: 'No runtime anomalies detected from metrics.'
+            }
+          ]).map((signal) => (
+            <article key={signal.id} className={`signal-card ${signal.severity}`}>
+              <p>{signal.severity.toUpperCase()}</p>
+              <strong>{signal.title}</strong>
+              <span>{signal.description}</span>
+            </article>
+          ))}
         </div>
       </section>
 

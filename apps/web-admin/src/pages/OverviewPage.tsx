@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   AdminActivityEventListResponse,
   AdminOverviewSummaryResponse,
@@ -9,6 +9,7 @@ import {
   getHealth,
   getMetrics
 } from '../lib/adminApi';
+import { buildOperationalSignals } from '../lib/monitoringSignals';
 
 type OverviewState = {
   health: HealthResponse | null;
@@ -72,54 +73,50 @@ export function OverviewPage() {
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [lastUpdatedAt, setLastUpdatedAt] = useState<string | null>(null);
 
-  useEffect(() => {
-    let active = true;
-
-    async function load() {
+  const loadOverview = useCallback(async (silent = false) => {
+    if (!silent) {
       setLoading(true);
-      setError(null);
-      try {
-        const [health, metrics, summary, activity] = await Promise.all([
-          getHealth(),
-          getMetrics(),
-          getAdminOverviewSummary(),
-          getAdminActivityEvents({ type: 'ALL', limit: 50 })
-        ]);
+    }
+    setError(null);
 
-        if (!active) {
-          return;
-        }
+    try {
+      const [health, metrics, summary, activity] = await Promise.all([
+        getHealth(),
+        getMetrics(),
+        getAdminOverviewSummary(),
+        getAdminActivityEvents({ type: 'ALL', limit: 50 })
+      ]);
 
-        setState({
-          health,
-          metrics,
-          summary,
-          activity
-        });
-      } catch (err) {
-        if (!active) {
-          return;
-        }
-
-        const message =
-          typeof err === 'object' && err && 'message' in err
-            ? String((err as { message: unknown }).message)
-            : 'Failed to load dashboard overview';
-        setError(message);
-      } finally {
-        if (active) {
-          setLoading(false);
-        }
+      setState({
+        health,
+        metrics,
+        summary,
+        activity
+      });
+      setLastUpdatedAt(new Date().toISOString());
+    } catch (err) {
+      const message =
+        typeof err === 'object' && err && 'message' in err
+          ? String((err as { message: unknown }).message)
+          : 'Failed to load dashboard overview';
+      setError(message);
+    } finally {
+      if (!silent) {
+        setLoading(false);
       }
     }
-
-    void load();
-
-    return () => {
-      active = false;
-    };
   }, []);
+
+  useEffect(() => {
+    void loadOverview();
+    const timer = window.setInterval(() => {
+      void loadOverview(true);
+    }, 15000);
+
+    return () => window.clearInterval(timer);
+  }, [loadOverview]);
 
   const statusCounts = useMemo(() => {
     return {
@@ -162,6 +159,16 @@ export function OverviewPage() {
     return Math.round(total / state.metrics.routes.length);
   }, [state.metrics]);
 
+  const operationalSignals = useMemo(
+    () =>
+      buildOperationalSignals({
+        metrics: state.metrics,
+        summary: state.summary,
+        activity: state.activity
+      }),
+    [state.activity, state.metrics, state.summary]
+  );
+
   const databaseLoad = useMemo(() => {
     if (!state.metrics || state.metrics.totalRequests === 0) {
       return 0;
@@ -178,12 +185,36 @@ export function OverviewPage() {
           <div>
             <h3>Overview</h3>
             <p>Operational clarity across trust, moderation, and system state.</p>
+            <small>Updated {formatRelative(lastUpdatedAt)}</small>
           </div>
-          {error ? (
-            <button type="button" className="btn-danger" onClick={() => window.location.reload()}>
-              Retry
+          <div className="feed-actions">
+            <button type="button" className="btn-secondary" onClick={() => void loadOverview(true)}>
+              Refresh
             </button>
-          ) : null}
+            {error ? (
+              <button type="button" className="btn-danger" onClick={() => void loadOverview()}>
+                Retry
+              </button>
+            ) : null}
+          </div>
+        </div>
+      </section>
+
+      <section className="surface-card page-section">
+        <header>
+          <div>
+            <h3>Operational Alerts</h3>
+            <p>Actionable health signals from API, queue pressure, and moderation activity.</p>
+          </div>
+        </header>
+        <div className="signal-grid">
+          {operationalSignals.map((signal) => (
+            <article key={signal.id} className={`signal-card ${signal.severity}`}>
+              <p>{signal.severity.toUpperCase()}</p>
+              <strong>{signal.title}</strong>
+              <span>{signal.description}</span>
+            </article>
+          ))}
         </div>
       </section>
 

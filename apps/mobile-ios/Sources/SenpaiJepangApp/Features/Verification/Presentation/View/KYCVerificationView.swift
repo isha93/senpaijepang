@@ -453,7 +453,18 @@ struct KYCVerificationView: View {
                 .multilineTextAlignment(.center)
                 .lineSpacing(4)
                 .padding(.horizontal, 32)
-                .padding(.bottom, 40)
+                .padding(.bottom, 12)
+
+            if let error = viewModel.errorMessage, !error.isEmpty {
+                Text(error)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(Color.red)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 24)
+                    .padding(.bottom, 28)
+            } else {
+                Color.clear.frame(height: 16)
+            }
             
             // Checklist
             VStack(alignment: .leading, spacing: 20) {

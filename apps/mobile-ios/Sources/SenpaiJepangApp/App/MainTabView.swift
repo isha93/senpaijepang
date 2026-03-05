@@ -10,6 +10,7 @@ struct MainTabView: View {
     private let authService: AuthServiceProtocol
     private let jobService: JobServiceProtocol
     private let journeyService: JourneyServiceProtocol
+    private let verificationService: VerificationServiceProtocol
     private let feedService: FeedServiceProtocol
 
     init(
@@ -18,12 +19,14 @@ struct MainTabView: View {
         jobService: JobServiceProtocol,
         journeyService: JourneyServiceProtocol,
         profileService: ProfileServiceProtocol,
+        verificationService: VerificationServiceProtocol,
         feedService: FeedServiceProtocol
     ) {
         self._navigation = ObservedObject(wrappedValue: navigation)
         self.authService = authService
         self.jobService = jobService
         self.journeyService = journeyService
+        self.verificationService = verificationService
         self.feedService = feedService
         _feedVM = StateObject(wrappedValue: FeedListViewModel(feedService: feedService, profileService: profileService, navigation: navigation))
         _jobsVM = StateObject(wrappedValue: JobsListViewModel(jobService: jobService, navigation: navigation))
@@ -139,7 +142,12 @@ struct MainTabView: View {
         case .notifications:
             NotificationsView(viewModel: NotificationsViewModel(navigation: navigation))
         case .kycVerification:
-            KYCVerificationView(viewModel: KYCViewModel(navigation: navigation))
+            KYCVerificationView(
+                viewModel: KYCViewModel(
+                    navigation: navigation,
+                    verificationService: verificationService
+                )
+            )
         case .articleDetail(let post):
             ArticleDetailView(
                 viewModel: ArticleDetailViewModel(

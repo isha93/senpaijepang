@@ -1,3 +1,5 @@
+import Foundation
+import CryptoKit
 import SwiftUI
 import netfox
 
@@ -16,6 +18,7 @@ struct SenpaiJepangApp: App {
                 jobService: container.jobService,
                 journeyService: container.journeyService,
                 profileService: container.profileService,
+                verificationService: container.verificationService,
                 feedService: container.feedService
             )
         }
@@ -32,6 +35,7 @@ private final class AppContainer: ObservableObject {
     let jobService: JobService
     let journeyService: JourneyService
     let profileService: ProfileService
+    let verificationService: VerificationService
     let feedService: FeedService
 
     init() {
@@ -146,6 +150,53 @@ private final class AppContainer: ObservableObject {
             }
         )
 
+        self.verificationService = VerificationService(
+            uploadHandler: { [client] request in
+                let sessionId = try await AppContainer.resolveWritableKycSessionId(client: client)
+                let checksum = request.data.sha256HexDigest()
+
+                let uploadResponse = try await client.request(
+                    IdentityEndpoint.createUploadURL(
+                        sessionId: sessionId,
+                        documentType: request.documentType,
+                        fileName: request.fileName,
+                        contentType: request.contentType,
+                        contentLength: request.data.count,
+                        checksumSha256: checksum
+                    ),
+                    responseType: KycUploadURLResponseDTO.self
+                )
+
+                try await uploadToPresignedURL(
+                    data: request.data,
+                    descriptor: uploadResponse.upload,
+                    fallbackContentType: request.contentType
+                )
+
+                _ = try await client.request(
+                    IdentityEndpoint.uploadDocument(
+                        sessionId: sessionId,
+                        documentType: request.documentType,
+                        objectKey: uploadResponse.upload.objectKey,
+                        checksumSha256: checksum,
+                        metadata: request.metadata
+                    ),
+                    responseType: KycDocumentUploadResponseDTO.self
+                )
+
+                let submitResponse = try await client.request(
+                    IdentityEndpoint.submitSession(sessionId: sessionId),
+                    responseType: KycSessionEnvelopeDTO.self
+                )
+
+                return VerificationUploadResult(
+                    trustStatus: submitResponse.status,
+                    rawSessionStatus: submitResponse.session.status,
+                    sessionId: submitResponse.session.id
+                )
+            }
+        )
+
         self.feedService = FeedService(
             fetchHandler: { [client] in
                 let dto = try await client.request(
@@ -160,9 +211,88 @@ private final class AppContainer: ObservableObject {
             }
         )
     }
+
+    private static func resolveWritableKycSessionId(client: APIClient) async throws -> String {
+        let status = try await client.request(
+            IdentityEndpoint.kycStatus,
+            responseType: KycStatusResponseDTO.self
+        )
+
+        if let existingSession = status.session {
+            let rawStatus = existingSession.status.uppercased()
+            if rawStatus != "VERIFIED" && rawStatus != "REJECTED" {
+                return existingSession.id
+            }
+        }
+
+        let created = try await client.request(
+            IdentityEndpoint.startKycSession(provider: "manual"),
+            responseType: KycSessionEnvelopeDTO.self
+        )
+        return created.session.id
+    }
 }
 
-private enum AppError: Error {
+private func uploadToPresignedURL(
+    data: Data,
+    descriptor: KycUploadDescriptorDTO,
+    fallbackContentType: String
+) async throws {
+    guard let url = URL(string: descriptor.uploadUrl) else {
+        throw AppError.invalidUploadURL
+    }
+
+    var request = URLRequest(url: url)
+    request.httpMethod = descriptor.method.isEmpty ? "PUT" : descriptor.method
+    request.httpBody = data
+
+    var hasContentType = false
+    for (key, value) in descriptor.headers {
+        if key.lowercased() == "content-type" {
+            hasContentType = true
+        }
+        request.setValue(value, forHTTPHeaderField: key)
+    }
+    if !hasContentType {
+        request.setValue(fallbackContentType, forHTTPHeaderField: "Content-Type")
+    }
+
+    let (responseData, response) = try await URLSession.shared.data(for: request)
+    guard let httpResponse = response as? HTTPURLResponse else {
+        throw AppError.uploadFailed(statusCode: -1, responseBody: nil)
+    }
+    guard (200...299).contains(httpResponse.statusCode) else {
+        let body = String(data: responseData, encoding: .utf8)
+        throw AppError.uploadFailed(statusCode: httpResponse.statusCode, responseBody: body)
+    }
+}
+
+private extension Data {
+    func sha256HexDigest() -> String {
+        let digest = SHA256.hash(data: self)
+        return digest.map { String(format: "%02x", $0) }.joined()
+    }
+}
+
+private enum AppError: LocalizedError {
     case notImplemented
     case notFound
+    case invalidUploadURL
+    case uploadFailed(statusCode: Int, responseBody: String?)
+
+    var errorDescription: String? {
+        switch self {
+        case .notImplemented:
+            return "Feature not implemented yet."
+        case .notFound:
+            return "Resource not found."
+        case .invalidUploadURL:
+            return "Upload URL is invalid."
+        case .uploadFailed(let statusCode, let responseBody):
+            if let responseBody, !responseBody.isEmpty {
+                return "Upload failed (\(statusCode)): \(responseBody)"
+            }
+            return "Upload failed with status \(statusCode)."
+        }
+    }
 }

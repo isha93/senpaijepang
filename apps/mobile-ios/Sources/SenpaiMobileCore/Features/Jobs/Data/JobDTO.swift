@@ -129,3 +129,50 @@ struct ApplyJobResponseDTO: Decodable {
     let created: Bool
     let application: ApplicationDTO
 }
+
+// MARK: - KYC / Verification
+
+struct KycSessionEnvelopeDTO: Decodable {
+    let status: String
+    let session: KycSessionDTO
+}
+
+struct KycStatusResponseDTO: Decodable {
+    let status: String
+    let session: KycSessionDTO?
+}
+
+struct KycSessionDTO: Decodable {
+    let id: String
+    let status: String
+}
+
+struct KycUploadURLResponseDTO: Decodable {
+    let status: String
+    let session: KycSessionDTO
+    let upload: KycUploadDescriptorDTO
+}
+
+struct KycUploadDescriptorDTO: Decodable {
+    let objectKey: String
+    let uploadUrl: String
+    let method: String
+    let headers: [String: String]
+    let expiresAt: String
+}
+
+struct KycDocumentUploadResponseDTO: Decodable {
+    let status: String
+    let session: KycSessionDTO
+    let document: KycDocumentDTO
+}
+
+struct KycDocumentDTO: Decodable {
+    let id: String
+    let kycSessionId: String
+    let documentType: String
+    let objectKey: String?
+    let fileUrl: String
+    let checksumSha256: String
+    let createdAt: String
+}

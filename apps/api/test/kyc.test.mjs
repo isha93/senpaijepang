@@ -782,6 +782,106 @@ test('admin review queue returns submitted sessions with documents', async () =>
   );
 });
 
+test('kyc sessions are locked after final review (VERIFIED/REJECTED)', async () => {
+  await withServer(
+    async (baseUrl) => {
+      for (const decision of ['VERIFIED', 'REJECTED']) {
+        const emailTag = decision.toLowerCase();
+        const register = await postJson(baseUrl, '/auth/register', {
+          fullName: `Locked ${decision} User`,
+          email: `kyc-locked-${emailTag}@example.com`,
+          password: 'pass1234'
+        });
+        assert.equal(register.res.status, 201);
+        const accessToken = register.body.accessToken;
+
+        const createSession = await postJson(
+          baseUrl,
+          '/identity/kyc/sessions',
+          { provider: 'manual' },
+          { accessToken }
+        );
+        assert.equal(createSession.res.status, 201);
+        const sessionId = createSession.body.session.id;
+
+        const uploadUrl = await postJson(
+          baseUrl,
+          '/identity/kyc/upload-url',
+          {
+            sessionId,
+            documentType: 'passport',
+            fileName: `passport-${emailTag}.pdf`,
+            contentType: 'application/pdf',
+            contentLength: 420000,
+            checksumSha256: EXAMPLE_CHECKSUM
+          },
+          { accessToken }
+        );
+        assert.equal(uploadUrl.res.status, 201);
+
+        const uploadDocument = await postJson(
+          baseUrl,
+          '/identity/kyc/documents',
+          {
+            sessionId,
+            documentType: 'passport',
+            objectKey: uploadUrl.body.upload.objectKey,
+            checksumSha256: EXAMPLE_CHECKSUM
+          },
+          { accessToken }
+        );
+        assert.equal(uploadDocument.res.status, 201);
+
+        const submit = await postJson(baseUrl, `/identity/kyc/sessions/${sessionId}/submit`, {}, { accessToken });
+        assert.equal(submit.res.status, 200);
+        assert.equal(submit.body.session.status, 'SUBMITTED');
+
+        const review = await postJson(
+          baseUrl,
+          '/admin/kyc/review',
+          {
+            sessionId,
+            decision,
+            reviewedBy: 'ops@senpaijepang.com',
+            reason: `final_decision_${emailTag}`
+          },
+          {
+            headers: { 'x-admin-api-key': TEST_ADMIN_API_KEY }
+          }
+        );
+        assert.equal(review.res.status, 200);
+        assert.equal(review.body.session.status, decision);
+
+        const lockedUploadUrl = await postJson(
+          baseUrl,
+          '/identity/kyc/upload-url',
+          {
+            sessionId,
+            documentType: 'passport',
+            fileName: `passport-${emailTag}-retry.pdf`,
+            contentType: 'application/pdf',
+            contentLength: 420000,
+            checksumSha256: EXAMPLE_CHECKSUM
+          },
+          { accessToken }
+        );
+        assert.equal(lockedUploadUrl.res.status, 409);
+        assert.equal(lockedUploadUrl.body.error.code, 'kyc_session_locked');
+
+        const lockedSubmit = await postJson(
+          baseUrl,
+          `/identity/kyc/sessions/${sessionId}/submit`,
+          {},
+          { accessToken }
+        );
+        assert.equal(lockedSubmit.res.status, 409);
+        assert.equal(lockedSubmit.body.error.code, 'kyc_session_locked');
+      }
+    },
+    { adminApiKey: TEST_ADMIN_API_KEY }
+  );
+});
+
 test('admin review endpoint supports bearer token for super_admin role', async () => {
   const authStore = new InMemoryAuthStore();
   const authService = createAuthService({ store: authStore });

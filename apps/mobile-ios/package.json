@@ -4,6 +4,6 @@
   "private": true,
   "description": "SenpaiJepang iOS architecture scaffold",
   "scripts": {
-    "test:ios": "swift test --package-path ."
+    "test:ios": "bash ./scripts/test-ios.sh"
   }
 }

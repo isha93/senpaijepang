@@ -7,9 +7,9 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "lint": "node ../../scripts/task-check.mjs --task lint --scope .",
+    "lint": "eslint --max-warnings=0 \"src/**/*.{ts,tsx}\" \"vite.config.ts\"",
     "typecheck": "tsc --noEmit",
-    "test": "node ../../scripts/task-check.mjs --task test --scope ."
+    "test": "vitest run"
   },
   "dependencies": {
     "react": "^18.3.1",
@@ -17,10 +17,16 @@
     "react-router-dom": "^6.30.1"
   },
   "devDependencies": {
+    "@eslint/js": "^9.34.0",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^4.7.0",
+    "eslint": "^9.34.0",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "globals": "^15.15.0",
+    "typescript-eslint": "^8.41.0",
     "typescript": "^5.9.2",
-    "vite": "^5.4.19"
+    "vite": "^5.4.19",
+    "vitest": "^2.1.8"
   }
 }
