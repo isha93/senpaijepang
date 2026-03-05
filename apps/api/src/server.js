@@ -149,6 +149,11 @@ function matchAdminOrganizationVerificationRoute(pathname) {
   return match ? match[1] : null;
 }
 
+function matchAdminCaseActionRoute(pathname) {
+  const match = String(pathname || '').match(/^\/admin\/cases\/([^/]+)\/action$/);
+  return match ? match[1] : null;
+}
+
 function matchAdminUserRoute(pathname) {
   const match = String(pathname || '').match(/^\/admin\/users\/([^/]+)$/);
   return match ? match[1] : null;
@@ -321,6 +326,42 @@ function requireSuperAdminForAdminUserManagement(res, adminAuth) {
     }
   });
   return false;
+}
+
+function mapLegacyAdminCaseStatus(status) {
+  const normalized = String(status || '')
+    .trim()
+    .toUpperCase();
+  if (!normalized) {
+    return undefined;
+  }
+
+  const statusMap = {
+    OPEN: 'SUBMITTED',
+    IN_REVIEW: 'MANUAL_REVIEW',
+    WAITING_EVIDENCE: 'CREATED',
+    RESOLVED: 'VERIFIED',
+    REJECTED: 'REJECTED'
+  };
+  return statusMap[normalized] || normalized;
+}
+
+function mapLegacyAdminCaseActionToDecision(action) {
+  const normalized = String(action || '')
+    .trim()
+    .toUpperCase();
+  if (!normalized) {
+    return null;
+  }
+
+  const actionMap = {
+    REQUEST_EVIDENCE: 'MANUAL_REVIEW',
+    ESCALATE: 'MANUAL_REVIEW',
+    RESOLVE_VALID: 'VERIFIED',
+    RESOLVE_INVALID: 'REJECTED',
+    BLACKLIST_ENTITY: 'REJECTED'
+  };
+  return actionMap[normalized] || null;
 }
 
 async function handleRequest(
@@ -678,6 +719,17 @@ async function handleRequest(
   }
 
   if (req.method === 'GET' && pathname === '/users/me/profile') {
+    const user = await authenticateRequest(req, res, authService);
+    if (!user) {
+      return;
+    }
+
+    const result = await profileService.getProfile({ userId: user.id });
+    sendJson(res, 200, result);
+    return;
+  }
+
+  if (req.method === 'GET' && pathname === '/trust/profile') {
     const user = await authenticateRequest(req, res, authService);
     if (!user) {
       return;
@@ -1119,6 +1171,55 @@ async function handleRequest(
       status,
       cursor,
       limit
+    });
+    sendJson(res, 200, result);
+    return;
+  }
+
+  if (req.method === 'GET' && pathname === '/admin/cases') {
+    const adminAuth = await authenticateAdminRequest(req, res, authService, adminApiKey, adminRoleCodes);
+    if (!adminAuth) {
+      return;
+    }
+
+    const status = mapLegacyAdminCaseStatus(url.searchParams.get('status'));
+    const cursor = url.searchParams.get('cursor') || undefined;
+    const limit = url.searchParams.get('limit') || undefined;
+    const result = await kycService.listReviewQueue({
+      status,
+      cursor,
+      limit
+    });
+    sendJson(res, 200, result);
+    return;
+  }
+
+  const adminCaseActionCaseId = req.method === 'POST' ? matchAdminCaseActionRoute(pathname) : null;
+  if (req.method === 'POST' && adminCaseActionCaseId) {
+    const adminAuth = await authenticateAdminRequest(req, res, authService, adminApiKey, adminRoleCodes);
+    if (!adminAuth) {
+      return;
+    }
+
+    const body = await readJsonBody(req);
+    const mappedDecision = mapLegacyAdminCaseActionToDecision(body.action);
+    if (body.action && !mappedDecision) {
+      sendJson(res, 400, {
+        error: {
+          code: 'unsupported_case_action',
+          message:
+            'action must be one of REQUEST_EVIDENCE, ESCALATE, RESOLVE_VALID, RESOLVE_INVALID, BLACKLIST_ENTITY'
+        }
+      });
+      return;
+    }
+
+    const reviewedBy = body.reviewedBy || adminAuth.user?.email || 'legacy_admin_case_action';
+    const result = await kycService.reviewSession({
+      sessionId: adminCaseActionCaseId,
+      decision: body.decision || mappedDecision,
+      reviewedBy,
+      reason: body.reason || body.note
     });
     sendJson(res, 200, result);
     return;

@@ -277,17 +277,16 @@ Format: **Given / When / Then** + edge cases.
 
 ---
 
-## H. Route Mapping Guardrail (avoid 404 false negatives)
+## H. Legacy Compatibility Aliases
 
-Route berikut **bukan** bagian runtime v0 live saat ini:
-- `/v1/trust/profile`
-- `/v1/admin/cases`
-- `/v1/admin/cases/{caseId}/action`
+Route berikut sekarang tersedia sebagai alias kompatibilitas runtime:
+- `/v1/trust/profile` -> payload sama dengan `/v1/users/me/profile`
+- `/v1/admin/cases` -> alias ke `/v1/admin/kyc/review-queue`
+- `/v1/admin/cases/{caseId}/action` -> alias ke `/v1/admin/kyc/review` (sessionId dari `{caseId}`)
 
-Gunakan route runtime pengganti:
-- `trust/profile` -> `/v1/users/me/profile`
-- `admin/cases` queue -> `/v1/admin/kyc/review-queue`
-- `admin/cases action` -> `/v1/admin/kyc/review`
+Catatan:
+- Tetap prefer route canonical (`/users/me/profile`, `/admin/kyc/review-queue`, `/admin/kyc/review`) untuk integrasi baru.
+- `/v1/admin/cases` menerima status legacy (`OPEN/IN_REVIEW/WAITING_EVIDENCE/RESOLVED/REJECTED`) dan otomatis dimapping ke status KYC runtime.
 
 ---
 

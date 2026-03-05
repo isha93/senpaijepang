@@ -1,6 +1,6 @@
 # API Implementation Status (Runtime v0)
 
-Date: 2026-03-03
+Date: 2026-03-05
 
 ## 1. Purpose
 - Menjadi referensi kondisi API yang benar-benar sudah hidup di codebase saat ini.
@@ -50,6 +50,7 @@ Feed:
 Profile:
 - `GET /users/me/profile`
 - `PATCH /users/me/profile`
+- `GET /trust/profile` (legacy compatibility alias -> `/users/me/profile`)
 - `GET /users/me/verification-documents`
 - `POST /users/me/verification/final-request`
 
@@ -85,6 +86,8 @@ Admin:
 - `PATCH /admin/organizations/{orgId}/verification` (Bearer admin role, fallback header `x-admin-api-key`)
 - `POST /admin/kyc/review` (Bearer admin role, fallback header `x-admin-api-key`)
 - `GET /admin/kyc/review-queue` (Bearer admin role, fallback header `x-admin-api-key`, supports `status/cursor/limit`, returns `pageInfo`)
+- `GET /admin/cases` (legacy compatibility alias -> `/admin/kyc/review-queue`, termasuk mapping status `OPEN/IN_REVIEW/WAITING_EVIDENCE/RESOLVED`)
+- `POST /admin/cases/{caseId}/action` (legacy compatibility alias -> `/admin/kyc/review`, support `action` mapping atau `decision` passthrough)
 
 ## 5. Implemented Data Model (Migration-backed)
 - `001_auth_tables.sql`:

@@ -1,8 +1,8 @@
 openapi: 3.0.3
 info:
   title: SenpaiJepang API (Runtime v0)
-  version: 0.10.0
-  description: Runtime API contract implemented in repository as of 2026-03-01. Runtime paths are unversioned and also available via /v1 alias.
+  version: 0.10.1
+  description: Runtime API contract implemented in repository as of 2026-03-05. Runtime paths are unversioned and also available via /v1 alias.
 servers:
   - url: http://localhost:4000
     description: Local development
@@ -614,6 +614,24 @@ paths:
       responses:
         '200':
           description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfileResponse'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/ApiError'
+        '404':
+          $ref: '#/components/responses/ApiError'
+
+  /trust/profile:
+    get:
+      tags: [Profile]
+      summary: Legacy compatibility alias for profile aggregate (maps to /users/me/profile)
+      responses:
+        '200':
+          description: OK
           content:
             application/json:
               schema:
@@ -1634,6 +1652,43 @@ paths:
         '503':
           $ref: '#/components/responses/ApiError'
 
+  /admin/cases/{caseId}/action:
+    post:
+      tags: [Admin]
+      summary: Legacy compatibility alias for KYC review decision (maps to /admin/kyc/review)
+      security:
+        - bearerAuth: []
+        - adminApiKeyAuth: []
+      parameters:
+        - in: path
+          name: caseId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminLegacyCaseActionRequest'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KycSessionEnvelope'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/ApiError'
+        '403':
+          $ref: '#/components/responses/ApiError'
+        '404':
+          $ref: '#/components/responses/ApiError'
+        '503':
+          $ref: '#/components/responses/ApiError'
+
   /admin/kyc/review-queue:
     get:
       tags: [Admin]
@@ -1648,6 +1703,60 @@ paths:
           schema:
             type: string
             enum: [DEFAULT, ALL, SUBMITTED, MANUAL_REVIEW, VERIFIED, REJECTED, CREATED]
+        - in: query
+          name: cursor
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+        - in: query
+          name: limit
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminKycReviewQueueResponse'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/ApiError'
+        '403':
+          $ref: '#/components/responses/ApiError'
+        '503':
+          $ref: '#/components/responses/ApiError'
+
+  /admin/cases:
+    get:
+      tags: [Admin]
+      summary: Legacy compatibility alias for KYC review queue (maps to /admin/kyc/review-queue)
+      security:
+        - bearerAuth: []
+        - adminApiKeyAuth: []
+      parameters:
+        - in: query
+          name: status
+          required: false
+          schema:
+            type: string
+            enum:
+              - DEFAULT
+              - ALL
+              - OPEN
+              - IN_REVIEW
+              - WAITING_EVIDENCE
+              - RESOLVED
+              - REJECTED
+              - SUBMITTED
+              - MANUAL_REVIEW
+              - VERIFIED
+              - CREATED
         - in: query
           name: cursor
           required: false
@@ -3247,8 +3356,26 @@ components:
           enum: [MANUAL_REVIEW, VERIFIED, REJECTED]
         reviewedBy:
           type: string
+          description: Optional; defaults to authenticated admin email or legacy_admin_case_action for API-key mode.
+        reason:
+          type: string
+
+    AdminLegacyCaseActionRequest:
+      type: object
+      description: Supports legacy case action vocabulary or direct KYC decision passthrough.
+      properties:
+        action:
+          type: string
+          enum: [REQUEST_EVIDENCE, ESCALATE, RESOLVE_VALID, RESOLVE_INVALID, BLACKLIST_ENTITY]
+        decision:
+          type: string
+          enum: [MANUAL_REVIEW, VERIFIED, REJECTED]
+        reviewedBy:
+          type: string
           description: Optional for bearer admin auth; defaults to authenticated admin email.
         reason:
+          type: string
+        note:
           type: string
 
     AdminKycReviewQueueItem:
