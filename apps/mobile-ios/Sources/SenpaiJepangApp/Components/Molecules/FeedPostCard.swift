@@ -2,10 +2,12 @@ import SwiftUI
 
 struct FeedPostCard: View {
     private let post: FeedPost
+    private let onTap: () -> Void
     private let onSave: () -> Void
 
-    init(post: FeedPost, onSave: @escaping () -> Void) {
+    init(post: FeedPost, onTap: @escaping () -> Void, onSave: @escaping () -> Void) {
         self.post = post
+        self.onTap = onTap
         self.onSave = onSave
     }
 
@@ -67,6 +69,7 @@ struct FeedPostCard: View {
                     .contentTransition(.symbolEffect(.replace))
                 }
                 .buttonStyle(.plain)
+                .accessibilityIdentifier("feed_item_save_\(post.id)")
 
                 Spacer()
 
@@ -81,6 +84,11 @@ struct FeedPostCard: View {
             }
         }
         .padding(AppTheme.spacingL)
+        .contentShape(Rectangle())
+        .onTapGesture(perform: onTap)
+        .accessibilityElement(children: .contain)
+        .accessibilityAddTraits(.isButton)
+        .accessibilityIdentifier("feed_item_\(post.id)")
     }
 
     private func categoryColor(_ category: String) -> Color {

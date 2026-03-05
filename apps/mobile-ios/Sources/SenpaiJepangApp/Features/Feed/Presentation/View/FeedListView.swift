@@ -82,16 +82,14 @@ struct FeedListView: View {
                 } else {
                     LazyVStack(spacing: AppTheme.spacingL) {
                         ForEach(Array(viewModel.posts.enumerated()), id: \.element.id) { index, post in
-                            Button {
-                                viewModel.navigateToArticle(post)
-                            } label: {
-                                FeedPostCard(post: post) {
+                            FeedPostCard(
+                                post: post,
+                                onTap: { viewModel.navigateToArticle(post) },
+                                onSave: {
                                     Task { await viewModel.toggleSave(post) }
                                 }
-                            }
-                            .buttonStyle(.plain)
+                            )
                             .cardStyle()
-                            .accessibilityIdentifier("feed_item_\(post.id)")
                             .transition(.asymmetric(
                                 insertion: .opacity.combined(with: .offset(y: 12)),
                                 removal: .opacity

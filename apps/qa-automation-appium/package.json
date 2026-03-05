@@ -7,6 +7,8 @@
   "scripts": {
     "test": "wdio run ./wdio.conf.js",
     "test:ios": "PLATFORM=ios wdio run ./wdio.conf.js",
+    "test:ios:smoke": "PLATFORM=ios wdio run ./wdio.conf.js --spec './tests/specs/smoke/**/*.spec.js'",
+    "test:ios:regression": "PLATFORM=ios wdio run ./wdio.conf.js --spec './tests/specs/regression/**/*.spec.js'",
     "test:android": "PLATFORM=android wdio run ./wdio.conf.js"
   },
   "devDependencies": {

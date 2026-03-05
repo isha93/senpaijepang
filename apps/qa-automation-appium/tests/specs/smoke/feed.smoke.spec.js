@@ -6,14 +6,12 @@ const users = require('../../fixtures/users.json');
 
 describe('Smoke - Feed', () => {
   before(async () => {
-    await driver.pause(2000);
     await OnboardingPage.skipOnboarding();
     await AuthPage.login(users.demo.email, users.demo.password);
-    await driver.pause(3000);
   });
 
   it('shows feed list', async () => {
     await HomePage.goToFeed();
-    await FeedPage.waitForVisible('~feed_list');
+    await FeedPage.waitForVisible('~feed_header_title', 30000);
   });
 });

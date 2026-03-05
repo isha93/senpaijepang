@@ -41,6 +41,7 @@ struct JobApplicationView: View {
                 bottomAction
             }
         }
+        .accessibilityIdentifier("job_application_view")
         .background(AppTheme.backgroundPrimary)
         .onAppear {
             // Trigger haptic feedback for initial load
@@ -88,12 +89,14 @@ struct JobApplicationView: View {
                     .frame(width: 40, height: 40)
                     .background(Circle().fill(AppTheme.grayLight).opacity(0.5))
             }
+            .accessibilityIdentifier("job_application_back_button")
             
             Spacer()
             
             Text(viewModel.currentStep == 0 ? "Melamar Pekerjaan" : "Lamar Pekerjaan (\(viewModel.currentStep + 1)/3)")
                 .font(.system(size: 18, weight: .bold))
                 .foregroundStyle(AppTheme.textPrimary)
+                .accessibilityIdentifier("job_application_header_title")
             
             Spacer()
             
@@ -217,6 +220,7 @@ struct JobApplicationView: View {
                             .font(.system(size: 14, weight: .bold))
                             .foregroundStyle(AppTheme.accent)
                             .disabled(viewModel.isUploadingCV)
+                            .accessibilityIdentifier("job_application_cv_upload_button")
                     }
                     
                     HStack(spacing: 16) {
@@ -234,9 +238,11 @@ struct JobApplicationView: View {
                                 .font(.system(size: 14, weight: .medium))
                                 .foregroundStyle(AppTheme.textPrimary)
                                 .lineLimit(1)
+                                .accessibilityIdentifier("job_application_cv_file_name")
                             Text(viewModel.cvMetaDescription)
                                 .font(.system(size: 12))
                                 .foregroundStyle(AppTheme.textSecondary)
+                                .accessibilityIdentifier("job_application_cv_meta")
                         }
                         
                         Spacer()
@@ -293,6 +299,7 @@ struct JobApplicationView: View {
                         .background(AppTheme.grayLight)
                         .clipShape(RoundedRectangle(cornerRadius: 16))
                         .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color(.systemGray5), lineWidth: 1))
+                        .accessibilityIdentifier("job_application_cover_letter_input")
                         .onChange(of: viewModel.coverLetterText) { newValue, _ in
                             if newValue.count > 500 {
                                 viewModel.coverLetterText = String(newValue.prefix(500))
@@ -397,6 +404,7 @@ struct JobApplicationView: View {
                     .foregroundStyle(Color.red)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 8)
+                    .accessibilityIdentifier("job_application_error_message")
             }
 
             Button {
@@ -428,6 +436,7 @@ struct JobApplicationView: View {
             }
             .buttonStyle(PressableButtonStyle())
             .disabled(viewModel.isPrimaryActionDisabled)
+            .accessibilityIdentifier("job_application_primary_button")
             
             if viewModel.currentStep == viewModel.totalSteps - 1 {
                 Text("Dengan menekan tombol di atas, Anda menyetujui Syarat & Ketentuan dari Senpai Jepang.")
@@ -477,6 +486,7 @@ struct JobApplicationView: View {
                 .font(.system(size: 24, weight: .bold))
                 .foregroundStyle(AppTheme.textPrimary)
                 .opacity(successOpacity)
+                .accessibilityIdentifier("job_application_success_title")
             
             Text("Terima kasih telah melamar. Perusahaan akan meninjau profil Anda dan menghubungi melalui email atau WhatsApp.")
                 .font(.system(size: 14))
@@ -501,6 +511,7 @@ struct JobApplicationView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 16))
                 }
                 .buttonStyle(PressableButtonStyle())
+                .accessibilityIdentifier("job_application_success_home_button")
                 
                 Button {
                     viewModel.finishFlow()
@@ -511,10 +522,12 @@ struct JobApplicationView: View {
                         .frame(maxWidth: .infinity)
                         .frame(height: 56)
                 }
+                .accessibilityIdentifier("job_application_success_status_button")
             }
             .padding(.horizontal, 24)
             .padding(.bottom, 32)
             .opacity(successOpacity)
         }
+        .accessibilityIdentifier("job_application_success_view")
     }
 }

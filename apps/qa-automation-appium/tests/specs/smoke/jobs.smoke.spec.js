@@ -6,16 +6,17 @@ const users = require('../../fixtures/users.json');
 
 describe('Smoke - Jobs', () => {
   before(async () => {
-    await driver.pause(2000);
     await OnboardingPage.skipOnboarding();
     await AuthPage.login(users.demo.email, users.demo.password);
-    await driver.pause(3000);
   });
 
-  it('shows jobs list and opens first job detail', async () => {
+  it('shows jobs list', async () => {
     await HomePage.goToJobs();
-    await JobsPage.waitForVisible('~jobs_list');
+    await JobsPage.waitForJobsList();
+  });
+
+  it('opens first job detail', async () => {
     await JobsPage.openFirstJob();
-    await JobsPage.waitForVisible('~job_detail_title');
+    await JobsPage.waitForJobDetail();
   });
 });

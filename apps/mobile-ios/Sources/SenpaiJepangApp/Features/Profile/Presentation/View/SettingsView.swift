@@ -56,6 +56,7 @@ struct SettingsView: View {
                 LText("Account")
             }
         }
+        .accessibilityIdentifier("settings_view")
         .navigationTitle(langManager.localize(key: "Settings"))
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)

@@ -6,10 +6,8 @@ const users = require('../../fixtures/users.json');
 
 describe('Smoke - Profile', () => {
   before(async () => {
-    await driver.pause(2000);
     await OnboardingPage.skipOnboarding();
     await AuthPage.login(users.demo.email, users.demo.password);
-    await driver.pause(3000);
   });
 
   it('shows profile view', async () => {
