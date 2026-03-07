@@ -6,6 +6,14 @@ public protocol APIClientProtocol {
 }
 
 public final class APIClient: APIClientProtocol {
+    private struct APIErrorEnvelope: Decodable {
+        struct Payload: Decodable {
+            let code: String?
+            let message: String?
+        }
+
+        let error: Payload
+    }
     
     private let session: URLSession
     private let tokenProvider: AuthTokenProvider?
@@ -16,7 +24,7 @@ public final class APIClient: APIClientProtocol {
     }
     
     public func request<T: Decodable>(_ endpoint: APIEndpoint, responseType: T.Type) async throws -> T {
-        let (data, response) = try await performRequest(endpoint)
+        let (data, _) = try await performRequest(endpoint)
         return try decode(data: data, responseType: responseType)
     }
     
@@ -36,17 +44,18 @@ public final class APIClient: APIClientProtocol {
         switch httpResponse.statusCode {
         case 200...299:
             return (data, response)
+        case 400, 409, 422, 429:
+            throw APIError.custom(parseAPIErrorMessage(from: data) ?? "Request failed.")
         case 401:
-            // Optional: Handle token refresh logic here
-            throw APIError.unauthorized
+            throw APIError.custom(parseAPIErrorMessage(from: data) ?? APIError.unauthorized.localizedDescription)
         case 403:
-            throw APIError.forbidden
+            throw APIError.custom(parseAPIErrorMessage(from: data) ?? APIError.forbidden.localizedDescription)
         case 404:
-            throw APIError.notFound
+            throw APIError.custom(parseAPIErrorMessage(from: data) ?? APIError.notFound.localizedDescription)
         case 500...599:
-            throw APIError.serverError(statusCode: httpResponse.statusCode)
+            throw APIError.custom(parseAPIErrorMessage(from: data) ?? APIError.serverError(statusCode: httpResponse.statusCode).localizedDescription)
         default:
-            throw APIError.custom("Unexpected status code: \(httpResponse.statusCode)")
+            throw APIError.custom(parseAPIErrorMessage(from: data) ?? "Unexpected status code: \(httpResponse.statusCode)")
         }
     }
     
@@ -100,5 +109,14 @@ public final class APIClient: APIClientProtocol {
         } catch {
             throw APIError.decodingError(error)
         }
+    }
+
+    private func parseAPIErrorMessage(from data: Data) -> String? {
+        guard !data.isEmpty else { return nil }
+        let decoder = JSONDecoder()
+        if let envelope = try? decoder.decode(APIErrorEnvelope.self, from: data) {
+            return envelope.error.message
+        }
+        return nil
     }
 }

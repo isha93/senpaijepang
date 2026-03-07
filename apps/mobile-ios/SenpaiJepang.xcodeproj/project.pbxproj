@@ -28,6 +28,7 @@
 		3735010785017EA9FA60AB7D /* ManagedTask.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD70124E2E5D7952050F55E8 /* ManagedTask.swift */; };
 		38CCE0371508A9B731D54C62 /* AppRoute.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8002F32ADF944393432D57F /* AppRoute.swift */; };
 		3BB3A55006BB55B3DFBAAA41 /* ProfileDTO.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1EBA78EB2C6C78FE2F97F069 /* ProfileDTO.swift */; };
+		3CF241BB0AE50DC67A905865 /* RegistrationViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = ADC2014FDA5161CA28ACD69F /* RegistrationViewModelTests.swift */; };
 		40D7A478D7EB2EBA90C7B336 /* JobCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDC5FCBE16EF57E14EB1C47F /* JobCard.swift */; };
 		4119AEC6A6BFB477AF8FC2BE /* ArticleDetailViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C037AF04A9CE8461C14F80A /* ArticleDetailViewModel.swift */; };
 		4825C89F5FB746E4CB6DA598 /* CategoryFilterRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF546357F1F129BBAB8FCD08 /* CategoryFilterRow.swift */; };
@@ -91,10 +92,21 @@
 		FF2F2C9A89E1833A4061F4AF /* PrimaryButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1EEAAFFD85F67C47BA12E8F9 /* PrimaryButton.swift */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		1CAAE864D913169EEC0D0622 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = FEBC59BF6A99AF2FB95F8380 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 8B9EABEB8BA1922F45B3FC46;
+			remoteInfo = SenpaiJepang;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
 		0104A4124EADA7A15FBF052B /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		09501A48E0DB811E2D101E2B /* LanguageManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LanguageManager.swift; sourceTree = "<group>"; };
 		0CD8378045CF61BF4E917163 /* LoginViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginViewModel.swift; sourceTree = "<group>"; };
+		0E8F566DCA3172EA8B200B87 /* SenpaiJepangTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = SenpaiJepangTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		13DE83CEBB2CBF4BB4D9673C /* FeedServiceProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedServiceProtocol.swift; sourceTree = "<group>"; };
 		154B167D1E77CBDCC4079313 /* DocumentRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentRow.swift; sourceTree = "<group>"; };
 		1EBA78EB2C6C78FE2F97F069 /* ProfileDTO.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileDTO.swift; sourceTree = "<group>"; };
@@ -148,6 +160,7 @@
 		A7179D0124A1626B7A1FE86C /* JobsListViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JobsListViewModel.swift; sourceTree = "<group>"; };
 		A89771D2640131244CCD0493 /* AppRootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppRootView.swift; sourceTree = "<group>"; };
 		AD70124E2E5D7952050F55E8 /* ManagedTask.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManagedTask.swift; sourceTree = "<group>"; };
+		ADC2014FDA5161CA28ACD69F /* RegistrationViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RegistrationViewModelTests.swift; sourceTree = "<group>"; };
 		AF2F7F60308DF0AC4F286D72 /* ApplicationDocumentService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApplicationDocumentService.swift; sourceTree = "<group>"; };
 		B2A89F34FDDB6131E92E531E /* APIError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIError.swift; sourceTree = "<group>"; };
 		B5CBC2CDEA9992C8E1DF69F7 /* ProfileService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileService.swift; sourceTree = "<group>"; };
@@ -234,6 +247,7 @@
 			isa = PBXGroup;
 			children = (
 				801123C769F80C42CF08B29B /* SenpaiJepangApp */,
+				3698EA4DE39DA69C4C803C78 /* SenpaiJepangAppTests */,
 				5E3FAF55B04C052ACC278E51 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -293,6 +307,15 @@
 				4ACD9D81D5D2F2347E3F7070 /* KYCVerificationView.swift */,
 			);
 			path = View;
+			sourceTree = "<group>";
+		};
+		3698EA4DE39DA69C4C803C78 /* SenpaiJepangAppTests */ = {
+			isa = PBXGroup;
+			children = (
+				ADC2014FDA5161CA28ACD69F /* RegistrationViewModelTests.swift */,
+			);
+			name = SenpaiJepangAppTests;
+			path = Tests/SenpaiJepangAppTests;
 			sourceTree = "<group>";
 		};
 		3E486A54C802D76F3C7AA1F0 /* ViewModel */ = {
@@ -394,6 +417,7 @@
 			isa = PBXGroup;
 			children = (
 				B734008A981D8F4C900647F8 /* SenpaiJepang.app */,
+				0E8F566DCA3172EA8B200B87 /* SenpaiJepangTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -872,6 +896,24 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		605DE103F60D6A4F027E7E56 /* SenpaiJepangTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 7D1A48446C440BC24AD9D521 /* Build configuration list for PBXNativeTarget "SenpaiJepangTests" */;
+			buildPhases = (
+				46922A71FBE6CD515079788F /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				98E707FB3876D555EA700F34 /* PBXTargetDependency */,
+			);
+			name = SenpaiJepangTests;
+			packageProductDependencies = (
+			);
+			productName = SenpaiJepangTests;
+			productReference = 0E8F566DCA3172EA8B200B87 /* SenpaiJepangTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 		8B9EABEB8BA1922F45B3FC46 /* SenpaiJepang */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 016112B7D4DDB241F723B740 /* Build configuration list for PBXNativeTarget "SenpaiJepang" */;
@@ -923,11 +965,20 @@
 			projectRoot = "";
 			targets = (
 				8B9EABEB8BA1922F45B3FC46 /* SenpaiJepang */,
+				605DE103F60D6A4F027E7E56 /* SenpaiJepangTests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXSourcesBuildPhase section */
+		46922A71FBE6CD515079788F /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				3CF241BB0AE50DC67A905865 /* RegistrationViewModelTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		550A244E9E43DDD48FFE88CB /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -1018,6 +1069,14 @@
 		};
 /* End PBXSourcesBuildPhase section */
 
+/* Begin PBXTargetDependency section */
+		98E707FB3876D555EA700F34 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 8B9EABEB8BA1922F45B3FC46 /* SenpaiJepang */;
+			targetProxy = 1CAAE864D913169EEC0D0622 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
 /* Begin XCBuildConfiguration section */
 		0D5424C721A04CF0838D4792 /* Release */ = {
 			isa = XCBuildConfiguration;
@@ -1037,6 +1096,24 @@
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
+		};
+		4DECF0426EA77FC81279260E /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.senpaijepang.SenpaiJepangTests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/SenpaiJepang.app/SenpaiJepang";
+			};
+			name = Debug;
 		};
 		67E34F4C7F884581B3269AF0 /* Debug */ = {
 			isa = XCBuildConfiguration;
@@ -1109,6 +1186,24 @@
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		98875F312ADB45180F146937 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.senpaijepang.SenpaiJepangTests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/SenpaiJepang.app/SenpaiJepang";
 			};
 			name = Release;
 		};
@@ -1191,6 +1286,15 @@
 			buildConfigurations = (
 				CA82ACF5A087B436790C5536 /* Debug */,
 				7370E93B8F42649E7A40FEAA /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		7D1A48446C440BC24AD9D521 /* Build configuration list for PBXNativeTarget "SenpaiJepangTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				4DECF0426EA77FC81279260E /* Debug */,
+				98875F312ADB45180F146937 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;

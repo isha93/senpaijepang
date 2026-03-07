@@ -553,6 +553,20 @@ async function handleRequest(
     return;
   }
 
+  if (req.method === 'POST' && pathname === '/auth/email-verification/resend') {
+    const body = await readJsonBody(req);
+    const result = await authService.resendEmailVerification(body);
+    sendJson(res, 200, result);
+    return;
+  }
+
+  if (req.method === 'POST' && pathname === '/auth/email-verification/verify') {
+    const body = await readJsonBody(req);
+    const result = await authService.verifyEmailVerification(body);
+    sendJson(res, 200, result);
+    return;
+  }
+
   if (req.method === 'POST' && pathname === '/auth/login') {
     const body = await readJsonBody(req);
     const result = await authService.login(body);

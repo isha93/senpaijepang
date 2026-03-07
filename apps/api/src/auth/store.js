@@ -6,6 +6,8 @@ export class InMemoryAuthStore {
     this.userIdByEmail = new Map();
     this.sessionsById = new Map();
     this.sessionIdByTokenHash = new Map();
+    this.emailVerificationChallengesById = new Map();
+    this.emailVerificationChallengeIdsByEmail = new Map();
     this.kycSessionsById = new Map();
     this.kycSessionIdsByUserId = new Map();
     this.identityDocumentsById = new Map();
@@ -73,6 +75,7 @@ export class InMemoryAuthStore {
       email: normalizedEmail,
       passwordHash,
       avatarUrl: null,
+      emailVerifiedAt: null,
       createdAt: now,
       updatedAt: now
     };
@@ -115,6 +118,17 @@ export class InMemoryAuthStore {
     }
 
     user.passwordHash = passwordHash;
+    user.updatedAt = new Date().toISOString();
+    return user;
+  }
+
+  markUserEmailVerified({ userId, verifiedAt }) {
+    const user = this.usersById.get(userId);
+    if (!user) {
+      return null;
+    }
+
+    user.emailVerifiedAt = verifiedAt;
     user.updatedAt = new Date().toISOString();
     return user;
   }
@@ -223,6 +237,61 @@ export class InMemoryAuthStore {
       return;
     }
     session.revokedAt = new Date().toISOString();
+  }
+
+  createEmailVerificationChallenge({ userId, email, codeHash, expiresAt, resendAvailableAt, maxAttempts }) {
+    const challenge = {
+      id: randomUUID(),
+      userId,
+      email: String(email || '').trim().toLowerCase(),
+      codeHash,
+      expiresAt,
+      resendAvailableAt,
+      attemptCount: 0,
+      maxAttempts,
+      verifiedAt: null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    this.emailVerificationChallengesById.set(challenge.id, challenge);
+    const ids = this.emailVerificationChallengeIdsByEmail.get(challenge.email) || [];
+    ids.push(challenge.id);
+    this.emailVerificationChallengeIdsByEmail.set(challenge.email, ids);
+    return challenge;
+  }
+
+  findLatestEmailVerificationChallengeByEmail(email) {
+    const normalizedEmail = String(email || '').trim().toLowerCase();
+    const ids = this.emailVerificationChallengeIdsByEmail.get(normalizedEmail) || [];
+    if (ids.length === 0) {
+      return null;
+    }
+
+    const latestId = ids[ids.length - 1];
+    return this.emailVerificationChallengesById.get(latestId) || null;
+  }
+
+  incrementEmailVerificationAttempt(challengeId) {
+    const challenge = this.emailVerificationChallengesById.get(challengeId);
+    if (!challenge) {
+      return null;
+    }
+
+    challenge.attemptCount += 1;
+    challenge.updatedAt = new Date().toISOString();
+    return challenge;
+  }
+
+  markEmailVerificationChallengeVerified({ challengeId, verifiedAt }) {
+    const challenge = this.emailVerificationChallengesById.get(challengeId);
+    if (!challenge) {
+      return null;
+    }
+
+    challenge.verifiedAt = verifiedAt;
+    challenge.updatedAt = new Date().toISOString();
+    return challenge;
   }
 
   createKycSession({ userId, provider = 'manual' }) {

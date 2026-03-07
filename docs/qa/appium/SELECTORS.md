@@ -13,6 +13,17 @@
 - `auth_password_input`
 - `auth_login_button`
 - `auth_error_text`
+- `registration_full_name_input`
+- `registration_email_input`
+- `registration_password_input`
+- `registration_confirm_password_input`
+- `registration_continue_button`
+- `registration_create_account_button`
+- `registration_verify_view`
+- `registration_verify_code_input`
+- `registration_verify_email_button`
+- `registration_resend_code_button`
+- `registration_change_email_button`
 
 ## Home / Feed
 - `home_search_input`

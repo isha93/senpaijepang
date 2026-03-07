@@ -21,6 +21,8 @@ Auth:
 - `GET /health`
 - `GET /metrics`
 - `POST /auth/register`
+- `POST /auth/email-verification/resend`
+- `POST /auth/email-verification/verify`
 - `POST /auth/login`
 - `POST /auth/refresh`
 - `POST /auth/logout`
@@ -129,6 +131,9 @@ Admin:
 - `006_user_profile_fields.sql`:
   - `users.avatar_url`
   - `users.updated_at`
+- `012_email_verification.sql`:
+  - `users.email_verified_at`
+  - `email_verification_challenges`
 - `007_organizations_tables.sql`:
   - `organizations`
   - `organization_verifications`
@@ -198,7 +203,7 @@ API guardrails yang aktif:
 
 ## 10. iOS Integration Readiness (2026-03-01)
 Siap integrasi bertahap untuk flow:
-- Auth (`register/login/refresh/logout/me`).
+- Auth (`register/login/refresh/logout/me` + email verification resend/verify).
 - Jobs (`list/detail/saved/apply/journey`).
 - Feed (`list/saved`).
 - Profile (`get/patch` + docs/final request).

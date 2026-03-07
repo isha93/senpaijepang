@@ -16,6 +16,26 @@ targets:
       - package: netfox
     sources:
       - path: Sources/SenpaiJepangApp
+  SenpaiJepangTests:
+    type: bundle.unit-test
+    platform: iOS
+    deploymentTarget: "17.0"
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+    sources:
+      - path: Tests/SenpaiJepangAppTests
+    dependencies:
+      - target: SenpaiJepang
+
+schemes:
+  SenpaiJepang:
+    build:
+      targets:
+        SenpaiJepang: all
+    test:
+      targets:
+        - name: SenpaiJepangTests
 
 packages:
   netfox:

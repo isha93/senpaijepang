@@ -69,6 +69,52 @@ paths:
         '409':
           $ref: '#/components/responses/ApiError'
 
+  /auth/email-verification/resend:
+    post:
+      tags: [Auth]
+      summary: Resend email verification code
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResendEmailVerificationRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmailVerificationChallenge'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '404':
+          $ref: '#/components/responses/ApiError'
+        '429':
+          $ref: '#/components/responses/ApiError'
+
+  /auth/email-verification/verify:
+    post:
+      tags: [Auth]
+      summary: Verify email verification code
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VerifyEmailVerificationRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmailVerificationResult'
+        '400':
+          $ref: '#/components/responses/ApiError'
+
   /auth/login:
     post:
       tags: [Auth]
@@ -2663,6 +2709,26 @@ components:
         refreshToken:
           type: string
 
+    ResendEmailVerificationRequest:
+      type: object
+      required: [email]
+      properties:
+        email:
+          type: string
+          format: email
+
+    VerifyEmailVerificationRequest:
+      type: object
+      required: [email, code]
+      properties:
+        email:
+          type: string
+          format: email
+        code:
+          type: string
+          minLength: 6
+          maxLength: 6
+
     LogoutRequest:
       type: object
       properties:
@@ -2671,7 +2737,7 @@ components:
 
     User:
       type: object
-      required: [id, fullName, email, createdAt, roles]
+      required: [id, fullName, email, emailVerified, emailVerifiedAt, createdAt, roles]
       properties:
         id:
           type: string
@@ -2681,6 +2747,12 @@ components:
         email:
           type: string
           format: email
+        emailVerified:
+          type: boolean
+        emailVerifiedAt:
+          type: string
+          format: date-time
+          nullable: true
         createdAt:
           type: string
           format: date-time
@@ -2699,6 +2771,41 @@ components:
           type: string
         refreshToken:
           type: string
+        emailVerification:
+          $ref: '#/components/schemas/EmailVerificationChallenge'
+
+    EmailVerificationChallenge:
+      type: object
+      required: [required, verified, email, sent, expiresInSec, resendAvailableInSec]
+      properties:
+        required:
+          type: boolean
+        verified:
+          type: boolean
+        email:
+          type: string
+          format: email
+        sent:
+          type: boolean
+        expiresInSec:
+          type: integer
+        resendAvailableInSec:
+          type: integer
+        developmentCode:
+          type: string
+          description: Development-only OTP visibility helper; omitted in production.
+
+    EmailVerificationResult:
+      type: object
+      required: [email, verified, alreadyVerified]
+      properties:
+        email:
+          type: string
+          format: email
+        verified:
+          type: boolean
+        alreadyVerified:
+          type: boolean
 
     OrganizationType:
       type: string

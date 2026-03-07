@@ -57,7 +57,21 @@ private final class AppContainer: ObservableObject {
                     AuthEndpoint.register(fullName: fullName, email: email, password: password),
                     responseType: AuthResponseDTO.self
                 )
-                return dto.toSession()
+                return dto.toRegistrationResult()
+            },
+            resendEmailVerificationHandler: { email in
+                let dto = try await client.request(
+                    AuthEndpoint.resendEmailVerification(email: email),
+                    responseType: EmailVerificationChallengeDTO.self
+                )
+                return dto.toDomain()
+            },
+            verifyEmailVerificationHandler: { email, code in
+                let dto = try await client.request(
+                    AuthEndpoint.verifyEmailVerification(email: email, code: code),
+                    responseType: EmailVerificationResultDTO.self
+                )
+                return dto.toDomain()
             }
         )
 

@@ -41,7 +41,7 @@ async function main() {
   const port = Number(process.env.API_PORT || 4000);
   const authStore = await createAuthStoreFromEnv(process.env);
   const objectStorage = await createObjectStorageFromEnv(process.env);
-  const authService = createAuthService({ store: authStore.store, env: process.env });
+  const authService = createAuthService({ store: authStore.store, env: process.env, logger });
   const kycService = createKycService({
     store: authStore.store,
     objectStorage: objectStorage.storage,

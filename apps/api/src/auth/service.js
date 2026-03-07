@@ -1,7 +1,8 @@
-import { createHash } from 'node:crypto';
+import { createHash, randomInt } from 'node:crypto';
 import { hashPassword, verifyPassword } from './password.js';
 import { createAccessToken, createRefreshToken, verifyAccessToken } from './tokens.js';
 import { InMemoryAuthStore } from './store.js';
+import { createEmailDelivery } from './email-delivery.js';
 
 class ApiError extends Error {
   constructor(status, code, message) {
@@ -17,6 +18,22 @@ function isValidEmail(value) {
 
 function hashToken(token) {
   return createHash('sha256').update(String(token)).digest('hex');
+}
+
+function hashVerificationCode(code) {
+  return createHash('sha256').update(`email-verification:${String(code)}`).digest('hex');
+}
+
+function generateVerificationCode() {
+  return String(randomInt(0, 1_000_000)).padStart(6, '0');
+}
+
+function normalizeVerificationCode(code) {
+  return String(code || '').replace(/\s+/g, '').trim();
+}
+
+function secondsUntil(timestampMs, nowMs = Date.now()) {
+  return Math.max(0, Math.ceil((Number(timestampMs || 0) - nowMs) / 1000));
 }
 
 function normalizeCursor(cursor) {
@@ -63,12 +80,28 @@ function normalizeAdminRoles(roles) {
 }
 
 export class AuthService {
-  constructor({ store, accessTokenSecret, accessTokenTtlSec, refreshTokenTtlSec, defaultRoleCode }) {
+  constructor({
+    store,
+    accessTokenSecret,
+    accessTokenTtlSec,
+    refreshTokenTtlSec,
+    defaultRoleCode,
+    emailDelivery,
+    emailVerificationCodeTtlSec,
+    emailVerificationResendCooldownSec,
+    emailVerificationMaxAttempts,
+    exposeEmailVerificationCode
+  }) {
     this.store = store;
     this.accessTokenSecret = accessTokenSecret;
     this.accessTokenTtlSec = accessTokenTtlSec;
     this.refreshTokenTtlSec = refreshTokenTtlSec;
     this.defaultRoleCode = defaultRoleCode;
+    this.emailDelivery = emailDelivery;
+    this.emailVerificationCodeTtlSec = emailVerificationCodeTtlSec;
+    this.emailVerificationResendCooldownSec = emailVerificationResendCooldownSec;
+    this.emailVerificationMaxAttempts = emailVerificationMaxAttempts;
+    this.exposeEmailVerificationCode = exposeEmailVerificationCode;
   }
 
   async register({ fullName, email, password }) {
@@ -96,7 +129,17 @@ export class AuthService {
     }
 
     await this.assignDefaultRole(user.id);
-    return this.issueSession(user);
+    const session = await this.issueSession(user);
+    const verification = await this.issueEmailVerificationChallenge(user);
+    return {
+      ...session,
+      emailVerification: this.publicEmailVerificationChallenge({
+        user,
+        challenge: verification.challenge,
+        sent: verification.sent,
+        code: verification.code
+      })
+    };
   }
 
   async login({ identifier, email, password }) {
@@ -142,6 +185,106 @@ export class AuthService {
     if (session) {
       await this.store.revokeSession(session.id);
     }
+  }
+
+  async resendEmailVerification({ email }) {
+    const normalizedEmail = String(email || '').trim().toLowerCase();
+    if (!isValidEmail(normalizedEmail)) {
+      throw new ApiError(400, 'invalid_email', 'email is invalid');
+    }
+
+    const user = await this.store.findUserByEmail(normalizedEmail);
+    if (!user) {
+      throw new ApiError(404, 'user_not_found', 'user not found');
+    }
+    if (user.emailVerifiedAt) {
+      return {
+        email: user.email,
+        verified: true,
+        alreadyVerified: true
+      };
+    }
+
+    const latestChallenge = await this.store.findLatestEmailVerificationChallengeByEmail(normalizedEmail);
+    const nowMs = Date.now();
+    if (
+      latestChallenge &&
+      !latestChallenge.verifiedAt &&
+      nowMs < latestChallenge.resendAvailableAt
+    ) {
+      throw new ApiError(
+        429,
+        'verification_code_throttled',
+        `Please wait ${secondsUntil(latestChallenge.resendAvailableAt, nowMs)} seconds before requesting a new code`
+      );
+    }
+
+    const verification = await this.issueEmailVerificationChallenge(user);
+    return this.publicEmailVerificationChallenge({
+      user,
+      challenge: verification.challenge,
+      sent: verification.sent,
+      code: verification.code
+    });
+  }
+
+  async verifyEmailVerification({ email, code }) {
+    const normalizedEmail = String(email || '').trim().toLowerCase();
+    const normalizedCode = normalizeVerificationCode(code);
+
+    if (!isValidEmail(normalizedEmail)) {
+      throw new ApiError(400, 'invalid_email', 'email is invalid');
+    }
+    if (!/^\d{6}$/.test(normalizedCode)) {
+      throw new ApiError(400, 'verification_code_invalid', 'verification code must be 6 digits');
+    }
+
+    const user = await this.store.findUserByEmail(normalizedEmail);
+    if (!user) {
+      throw new ApiError(400, 'verification_code_invalid', 'verification code is invalid');
+    }
+    if (user.emailVerifiedAt) {
+      return {
+        email: user.email,
+        verified: true,
+        alreadyVerified: true
+      };
+    }
+
+    const challenge = await this.store.findLatestEmailVerificationChallengeByEmail(normalizedEmail);
+    if (!challenge || challenge.verifiedAt) {
+      throw new ApiError(400, 'verification_code_invalid', 'verification code is invalid');
+    }
+    if (Date.now() >= challenge.expiresAt) {
+      throw new ApiError(400, 'verification_code_expired', 'verification code has expired');
+    }
+    if (challenge.attemptCount >= challenge.maxAttempts) {
+      throw new ApiError(400, 'verification_code_locked', 'verification code has exceeded the maximum number of attempts');
+    }
+
+    if (challenge.codeHash !== hashVerificationCode(normalizedCode)) {
+      const updatedChallenge = await this.store.incrementEmailVerificationAttempt(challenge.id);
+      if (updatedChallenge && updatedChallenge.attemptCount >= updatedChallenge.maxAttempts) {
+        throw new ApiError(400, 'verification_code_locked', 'verification code has exceeded the maximum number of attempts');
+      }
+      throw new ApiError(400, 'verification_code_invalid', 'verification code is invalid');
+    }
+
+    const verifiedAt = new Date().toISOString();
+    await this.store.markEmailVerificationChallengeVerified({
+      challengeId: challenge.id,
+      verifiedAt
+    });
+    await this.store.markUserEmailVerified({
+      userId: user.id,
+      verifiedAt
+    });
+
+    return {
+      email: user.email,
+      verified: true,
+      alreadyVerified: false
+    };
   }
 
   async authenticateAccessToken(accessToken) {
@@ -206,8 +349,54 @@ export class AuthService {
       id: user.id,
       fullName: user.fullName,
       email: user.email,
+      emailVerified: Boolean(user.emailVerifiedAt),
+      emailVerifiedAt: user.emailVerifiedAt || null,
       createdAt: user.createdAt,
       roles
+    };
+  }
+
+  publicEmailVerificationChallenge({ user, challenge, sent, code }) {
+    return {
+      required: !user.emailVerifiedAt,
+      verified: Boolean(user.emailVerifiedAt),
+      email: user.email,
+      sent: Boolean(sent),
+      expiresInSec: challenge ? secondsUntil(challenge.expiresAt) : 0,
+      resendAvailableInSec: challenge ? secondsUntil(challenge.resendAvailableAt) : 0,
+      ...(this.exposeEmailVerificationCode && code ? { developmentCode: code } : {})
+    };
+  }
+
+  async issueEmailVerificationChallenge(user) {
+    const code = generateVerificationCode();
+    const nowMs = Date.now();
+    const challenge = await this.store.createEmailVerificationChallenge({
+      userId: user.id,
+      email: user.email,
+      codeHash: hashVerificationCode(code),
+      expiresAt: nowMs + this.emailVerificationCodeTtlSec * 1000,
+      resendAvailableAt: nowMs + this.emailVerificationResendCooldownSec * 1000,
+      maxAttempts: this.emailVerificationMaxAttempts
+    });
+
+    let sent = false;
+    try {
+      await this.emailDelivery.sendVerificationCode({
+        to: user.email,
+        fullName: user.fullName,
+        code,
+        expiresInSec: this.emailVerificationCodeTtlSec
+      });
+      sent = true;
+    } catch {
+      sent = false;
+    }
+
+    return {
+      challenge,
+      code,
+      sent
     };
   }
 
@@ -407,7 +596,7 @@ export class AuthService {
   }
 }
 
-export function createAuthService({ store, env = process.env } = {}) {
+export function createAuthService({ store, env = process.env, logger } = {}) {
   return new AuthService({
     store: store || new InMemoryAuthStore(),
     accessTokenSecret: env.AUTH_TOKEN_SECRET || 'dev-insecure-token-secret-change-me',
@@ -415,7 +604,14 @@ export function createAuthService({ store, env = process.env } = {}) {
     refreshTokenTtlSec: Number(env.AUTH_REFRESH_TOKEN_TTL_SEC || 604800),
     defaultRoleCode: String(env.AUTH_DEFAULT_ROLE_CODE || 'sdm')
       .trim()
-      .toLowerCase()
+      .toLowerCase(),
+    emailDelivery: createEmailDelivery({ env, logger }),
+    emailVerificationCodeTtlSec: Number(env.AUTH_EMAIL_VERIFICATION_CODE_TTL_SEC || 600),
+    emailVerificationResendCooldownSec: Number(env.AUTH_EMAIL_VERIFICATION_RESEND_COOLDOWN_SEC || 60),
+    emailVerificationMaxAttempts: Number(env.AUTH_EMAIL_VERIFICATION_MAX_ATTEMPTS || 5),
+    exposeEmailVerificationCode:
+      String(env.AUTH_EMAIL_VERIFICATION_EXPOSE_CODE || '').trim().toLowerCase() === 'true' ||
+      String(env.NODE_ENV || '').trim().toLowerCase() !== 'production'
   });
 }
 

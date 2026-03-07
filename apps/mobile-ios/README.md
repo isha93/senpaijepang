@@ -159,13 +159,11 @@ apps/mobile-ios/
 │   │       ├── Profile/                #    👤 User profile
 │   │       └── Feed/                   #    📰 Community feed
 │   │
-│   └── SenpaiMobileCore/              # 📚 Shared Core Library
-│       └── (mirrors App structure)     #    Reusable across targets
+│   └── SenpaiMobileCore/               # 📚 Legacy SwiftPM mirror (not primary app target)
 │
 └── Tests/
-    └── SenpaiMobileCoreTests/          # ✅ Unit tests
-        ├── LoginViewModelTests.swift
-        └── NavigationManagerTests.swift
+    └── SenpaiJepangAppTests/           # ✅ Xcode unit tests for active app target
+        └── RegistrationViewModelTests.swift
 ```
 
 ---
@@ -203,7 +201,7 @@ graph LR
 
 | Module | Views | ViewModels | Service Protocol | Service Impl |
 |--------|-------|------------|-----------------|--------------|
-| **Auth** | `LoginView` | `LoginViewModel` | `AuthServiceProtocol` | `AuthService` |
+| **Auth** | `LoginView` · `RegistrationView` | `LoginViewModel` · `RegistrationViewModel` | `AuthServiceProtocol` | `AuthService` |
 | **Jobs** | `JobsListView` · `JobDetailView` · `SavedJobsView` | `JobsListViewModel` · `JobDetailViewModel` · `SavedJobsViewModel` | `JobServiceProtocol` | `JobService` |
 | **Journey** | `ApplicationJourneyView` | `ApplicationJourneyViewModel` | `JourneyServiceProtocol` | `JourneyService` |
 | **Profile** | `ProfileView` | `ProfileViewModel` | `ProfileServiceProtocol` | `ProfileService` |
@@ -370,21 +368,20 @@ xcodegen generate --spec project.yml
 
 ## ✅ Testing
 
-### Run iOS Smoke Build (Recommended)
+### Run iOS Unit Tests (Recommended)
 
 ```bash
 # Via monorepo workspace
 npm run test:ios -w @senpaijepang/mobile-ios
 ```
 
-Script `test:ios` menjalankan `xcodebuild` simulator smoke build dan otomatis skip di non-macOS.
+Script `test:ios` menjalankan `xcodebuild test` di iOS Simulator dan otomatis skip di non-macOS.
 
 ### Test Coverage
 
 | Module | Tests |
 |--------|-------|
-| `NavigationManager` | ✅ Route push/pop/replace |
-| `LoginViewModel` | ✅ Login flow, validation, navigation |
+| `RegistrationViewModel` | ✅ Password validation, register -> verify step, resend OTP, verify success |
 
 ### Testing Strategy
 
@@ -400,11 +397,8 @@ graph TD
     style NAV fill:#f87171,stroke:#ef4444,color:#fff
 ```
 
-> ⚠️ **Known Limitation:** `swift test` may fail on macOS due to iOS-only
-> `ToolbarItemPlacement` values (`.topBarLeading`, `.topBarTrailing`).
-> For stable validation, use Xcode Simulator builds.
->
-> Karena itu pipeline repo memakai simulator smoke build (`xcodebuild`) sebagai gate utama iOS.
+> ⚠️ **Known Limitation:** legacy `swift test` on `SenpaiMobileCore` is not the primary validation path anymore.
+> The active gate for iOS is `xcodebuild test` against the `SenpaiJepang` app target.
 
 ---
 
