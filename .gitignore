@@ -26,3 +26,5 @@ npm-debug.log*
 *.xcworkspace/xcuserdata/
 *.xcodeproj/xcuserdata/
 *.xcuserstate
+**/xcuserdata/
+**/*.xcuserstate
