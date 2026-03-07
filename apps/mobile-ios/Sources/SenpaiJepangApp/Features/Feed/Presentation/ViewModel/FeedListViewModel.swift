@@ -10,6 +10,8 @@ final class FeedListViewModel: ObservableObject, ManagedTask {
     @Published var selectedCategory: String
     @Published var profileCompletion: Int
     @Published var hasLoadedProfile: Bool
+    @Published var profileFullName: String
+    @Published var profileAvatarUrl: String?
 
     let categories = ["All", "Visa Info", "Safety", "Job Market", "Living Guide", "Community"]
 
@@ -52,27 +54,43 @@ final class FeedListViewModel: ObservableObject, ManagedTask {
         self.selectedCategory = "All"
         self.profileCompletion = 0
         self.hasLoadedProfile = false
+        self.profileFullName = ""
+        self.profileAvatarUrl = nil
     }
 
     func loadFeed() async {
-        async let feedResult = executeTask({
-            try await self.feedService.fetchFeed()
-        })
-        async let profileResult = executeTask({
-            try await self.profileService.fetchProfile()
-        })
+        guard !isLoading else { return }
 
-        let (posts, profile) = await (feedResult, profileResult)
+        isLoading = true
+        errorMessage = nil
+        defer {
+            isLoading = false
+            hasLoadedProfile = true
+        }
 
-        if let posts {
+        do {
+            let posts = try await feedService.fetchFeed()
             allPosts = posts.isEmpty ? Self.mockPosts : posts
-        } else {
+        } catch {
+            errorMessage = error.localizedDescription
             allPosts = Self.mockPosts
         }
-        if let profile {
+
+        do {
+            let profile = try await profileService.fetchProfile()
             profileCompletion = profile.completionPercentage
+            profileFullName = profile.fullName
+            profileAvatarUrl = profile.avatarUrl
+        } catch {
+            if errorMessage == nil {
+                errorMessage = error.localizedDescription
+            }
         }
-        hasLoadedProfile = true
+    }
+
+    var profileDisplayName: String {
+        let trimmed = profileFullName.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? "Senpai Jepang" : trimmed
     }
 
     func navigateToNotifications() {
@@ -85,12 +103,13 @@ final class FeedListViewModel: ObservableObject, ManagedTask {
 
     func toggleSave(_ post: FeedPost) async {
         // Try service first, fall back to local toggle
-        if let updated = await executeTask({
-            try await self.feedService.toggleSavePost(postId: post.id)
+        if let updatedSavedState = await executeTask({
+            try await self.feedService.toggleSavePost(
+                postId: post.id,
+                currentlySaved: post.isSaved
+            )
         }) {
-            if let index = allPosts.firstIndex(where: { $0.id == updated.id }) {
-                allPosts[index] = updated
-            }
+            applySavedState(postId: post.id, isSaved: updatedSavedState)
         } else if let index = allPosts.firstIndex(where: { $0.id == post.id }) {
             // Local fallback: flip isSaved in-place
             let p = allPosts[index]
@@ -100,6 +119,22 @@ final class FeedListViewModel: ObservableObject, ManagedTask {
                 category: p.category, source: p.source, imageURL: p.imageURL
             )
         }
+    }
+
+    func applySavedState(postId: String, isSaved: Bool) {
+        guard let index = allPosts.firstIndex(where: { $0.id == postId }) else { return }
+        let current = allPosts[index]
+        allPosts[index] = FeedPost(
+            id: current.id,
+            authorName: current.authorName,
+            content: current.content,
+            createdAt: current.createdAt,
+            isSaved: isSaved,
+            title: current.title,
+            category: current.category,
+            source: current.source,
+            imageURL: current.imageURL
+        )
     }
 
     // MARK: - Mock Data

@@ -145,7 +145,10 @@ private final class AppContainer: ObservableObject {
             },
             updateHandler: { [client] profile in
                 let dto = try await client.request(
-                    ProfileEndpoint.updateProfile(fullName: profile.fullName, avatarUrl: nil),
+                    ProfileEndpoint.updateProfile(
+                        fullName: profile.fullName,
+                        avatarUrl: profile.avatarUrl
+                    ),
                     responseType: ProfileResponseDTO.self
                 )
                 return dto.profile.toUserProfile()
@@ -252,9 +255,14 @@ private final class AppContainer: ObservableObject {
                 )
                 return dto.items.map { $0.toFeedPost() }
             },
-            toggleSaveHandler: { _ in
-                // No save endpoint yet — ViewModel falls back to local toggle
-                throw AppError.notImplemented
+            toggleSaveHandler: { [client] postId, currentlySaved in
+                let response = try await client.request(
+                    currentlySaved
+                        ? FeedEndpoint.unsavePost(postId: postId)
+                        : FeedEndpoint.savePost(postId: postId),
+                    responseType: SavePostResponseDTO.self
+                )
+                return response.saved
             }
         )
     }

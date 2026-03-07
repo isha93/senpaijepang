@@ -3,7 +3,7 @@ import Foundation
 @MainActor
 final class FeedService: FeedServiceProtocol {
     typealias FetchHandler = @Sendable () async throws -> [FeedPost]
-    typealias ToggleSaveHandler = @Sendable (String) async throws -> FeedPost
+    typealias ToggleSaveHandler = @Sendable (String, Bool) async throws -> Bool
 
     private let fetchHandler: FetchHandler
     private let toggleSaveHandler: ToggleSaveHandler
@@ -20,7 +20,7 @@ final class FeedService: FeedServiceProtocol {
         try await fetchHandler()
     }
 
-    func toggleSavePost(postId: String) async throws -> FeedPost {
-        try await toggleSaveHandler(postId)
+    func toggleSavePost(postId: String, currentlySaved: Bool) async throws -> Bool {
+        try await toggleSaveHandler(postId, currentlySaved)
     }
 }

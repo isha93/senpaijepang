@@ -37,5 +37,5 @@ struct FeedPost: Equatable, Sendable, Identifiable, Hashable {
 @MainActor
 protocol FeedServiceProtocol {
     func fetchFeed() async throws -> [FeedPost]
-    func toggleSavePost(postId: String) async throws -> FeedPost
+    func toggleSavePost(postId: String, currentlySaved: Bool) async throws -> Bool
 }

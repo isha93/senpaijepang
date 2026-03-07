@@ -37,6 +37,19 @@ struct FeedViewerStateDTO: Decodable {
     let saved: Bool
 }
 
+// MARK: - Save / unsave
+
+struct SavePostRequestDTO: Encodable {
+    let postId: String
+}
+
+struct SavePostResponseDTO: Decodable {
+    let saved: Bool
+    let created: Bool?
+    let removed: Bool?
+    let postId: String
+}
+
 // MARK: - Helpers
 
 private func parseDate(_ iso: String) -> Date {

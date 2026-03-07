@@ -7,15 +7,22 @@ final class ArticleDetailViewModel: ObservableObject {
     let post: FeedPost
     private let feedService: FeedServiceProtocol
     private let navigation: NavigationHandling
+    private let onSaveStateChange: ((String, Bool) -> Void)?
 
     @Published var isSaved: Bool
     @Published var isSaving: Bool = false
     @Published var feedbackGiven: Bool = false
 
-    init(post: FeedPost, feedService: FeedServiceProtocol, navigation: NavigationHandling) {
+    init(
+        post: FeedPost,
+        feedService: FeedServiceProtocol,
+        navigation: NavigationHandling,
+        onSaveStateChange: ((String, Bool) -> Void)? = nil
+    ) {
         self.post = post
         self.feedService = feedService
         self.navigation = navigation
+        self.onSaveStateChange = onSaveStateChange
         self.isSaved = post.isSaved
     }
 
@@ -27,8 +34,12 @@ final class ArticleDetailViewModel: ObservableObject {
         guard !isSaving else { return }
         isSaving = true
         do {
-            let updated = try await feedService.toggleSavePost(postId: post.id)
-            self.isSaved = updated.isSaved
+            let updatedSavedState = try await feedService.toggleSavePost(
+                postId: post.id,
+                currentlySaved: isSaved
+            )
+            self.isSaved = updatedSavedState
+            onSaveStateChange?(post.id, updatedSavedState)
         } catch {
             print("Error toggling save: \(error)")
         }
@@ -58,6 +69,26 @@ final class ArticleDetailViewModel: ObservableObject {
 
     var bodySection: ArticleBodySection {
         ArticleBodySection.forCategory(post.category ?? "General", source: post.source)
+    }
+
+    var shareItems: [Any] {
+        [shareMessage]
+    }
+
+    var shareMessage: String {
+        let source = post.source?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let teaser = post.content.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedTeaser = teaser.count > 140 ? String(teaser.prefix(137)) + "..." : teaser
+
+        var lines = [post.title]
+        if !trimmedTeaser.isEmpty {
+            lines.append(trimmedTeaser)
+        }
+        if let source, !source.isEmpty {
+            lines.append("Source: \(source)")
+        }
+        lines.append("Shared from Senpai Jepang")
+        return lines.joined(separator: "\n\n")
     }
 }
 

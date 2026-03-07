@@ -1,8 +1,10 @@
 import SwiftUI
+import UIKit
 
 struct ArticleDetailView: View {
     @StateObject private var viewModel: ArticleDetailViewModel
     @Environment(\.dismiss) private var dismiss
+    @State private var isShareSheetPresented = false
 
     init(viewModel: @autoclosure @escaping () -> ArticleDetailViewModel) {
         self._viewModel = StateObject(wrappedValue: viewModel())
@@ -34,6 +36,9 @@ struct ArticleDetailView: View {
         .accessibilityIdentifier("article_detail_view")
         .navigationBarHidden(true)
         .preferredColorScheme(.light) // Or respect system, but design wants clean look
+        .sheet(isPresented: $isShareSheetPresented) {
+            ShareSheet(activityItems: viewModel.shareItems)
+        }
     }
 
     private var heroSection: some View {
@@ -128,7 +133,7 @@ struct ArticleDetailView: View {
                 .accessibilityIdentifier("article_detail_save_button")
                 
                 Button(action: {
-                    // Share action placeholder
+                    isShareSheetPresented = true
                 }) {
                     Image(systemName: "square.and.arrow.up")
                         .font(.system(size: 20, weight: .semibold))
@@ -137,6 +142,7 @@ struct ArticleDetailView: View {
                         .background(Color.white.opacity(0.9))
                         .clipShape(Circle())
                 }
+                .accessibilityIdentifier("article_detail_share_button")
             }
         }
         .padding(.horizontal, AppTheme.spacingL)
@@ -387,6 +393,16 @@ struct ArticleDetailView: View {
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 4)
     }
+}
+
+private struct ShareSheet: UIViewControllerRepresentable {
+    let activityItems: [Any]
+
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        UIActivityViewController(activityItems: activityItems, applicationActivities: nil)
+    }
+
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }
 
 // Minimal shape for rounding specific corners

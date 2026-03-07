@@ -125,14 +125,12 @@ struct FeedListView: View {
                     Button { 
                         onNavigateToProfile() 
                     } label: {
-                        Circle()
-                            .fill(AppTheme.accentLight)
-                            .frame(width: 32, height: 32)
-                            .overlay {
-                                Text("B")
-                                    .font(.caption.bold())
-                                    .foregroundStyle(AppTheme.accent)
-                            }
+                        UserAvatarView(
+                            fullName: viewModel.profileDisplayName,
+                            avatarURL: viewModel.profileAvatarUrl,
+                            size: 32,
+                            font: .caption.bold()
+                        )
                     }
                     .accessibilityIdentifier("home_profile_button")
                 }

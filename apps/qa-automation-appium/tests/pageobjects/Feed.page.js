@@ -5,6 +5,8 @@ class FeedPage extends BasePage {
   get feedList() { return $('~feed_list'); }
   get articleDetailView() { return $('~article_detail_view'); }
   get articleBackButton() { return $('~article_detail_back_button'); }
+  get articleSaveButton() { return $('~article_detail_save_button'); }
+  get articleShareButton() { return $('~article_detail_share_button'); }
 
   feedItem(id) { return $(`~feed_item_${id}`); }
   feedSaveButton(id) { return $(`~feed_item_save_${id}`); }
@@ -55,6 +57,42 @@ class FeedPage extends BasePage {
     );
     if (candidates.length === 0) {
       throw new Error('No article detail back button found');
+    }
+    await candidates[0].waitForDisplayed({ timeout: 10000 });
+    await candidates[0].click();
+  }
+
+  async tapArticleShare() {
+    const byKnownId = await this.articleShareButton;
+    if (await byKnownId.isExisting()) {
+      await byKnownId.waitForDisplayed({ timeout: 10000 });
+      await byKnownId.click();
+      return;
+    }
+
+    const candidates = await $$(
+      '//XCUIElementTypeButton[@name="square.and.arrow.up" or @label="square.and.arrow.up"]'
+    );
+    if (candidates.length === 0) {
+      throw new Error('No article detail share button found');
+    }
+    await candidates[0].waitForDisplayed({ timeout: 10000 });
+    await candidates[0].click();
+  }
+
+  async tapArticleSave() {
+    const byKnownId = await this.articleSaveButton;
+    if (await byKnownId.isExisting()) {
+      await byKnownId.waitForDisplayed({ timeout: 10000 });
+      await byKnownId.click();
+      return;
+    }
+
+    const candidates = await $$(
+      '//XCUIElementTypeButton[@name="bookmark" or @label="bookmark" or @name="bookmark.fill" or @label="bookmark.fill"]'
+    );
+    if (candidates.length === 0) {
+      throw new Error('No article detail save button found');
     }
     await candidates[0].waitForDisplayed({ timeout: 10000 });
     await candidates[0].click();

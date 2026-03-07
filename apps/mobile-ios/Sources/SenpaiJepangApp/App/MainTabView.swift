@@ -161,7 +161,10 @@ struct MainTabView: View {
                 viewModel: ArticleDetailViewModel(
                     post: post,
                     feedService: feedService,
-                    navigation: navigation
+                    navigation: navigation,
+                    onSaveStateChange: { postId, isSaved in
+                        feedVM.applySavedState(postId: postId, isSaved: isSaved)
+                    }
                 )
             )
         default:

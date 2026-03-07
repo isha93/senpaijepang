@@ -40,6 +40,7 @@ struct UserProfile: Equatable, Sendable {
     let fullName: String
     let phoneNumber: String
     let email: String?
+    let avatarUrl: String?
     let nationality: String?
     let verificationStatus: VerificationStatus
     let completionPercentage: Int
@@ -53,6 +54,7 @@ struct UserProfile: Equatable, Sendable {
         fullName: String,
         phoneNumber: String,
         email: String? = nil,
+        avatarUrl: String? = nil,
         nationality: String? = nil,
         verificationStatus: VerificationStatus = .unverified,
         completionPercentage: Int = 0,
@@ -65,6 +67,7 @@ struct UserProfile: Equatable, Sendable {
         self.fullName = fullName
         self.phoneNumber = phoneNumber
         self.email = email
+        self.avatarUrl = avatarUrl
         self.nationality = nationality
         self.verificationStatus = verificationStatus
         self.completionPercentage = completionPercentage

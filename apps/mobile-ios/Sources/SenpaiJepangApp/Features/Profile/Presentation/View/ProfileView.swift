@@ -76,14 +76,14 @@ struct ProfileView: View {
                 // Avatar
                 VStack(spacing: 0) {
                     ZStack(alignment: .bottomTrailing) {
-                        Circle()
-                            .fill(Color.gray)
-                            .frame(width: 96, height: 96)
-                            .overlay {
-                                Text(String(profile.fullName.prefix(1)))
-                                    .font(.largeTitle.bold())
-                                    .foregroundStyle(.white)
-                            }
+                        UserAvatarView(
+                            fullName: profile.fullName,
+                            avatarURL: profile.avatarUrl,
+                            size: 96,
+                            backgroundColor: .gray,
+                            foregroundColor: .white,
+                            font: .largeTitle.bold()
+                        )
                             .overlay(
                                 Circle()
                                     .stroke(.white, lineWidth: 4)

@@ -26,6 +26,7 @@
 - `article_detail_view`
 - `article_detail_back_button`
 - `article_detail_save_button`
+- `article_detail_share_button`
 
 ## Jobs
 - `jobs_list`

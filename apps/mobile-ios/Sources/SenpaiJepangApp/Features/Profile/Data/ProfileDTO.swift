@@ -23,6 +23,7 @@ struct ProfileDataDTO: Decodable {
             fullName: fullName,
             phoneNumber: "",
             email: email,
+            avatarUrl: avatarUrl,
             nationality: nil,
             verificationStatus: status,
             completionPercentage: profileCompletionPercent,

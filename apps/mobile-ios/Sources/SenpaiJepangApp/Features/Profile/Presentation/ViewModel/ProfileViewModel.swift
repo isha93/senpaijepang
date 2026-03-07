@@ -45,6 +45,7 @@ final class ProfileViewModel: ObservableObject, ManagedTask {
         fullName: "Budi Santoso",
         phoneNumber: "",
         email: "demo@senpaijepang.com",
+        avatarUrl: nil,
         nationality: nil,
         verificationStatus: .verified,
         completionPercentage: 100,
