@@ -36,7 +36,7 @@ stateDiagram-v2
 ```
 
 ## Apa Yang Sudah Bisa Didemokan
-- Register -> login -> refresh -> logout.
+- Register -> email OTP verification -> login -> refresh -> logout.
 - Buka sesi KYC, minta upload URL, submit dokumen, submit sesi.
 - Admin ambil review queue dan putuskan `MANUAL_REVIEW`, `VERIFIED`, atau `REJECTED`.
 - Admin CRUD data bisnis: jobs, feed posts, organizations verification.
@@ -146,6 +146,32 @@ npm run check:dev-all
 ```
 Expected output akhir: `DEV_ALL_CHECK_OK`
 
+## Email OTP Verification
+- Flow auth sekarang mencakup:
+  - `POST /auth/register`
+  - `POST /auth/email-verification/resend`
+  - `POST /auth/email-verification/verify`
+- Default sample env memakai `AUTH_EMAIL_PROVIDER=log`.
+  - OTP tetap dibuat.
+  - OTP tidak dikirim ke inbox.
+  - Untuk development, code bisa muncul di response sebagai `developmentCode`.
+- Untuk kirim email real, set env berikut di runtime API:
+  - `AUTH_EMAIL_PROVIDER=resend`
+  - `AUTH_EMAIL_RESEND_API_KEY=...`
+  - `AUTH_EMAIL_FROM=...`
+- Guardrail yang aktif:
+  - `AUTH_EMAIL_VERIFICATION_CODE_TTL_SEC`
+  - `AUTH_EMAIL_VERIFICATION_RESEND_COOLDOWN_SEC`
+  - `AUTH_EMAIL_VERIFICATION_MAX_ATTEMPTS`
+
+Contoh `.env` untuk provider real:
+```bash
+AUTH_EMAIL_PROVIDER=resend
+AUTH_EMAIL_RESEND_API_KEY=re_xxx
+AUTH_EMAIL_FROM=no-reply@senpaijepang.com
+AUTH_EMAIL_VERIFICATION_EXPOSE_CODE=false
+```
+
 ## Command Harian
 | Command | Untuk apa |
 |---|---|
@@ -169,6 +195,8 @@ Expected output akhir: `DEV_ALL_CHECK_OK`
 
 ### Auth
 - `POST /auth/register`
+- `POST /auth/email-verification/resend`
+- `POST /auth/email-verification/verify`
 - `POST /auth/login`
 - `POST /auth/refresh`
 - `POST /auth/logout`

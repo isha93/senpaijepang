@@ -146,6 +146,61 @@ test('resend is throttled before cooldown window ends', async () => {
   });
 });
 
+test('static verification code can be used for register and resend flows', async () => {
+  await withServer(
+    {
+      NODE_ENV: 'production',
+      AUTH_EMAIL_VERIFICATION_STATIC_CODE: '777777',
+      AUTH_EMAIL_PROVIDER: 'log',
+      AUTH_EMAIL_VERIFICATION_EXPOSE_CODE: 'false',
+      AUTH_EMAIL_VERIFICATION_RESEND_COOLDOWN_SEC: '1'
+    },
+    async (baseUrl) => {
+      const register = await postJson(baseUrl, '/auth/register', {
+        fullName: 'Static Code User',
+        email: 'static-code-user@example.com',
+        password: 'pass1234'
+      });
+
+      assert.equal(register.res.status, 201);
+      assert.equal(register.body.emailVerification.sent, true);
+      assert.equal(register.body.emailVerification.developmentCode, undefined);
+
+      const verifyFromRegister = await postJson(baseUrl, '/auth/email-verification/verify', {
+        email: 'static-code-user@example.com',
+        code: '777777'
+      });
+
+      assert.equal(verifyFromRegister.res.status, 200);
+      assert.equal(verifyFromRegister.body.verified, true);
+
+      const secondRegister = await postJson(baseUrl, '/auth/register', {
+        fullName: 'Static Resend User',
+        email: 'static-resend-user@example.com',
+        password: 'pass1234'
+      });
+
+      assert.equal(secondRegister.res.status, 201);
+      await sleep(1100);
+
+      const resend = await postJson(baseUrl, '/auth/email-verification/resend', {
+        email: 'static-resend-user@example.com'
+      });
+
+      assert.equal(resend.res.status, 200);
+      assert.equal(resend.body.sent, true);
+
+      const verifyAfterResend = await postJson(baseUrl, '/auth/email-verification/verify', {
+        email: 'static-resend-user@example.com',
+        code: '777777'
+      });
+
+      assert.equal(verifyAfterResend.res.status, 200);
+      assert.equal(verifyAfterResend.body.verified, true);
+    }
+  );
+});
+
 test('verification code expires and max attempts are enforced', async () => {
   await withServer(
     {

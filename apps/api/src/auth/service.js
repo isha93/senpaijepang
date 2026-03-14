@@ -32,6 +32,17 @@ function normalizeVerificationCode(code) {
   return String(code || '').replace(/\s+/g, '').trim();
 }
 
+function normalizeStaticVerificationCode(code) {
+  const normalized = normalizeVerificationCode(code);
+  if (!normalized) {
+    return null;
+  }
+  if (!/^\d{6}$/.test(normalized)) {
+    throw new Error('AUTH_EMAIL_VERIFICATION_STATIC_CODE must be a 6 digit code');
+  }
+  return normalized;
+}
+
 function secondsUntil(timestampMs, nowMs = Date.now()) {
   return Math.max(0, Math.ceil((Number(timestampMs || 0) - nowMs) / 1000));
 }
@@ -90,7 +101,8 @@ export class AuthService {
     emailVerificationCodeTtlSec,
     emailVerificationResendCooldownSec,
     emailVerificationMaxAttempts,
-    exposeEmailVerificationCode
+    exposeEmailVerificationCode,
+    emailVerificationStaticCode
   }) {
     this.store = store;
     this.accessTokenSecret = accessTokenSecret;
@@ -102,6 +114,7 @@ export class AuthService {
     this.emailVerificationResendCooldownSec = emailVerificationResendCooldownSec;
     this.emailVerificationMaxAttempts = emailVerificationMaxAttempts;
     this.exposeEmailVerificationCode = exposeEmailVerificationCode;
+    this.emailVerificationStaticCode = emailVerificationStaticCode;
   }
 
   async register({ fullName, email, password }) {
@@ -369,7 +382,7 @@ export class AuthService {
   }
 
   async issueEmailVerificationChallenge(user) {
-    const code = generateVerificationCode();
+    const code = this.emailVerificationStaticCode || generateVerificationCode();
     const nowMs = Date.now();
     const challenge = await this.store.createEmailVerificationChallenge({
       userId: user.id,
@@ -611,7 +624,8 @@ export function createAuthService({ store, env = process.env, logger } = {}) {
     emailVerificationMaxAttempts: Number(env.AUTH_EMAIL_VERIFICATION_MAX_ATTEMPTS || 5),
     exposeEmailVerificationCode:
       String(env.AUTH_EMAIL_VERIFICATION_EXPOSE_CODE || '').trim().toLowerCase() === 'true' ||
-      String(env.NODE_ENV || '').trim().toLowerCase() !== 'production'
+      String(env.NODE_ENV || '').trim().toLowerCase() !== 'production',
+    emailVerificationStaticCode: normalizeStaticVerificationCode(env.AUTH_EMAIL_VERIFICATION_STATIC_CODE)
   });
 }
 

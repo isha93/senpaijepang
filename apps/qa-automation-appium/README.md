@@ -34,8 +34,26 @@ IOS_APP_PATH=apps/qa-automation-appium/apps/ios/SenpaiJepang.app \
 npm run test:ios -w @senpaijepang/qa-automation-appium
 ```
 
-Registration E2E is blocked against production by default. To test the OTP flow, point `API_BASE_URL`
-to a non-production backend with short resend cooldown and development OTP exposure enabled.
+Registration E2E is blocked against production by default.
+
+OTP options for registration E2E:
+- Non-production backend:
+  - point `API_BASE_URL` to the target backend
+  - enable development OTP exposure on the API
+- Temporary production mock OTP:
+  - set `E2E_ALLOW_PROD_REGISTRATION=true`
+  - optionally set `E2E_STATIC_VERIFICATION_CODE=777777`
+  - if `E2E_STATIC_VERIFICATION_CODE` is omitted, the helper currently falls back to `777777` for the production API
+
+Example with the temporary mock OTP:
+```bash
+PLATFORM=ios IOS_DEVICE_NAME="iPhone 15" IOS_PLATFORM_VERSION=17.5 \
+API_BASE_URL=https://senpai-api-app-production.up.railway.app \
+E2E_ALLOW_PROD_REGISTRATION=true \
+E2E_STATIC_VERIFICATION_CODE=777777 \
+IOS_APP_PATH=apps/qa-automation-appium/apps/ios/SenpaiJepang.app \
+npm run test:ios -w @senpaijepang/qa-automation-appium -- --spec './tests/specs/regression/registration.regression.spec.js'
+```
 
 Run Android:
 ```bash

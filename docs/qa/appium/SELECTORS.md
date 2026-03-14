@@ -12,7 +12,12 @@
 - `auth_email_input`
 - `auth_password_input`
 - `auth_login_button`
+- `auth_open_registration_button`
 - `auth_error_text`
+- `registration_back_button`
+- `registration_header_title`
+- `registration_account_view`
+- `registration_preferences_view`
 - `registration_full_name_input`
 - `registration_email_input`
 - `registration_password_input`
@@ -24,6 +29,8 @@
 - `registration_verify_email_button`
 - `registration_resend_code_button`
 - `registration_change_email_button`
+- `registration_error_text`
+- `registration_info_text`
 
 ## Home / Feed
 - `home_search_input`

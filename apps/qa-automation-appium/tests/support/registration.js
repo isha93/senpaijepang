@@ -16,7 +16,7 @@ function isRegistrationE2EEnabled() {
 function registrationSkipReason() {
   const baseURL = resolveApiBaseURL();
   if (!baseURL) {
-    return 'registration e2e requires API_BASE_URL pointing to a non-production backend';
+    return 'registration e2e requires API_BASE_URL to be set';
   }
   if (baseURL === PRODUCTION_API_BASE_URL && String(process.env.E2E_ALLOW_PROD_REGISTRATION || '').trim().toLowerCase() !== 'true') {
     return 'registration e2e is blocked against production by default';
@@ -33,10 +33,32 @@ function buildUniqueRegistrationUser() {
   };
 }
 
-async function fetchVerificationCodeFromResend(email) {
+function resolveStaticVerificationCode(baseURL) {
+  const configuredCode = String(process.env.E2E_STATIC_VERIFICATION_CODE || '').trim();
+  if (configuredCode) {
+    if (!/^\d{6}$/.test(configuredCode)) {
+      throw new Error('E2E_STATIC_VERIFICATION_CODE must be a 6 digit code');
+    }
+    return configuredCode;
+  }
+
+  const allowProd = String(process.env.E2E_ALLOW_PROD_REGISTRATION || '').trim().toLowerCase() === 'true';
+  if (allowProd && baseURL === PRODUCTION_API_BASE_URL) {
+    return '777777';
+  }
+
+  return '';
+}
+
+async function fetchVerificationCodeForRegistration(email) {
   const baseURL = resolveApiBaseURL();
   if (!baseURL) {
-    throw new Error('API_BASE_URL is required to fetch verification code for e2e registration');
+    throw new Error('API_BASE_URL is required to resolve verification code for e2e registration');
+  }
+
+  const staticCode = resolveStaticVerificationCode(baseURL);
+  if (staticCode) {
+    return staticCode;
   }
 
   const response = await fetch(`${baseURL}/v1/auth/email-verification/resend`, {
@@ -64,7 +86,7 @@ async function fetchVerificationCodeFromResend(email) {
 
 module.exports = {
   buildUniqueRegistrationUser,
-  fetchVerificationCodeFromResend,
+  fetchVerificationCodeForRegistration,
   isRegistrationE2EEnabled,
   registrationSkipReason
 };

@@ -183,6 +183,25 @@ Trust status (API response):
 - Request correlation via `x-request-id`.
 - `GET /metrics` untuk in-memory counters + latency summary.
 
+## 8a. Email Verification Delivery Mode
+- Endpoint auth email verification yang aktif:
+  - `POST /auth/register` (issue challenge otomatis setelah register)
+  - `POST /auth/email-verification/resend`
+  - `POST /auth/email-verification/verify`
+- Delivery provider runtime:
+  - default `AUTH_EMAIL_PROVIDER=log`
+  - provider real yang sudah diimplementasikan: `resend`
+- Jika provider masih `log`, OTP tidak dikirim ke inbox dan hanya tercatat di log runtime.
+- Pada non-production, code bisa ikut muncul di payload sebagai `developmentCode` jika expose mode aktif.
+- Env penting:
+  - `AUTH_EMAIL_PROVIDER`
+  - `AUTH_EMAIL_RESEND_API_KEY`
+  - `AUTH_EMAIL_FROM`
+  - `AUTH_EMAIL_VERIFICATION_CODE_TTL_SEC`
+  - `AUTH_EMAIL_VERIFICATION_RESEND_COOLDOWN_SEC`
+  - `AUTH_EMAIL_VERIFICATION_MAX_ATTEMPTS`
+  - `AUTH_EMAIL_VERIFICATION_STATIC_CODE` (opsional untuk mock/testing sementara, harus 6 digit)
+
 ## 9. Current KYC Upload Model
 - API generate pre-signed upload URL via `POST /identity/kyc/upload-url`.
 - Client upload file langsung ke object storage (`PUT`).
@@ -231,6 +250,9 @@ Environment minimum untuk staging:
 - `OBJECT_STORAGE_ACCESS_KEY_ID=...`
 - `OBJECT_STORAGE_SECRET_ACCESS_KEY=...`
 - `ADMIN_API_KEY=...` (opsional jika bootstrap admin belum full token role)
+- `AUTH_EMAIL_PROVIDER=resend`
+- `AUTH_EMAIL_RESEND_API_KEY=...`
+- `AUTH_EMAIL_FROM=...`
 - `KYC_PROVIDER_WEBHOOK_SECRET=...`
 - `KYC_PROVIDER_WEBHOOK_REQUIRE_SIGNATURE=true`
 - `KYC_PROVIDER_WEBHOOK_MAX_SKEW_SEC=300`

@@ -2,7 +2,7 @@ const OnboardingPage = require('../../pageobjects/Onboarding.page');
 const AuthPage = require('../../pageobjects/Auth.page');
 const {
   buildUniqueRegistrationUser,
-  fetchVerificationCodeFromResend,
+  fetchVerificationCodeForRegistration,
   isRegistrationE2EEnabled,
   registrationSkipReason
 } = require('../../support/registration');
@@ -15,7 +15,6 @@ describe('Regression - Registration', function () {
     }
 
     const user = buildUniqueRegistrationUser();
-    const resendWaitMs = Number(process.env.E2E_EMAIL_RESEND_WAIT_MS || 2000);
 
     await OnboardingPage.skipOnboarding();
     await AuthPage.openRegistration();
@@ -24,8 +23,7 @@ describe('Regression - Registration', function () {
     const verifyView = await AuthPage.registrationVerifyView;
     await verifyView.waitForDisplayed({ timeout: 30000 });
 
-    await driver.pause(resendWaitMs);
-    const verificationCode = await fetchVerificationCodeFromResend(user.email);
+    const verificationCode = await fetchVerificationCodeForRegistration(user.email);
 
     await AuthPage.enterVerificationCode(verificationCode);
     await AuthPage.submitVerificationCode();
