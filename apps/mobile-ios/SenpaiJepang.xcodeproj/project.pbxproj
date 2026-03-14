@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 77;
+	objectVersion = 63;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -168,7 +168,7 @@
 		AF2F7F60308DF0AC4F286D72 /* ApplicationDocumentService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApplicationDocumentService.swift; sourceTree = "<group>"; };
 		B2A89F34FDDB6131E92E531E /* APIError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIError.swift; sourceTree = "<group>"; };
 		B5CBC2CDEA9992C8E1DF69F7 /* ProfileService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileService.swift; sourceTree = "<group>"; };
-		B734008A981D8F4C900647F8 /* SenpaiJepang.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = SenpaiJepang.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		B734008A981D8F4C900647F8 /* SenpaiJepang.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SenpaiJepang.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B8002F32ADF944393432D57F /* AppRoute.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppRoute.swift; sourceTree = "<group>"; };
 		B951301010FEE9CFB7490FE5 /* AuthLifecycleTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthLifecycleTests.swift; sourceTree = "<group>"; };
 		B9D62225132F9A6280AEA97F /* FeedPostCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedPostCard.swift; sourceTree = "<group>"; };
@@ -951,11 +951,6 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1430;
-				TargetAttributes = {
-					8B9EABEB8BA1922F45B3FC46 = {
-						DevelopmentTeam = "";
-					};
-				};
 			};
 			buildConfigurationList = 6281206748BF059BE2D051B0 /* Build configuration list for PBXProject "SenpaiJepang" */;
 			compatibilityVersion = "Xcode 14.0";
@@ -970,7 +965,6 @@
 			packageReferences = (
 				00C63184CC8E12616A6EF775 /* XCRemoteSwiftPackageReference "netfox" */,
 			);
-			preferredProjectObjectVersion = 77;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
@@ -1106,7 +1100,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = BP9LJLZCM8;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -1143,7 +1137,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = BP9LJLZCM8;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;

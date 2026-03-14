@@ -45,7 +45,7 @@ struct OnboardingView: View {
         HStack(spacing: 8) {
             ForEach(0..<viewModel.totalSteps, id: \.self) { index in
                 Capsule()
-                    .fill(index <= viewModel.currentStep ? AppTheme.accent : Color(.systemGray5))
+                    .fill(index <= viewModel.currentStep ? AppTheme.accent : AppTheme.grayMedium)
                     .frame(height: 6)
                     .frame(maxWidth: .infinity)
                     .animation(AppTheme.animationDefault, value: viewModel.currentStep)
@@ -307,10 +307,10 @@ struct OnboardingView: View {
                         featureRow(icon: "trash.fill", title: "Hak Hapus Data", desc: "Anda memiliki kendali penuh untuk menghapus data kapan saja.")
                     }
                     .padding(20)
-                    .background(Color(.systemGray6).opacity(0.5))
+                    .background(AppTheme.inputBackground.opacity(0.5))
                     .clipShape(RoundedRectangle(cornerRadius: 20))
                     .overlay(
-                        RoundedRectangle(cornerRadius: 20).stroke(Color(.systemGray5), lineWidth: 1)
+                        RoundedRectangle(cornerRadius: 20).stroke(AppTheme.grayMedium, lineWidth: 1)
                     )
                     .padding(.horizontal, 24)
                 }
@@ -356,7 +356,7 @@ struct OnboardingView: View {
                 HStack(spacing: 12) {
                     ZStack {
                         RoundedRectangle(cornerRadius: 4)
-                            .stroke(viewModel.isAgreedToTerms ? AppTheme.accent : Color(.systemGray3), lineWidth: 2)
+                            .stroke(viewModel.isAgreedToTerms ? AppTheme.accent : AppTheme.textTertiary, lineWidth: 2)
                             .frame(width: 20, height: 20)
                             .background(viewModel.isAgreedToTerms ? AppTheme.accent : .clear)
                             .clipShape(RoundedRectangle(cornerRadius: 4))

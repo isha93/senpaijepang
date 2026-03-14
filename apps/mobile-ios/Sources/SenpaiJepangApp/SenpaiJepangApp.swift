@@ -1,6 +1,7 @@
 import Foundation
 import CryptoKit
 import SwiftUI
+import UIKit
 import netfox
 
 @main
@@ -9,6 +10,7 @@ struct SenpaiJepangApp: App {
 
     init() {
         NFX.sharedInstance().start()
+        configureTabBarAppearance()
     }
 
     var body: some Scene {
@@ -22,7 +24,15 @@ struct SenpaiJepangApp: App {
                 applicationDocumentService: container.applicationDocumentService,
                 feedService: container.feedService
             )
+            .preferredColorScheme(.light)
         }
+    }
+
+    private func configureTabBarAppearance() {
+        let tabBar = UITabBar.appearance()
+        tabBar.tintColor = UIColor(AppTheme.accent)
+        tabBar.unselectedItemTintColor = UIColor(AppTheme.tabBarInactive)
+        tabBar.backgroundColor = UIColor(AppTheme.backgroundCard)
     }
 }
 

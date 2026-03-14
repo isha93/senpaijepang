@@ -31,7 +31,7 @@ enum NotificationType {
         case .verification: return .blue
         case .news: return .purple
         case .comment: return .orange
-        case .systemUpdate: return Color(.systemGray)
+        case .systemUpdate: return AppTheme.textSecondary
         }
     }
 
@@ -41,7 +41,7 @@ enum NotificationType {
         case .verification: return Color.blue.opacity(0.12)
         case .news: return Color.purple.opacity(0.12)
         case .comment: return Color.orange.opacity(0.12)
-        case .systemUpdate: return Color(.systemGray5)
+        case .systemUpdate: return AppTheme.grayMedium
         }
     }
 

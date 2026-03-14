@@ -11,6 +11,9 @@ enum AppTheme {
     static let textSecondary = Color(red: 0.44, green: 0.47, blue: 0.50)
     static let textTertiary = Color(red: 0.65, green: 0.67, blue: 0.70)
     static let border = Color(red: 0.91, green: 0.92, blue: 0.93)
+    static let inputBackground = grayLight
+    static let inputBorder = border
+    static let tabBarInactive = textTertiary
     static let destructive = Color.red
     static let warning = Color.orange
     static let pending = Color.orange

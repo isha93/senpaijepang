@@ -59,7 +59,7 @@ struct LoginView: View {
                         }
                         .padding(.horizontal, 16)
                         .frame(height: 56)
-                        .background(Color(.systemGray6))
+                        .background(AppTheme.inputBackground)
                         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                     }
                     .padding(.bottom, 20)
@@ -103,7 +103,7 @@ struct LoginView: View {
                         }
                         .padding(.horizontal, 16)
                         .frame(height: 56)
-                        .background(Color(.systemGray6))
+                        .background(AppTheme.inputBackground)
                         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
 
                         HStack {

@@ -166,7 +166,7 @@ struct JobApplicationView: View {
                 .padding(16)
                 .background(AppTheme.grayLight)
                 .clipShape(RoundedRectangle(cornerRadius: 16))
-                .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color(.systemGray5), lineWidth: 1))
+                .overlay(RoundedRectangle(cornerRadius: 16).stroke(AppTheme.grayMedium, lineWidth: 1))
                 
                 // Profile Section
                 VStack(alignment: .leading, spacing: 16) {
@@ -177,7 +177,7 @@ struct JobApplicationView: View {
                     HStack(spacing: 16) {
                         // Mock Avatar
                         Circle()
-                            .fill(Color(.systemGray5))
+                            .fill(AppTheme.grayMedium)
                             .frame(width: 56, height: 56)
                             .overlay(Image(systemName: "person.fill").foregroundStyle(.gray))
                             .overlay(Circle().stroke(AppTheme.accent.opacity(0.2), lineWidth: 2))
@@ -204,7 +204,7 @@ struct JobApplicationView: View {
                     .background(AppTheme.backgroundPrimary)
                     .clipShape(RoundedRectangle(cornerRadius: 16))
                     .shadow(color: AppTheme.textTertiary.opacity(0.05), radius: 8, y: 4)
-                    .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color(.systemGray5), lineWidth: 1))
+                    .overlay(RoundedRectangle(cornerRadius: 16).stroke(AppTheme.grayMedium, lineWidth: 1))
                 }
                 
                 // CV Section
@@ -252,13 +252,13 @@ struct JobApplicationView: View {
                                 .tint(AppTheme.accent)
                         } else {
                             Image(systemName: viewModel.hasUploadedCV ? "checkmark.circle.fill" : "minus.circle")
-                                .foregroundStyle(viewModel.hasUploadedCV ? AppTheme.accent : Color(.systemGray3))
+                                .foregroundStyle(viewModel.hasUploadedCV ? AppTheme.accent : AppTheme.textTertiary)
                         }
                     }
                     .padding(16)
                     .background(AppTheme.backgroundPrimary)
                     .clipShape(RoundedRectangle(cornerRadius: 16))
-                    .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color(.systemGray4), style: StrokeStyle(lineWidth: 2, dash: [6])))
+                    .overlay(RoundedRectangle(cornerRadius: 16).stroke(AppTheme.inputBorder, style: StrokeStyle(lineWidth: 2, dash: [6])))
 
                     if let reviewReason = viewModel.cvReviewReason, !reviewReason.isEmpty {
                         HStack(alignment: .top, spacing: 8) {
@@ -298,7 +298,7 @@ struct JobApplicationView: View {
                         .frame(minHeight: 240)
                         .background(AppTheme.grayLight)
                         .clipShape(RoundedRectangle(cornerRadius: 16))
-                        .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color(.systemGray5), lineWidth: 1))
+                        .overlay(RoundedRectangle(cornerRadius: 16).stroke(AppTheme.grayMedium, lineWidth: 1))
                         .accessibilityIdentifier("job_application_cover_letter_input")
                         .onChange(of: viewModel.coverLetterText) { newValue, _ in
                             if newValue.count > 500 {
@@ -392,7 +392,7 @@ struct JobApplicationView: View {
         .padding(16)
         .background(AppTheme.grayLight.opacity(0.5))
         .clipShape(RoundedRectangle(cornerRadius: 16))
-        .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color(.systemGray5), lineWidth: 1))
+        .overlay(RoundedRectangle(cornerRadius: 16).stroke(AppTheme.grayMedium, lineWidth: 1))
     }
     
     // MARK: - Bottom Action Container

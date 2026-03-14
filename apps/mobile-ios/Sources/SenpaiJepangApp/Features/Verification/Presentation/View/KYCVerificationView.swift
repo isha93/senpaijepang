@@ -56,7 +56,7 @@ struct KYCVerificationView: View {
                         .font(.system(size: 20, weight: .medium))
                         .foregroundStyle(AppTheme.textSecondary)
                         .frame(width: 40, height: 40)
-                        .background(Color(.systemGray6))
+                        .background(AppTheme.inputBackground)
                         .clipShape(Circle())
                 }
                 
@@ -93,7 +93,7 @@ struct KYCVerificationView: View {
                         
                         // Fake image for illustration
                         Circle()
-                            .fill(Color(.systemGray6))
+                            .fill(AppTheme.inputBackground)
                             .frame(width: 140, height: 140)
                             .overlay(
                                 Image(systemName: "person.crop.circle.badge.checkmark")
@@ -180,7 +180,7 @@ struct KYCVerificationView: View {
         HStack(spacing: 20) {
             ZStack {
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(Color(.systemGray6))
+                    .fill(AppTheme.inputBackground)
                     .frame(width: 48, height: 48)
                 Image(systemName: icon)
                     .font(.system(size: 22))
@@ -206,7 +206,7 @@ struct KYCVerificationView: View {
     private var scanningStep: some View {
         ZStack {
             // Fake Camera Background
-            Color(.systemGray5)
+            AppTheme.grayMedium
                 .ignoresSafeArea()
             
             VStack(spacing: 0) {
@@ -400,7 +400,7 @@ struct KYCVerificationView: View {
             ZStack {
                 // Background track
                 Circle()
-                    .stroke(Color(.systemGray6), lineWidth: 6)
+                    .stroke(AppTheme.inputBackground, lineWidth: 6)
                     .frame(width: 160, height: 160)
                 
                 // Animated progress rim
@@ -506,7 +506,7 @@ struct KYCVerificationView: View {
                         .rotationEffect(.degrees(spinnerRotation))
                 } else {
                     Circle()
-                        .stroke(Color(.systemGray4), lineWidth: 2)
+                        .stroke(AppTheme.inputBorder, lineWidth: 2)
                         .frame(width: 24, height: 24)
                 }
             }

@@ -93,7 +93,7 @@ struct NotificationsView: View {
                 .foregroundStyle(isSelected ? .white : AppTheme.textSecondary)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 6)
-                .background(isSelected ? Color(.label) : Color(.systemGray6))
+                .background(isSelected ? AppTheme.textPrimary : AppTheme.inputBackground)
                 .clipShape(Capsule())
         }
         .buttonStyle(.plain)

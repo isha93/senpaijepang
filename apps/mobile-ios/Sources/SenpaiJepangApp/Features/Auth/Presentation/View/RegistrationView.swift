@@ -94,7 +94,7 @@ struct RegistrationView: View {
         } else if index < viewModel.currentStep.rawValue {
             return AppTheme.accent.opacity(0.35)
         } else {
-            return Color(.systemGray5)
+            return AppTheme.grayMedium
         }
     }
 
@@ -267,11 +267,11 @@ struct RegistrationView: View {
                             }
                             .padding(.horizontal, 16)
                             .frame(height: 48)
-                            .background(Color(.systemGray6))
+                            .background(AppTheme.inputBackground)
                             .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                             .overlay(
                                 RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                    .stroke(Color(.systemGray4), lineWidth: 1)
+                                    .stroke(AppTheme.inputBorder, lineWidth: 1)
                             )
                         }
 
@@ -289,7 +289,7 @@ struct RegistrationView: View {
                                         .clipShape(Capsule())
                                         .overlay(
                                             Capsule()
-                                                .stroke(viewModel.selectedPrefecture == prefecture ? AppTheme.accent : Color(.systemGray4), lineWidth: 1)
+                                                .stroke(viewModel.selectedPrefecture == prefecture ? AppTheme.accent : AppTheme.inputBorder, lineWidth: 1)
                                         )
                                 }
                             }
@@ -323,7 +323,7 @@ struct RegistrationView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                         .overlay(
                             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                .stroke(Color(.systemGray4), lineWidth: 1)
+                                .stroke(AppTheme.inputBorder, lineWidth: 1)
                         )
                 }
                 .buttonStyle(PressableButtonStyle())
@@ -362,11 +362,11 @@ struct RegistrationView: View {
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 16)
-            .background(isSelected ? AppTheme.accent.opacity(0.05) : Color(.systemGray6))
+            .background(isSelected ? AppTheme.accent.opacity(0.05) : AppTheme.inputBackground)
             .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .stroke(isSelected ? AppTheme.accent : Color(.systemGray4), lineWidth: isSelected ? 1.5 : 1)
+                    .stroke(isSelected ? AppTheme.accent : AppTheme.inputBorder, lineWidth: isSelected ? 1.5 : 1)
             )
         }
         .buttonStyle(.plain)
@@ -464,7 +464,7 @@ struct RegistrationView: View {
             HStack(spacing: 12) {
                 ForEach(0..<6, id: \.self) { index in
                     RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .fill(Color(.systemGray6))
+                        .fill(AppTheme.inputBackground)
                         .overlay(
                             RoundedRectangle(cornerRadius: 14, style: .continuous)
                                 .stroke(otpBorderColor(for: index), lineWidth: 1.5)
@@ -502,7 +502,7 @@ struct RegistrationView: View {
         if index == viewModel.verificationCode.count && isVerificationFieldFocused {
             return AppTheme.accent.opacity(0.6)
         }
-        return Color(.systemGray5)
+        return AppTheme.grayMedium
     }
 
     @ViewBuilder
@@ -526,7 +526,7 @@ struct RegistrationView: View {
                 }
                 .frame(maxWidth: .infinity)
                 .frame(height: 54)
-                .background(Color(.systemGray6))
+                .background(AppTheme.inputBackground)
                 .clipShape(Capsule())
             }
             .buttonStyle(.plain)
@@ -543,7 +543,7 @@ struct RegistrationView: View {
             }
             .frame(maxWidth: .infinity)
             .frame(height: 54)
-            .background(Color(.systemGray6))
+            .background(AppTheme.inputBackground)
             .clipShape(Capsule())
         }
     }
@@ -620,11 +620,11 @@ struct RegistrationView: View {
             content()
                 .padding(.horizontal, 14)
                 .frame(height: 48)
-                .background(Color(.systemGray6))
+                .background(AppTheme.inputBackground)
                 .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                 .overlay(
                     RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .stroke(Color(.systemGray4), lineWidth: 1)
+                        .stroke(AppTheme.inputBorder, lineWidth: 1)
                 )
         }
     }
