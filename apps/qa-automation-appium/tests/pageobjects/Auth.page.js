@@ -1,3 +1,5 @@
+const fs = require('fs');
+const path = require('path');
 const BasePage = require('./Base.page');
 
 class AuthPage extends BasePage {
@@ -14,13 +16,18 @@ class AuthPage extends BasePage {
   get registrationEmailInput() { return $('~registration_email_input'); }
   get registrationPasswordInput() { return $('~registration_password_input'); }
   get registrationConfirmPasswordInput() { return $('~registration_confirm_password_input'); }
+  get registrationPasswordVisibilityButton() { return $('~registration_password_visibility_button'); }
+  get registrationConfirmPasswordVisibilityButton() { return $('~registration_confirm_password_visibility_button'); }
   get registrationContinueButton() { return $('~registration_continue_button'); }
   get registrationCreateAccountButton() { return $('~registration_create_account_button'); }
   get registrationVerifyView() { return $('~registration_verify_view'); }
   get registrationVerifyCodeInput() { return $('~registration_verify_code_input'); }
-  get registrationVerifyEmailButton() { return $('~registration_verify_email_button'); }
+  get registrationVerifyEmailButton() { return $('-ios predicate string:type == "XCUIElementTypeButton" AND label == "Verify Email"'); }
   get registrationResendCodeButton() { return $('~registration_resend_code_button'); }
   get registrationChangeEmailButton() { return $('~registration_change_email_button'); }
+  get registrationGoToDashboardButton() { return $('-ios predicate string:type == "XCUIElementTypeButton" AND label == "Go to Dashboard"'); }
+  get registrationTokyoQuickPrefectureButton() { return $('-ios predicate string:type == "XCUIElementTypeButton" AND label == "Tokyo"'); }
+  get registrationPreferencesContinueButton() { return $('-ios predicate string:type == "XCUIElementTypeButton" AND label == "Continue"'); }
   get registrationErrorText() { return $('~registration_error_text'); }
   get registrationInfoText() { return $('~registration_info_text'); }
 
@@ -44,19 +51,9 @@ class AuthPage extends BasePage {
     await this.registrationFullNameInput.waitForDisplayed({ timeout: 15000 });
     await this.setInputValue(this.registrationFullNameInput, fullName);
     await this.setInputValue(this.registrationEmailInput, email);
-    await this.setInputValue(this.registrationPasswordInput, password);
-    await driver.pause(500);
-
-    // Explicitly focus and set Confirm Password to ensure it registers
-    await this.registrationConfirmPasswordInput.click();
-    await this.registrationConfirmPasswordInput.clearValue();
-    await this.registrationConfirmPasswordInput.setValue(confirmPassword + '\\n'); // Add newline to trigger dismiss/commit
-
-    try {
-      await driver.hideKeyboard();
-    } catch (_error) {
-      // Keyboard may already be dismissed on some simulator states.
-    }
+    await this.ensureRegistrationPasswordInputsVisible();
+    await this.setInputValueVerified(this.registrationPasswordInput, password);
+    await this.setInputValueVerified(this.registrationConfirmPasswordInput, confirmPassword);
     await this.dismissRegistrationKeyboard();
   }
 
@@ -64,19 +61,16 @@ class AuthPage extends BasePage {
     await this.registrationAccountView.waitForDisplayed({ timeout: 15000 });
     await this.dismissRegistrationKeyboard();
 
-    // Scroll down to ensure the Continue button is visible
     try {
-      await driver.execute('mobile: scroll', { direction: 'down' });
-    } catch (_e) {
-      // Ignored if already at bottom or scroll fails
-    }
-
-    try {
-      await this.registrationContinueButton.waitForDisplayed({ timeout: 15000 });
-      await this.registrationContinueButton.click();
+      const continueButton = await this.findVisibleWithSwipe('~registration_continue_button', {
+        maxSwipes: 4,
+        pauseMs: 400,
+        direction: 'up'
+      });
+      await continueButton.click();
     } catch (error) {
-      // If the button is still not visible natively, try to find it by name using an iOS class chain or predicate 
-      // and tap it directly. Wait a moment first.
+      // If the button is still not visible natively, try to find it by name using an iOS predicate
+      // and tap it directly after a short pause.
       await driver.pause(1000);
       const continueBtn = await driver.$(`-ios predicate string:name == "registration_continue_button"`);
       await continueBtn.click();
@@ -97,16 +91,49 @@ class AuthPage extends BasePage {
 
   async continueRegistrationPreferences() {
     await this.registrationPreferencesView.waitForDisplayed({ timeout: 15000 });
-    for (let attempt = 0; attempt < 3; attempt += 1) {
-      if (await this.registrationCreateAccountButton.isDisplayed()) {
-        await this.registrationCreateAccountButton.click();
-        return;
+    await this.selectRegistrationQuickPrefecture();
+    await this.dismissRegistrationKeyboard();
+
+    try {
+      const continueButton = await this.findVisibleWithSwipe('~registration_create_account_button', {
+        maxSwipes: 3,
+        pauseMs: 300,
+        direction: 'up'
+      });
+      await continueButton.click();
+    } catch (_error) {
+      try {
+        const continueButton = await this.findVisibleWithSwipe('-ios predicate string:type == "XCUIElementTypeButton" AND name == "registration_create_account_button"', {
+          maxSwipes: 2,
+          pauseMs: 300,
+          direction: 'up'
+        });
+        await continueButton.click();
+      } catch (_nestedError) {
+        try {
+          const continueButton = await this.findVisibleWithSwipe('-ios predicate string:type == "XCUIElementTypeButton" AND label == "Continue"', {
+            maxSwipes: 2,
+            pauseMs: 300,
+            direction: 'up'
+          });
+          await continueButton.click();
+        } catch (_fallbackError) {
+          const button = await this.registrationPreferencesContinueButton;
+          if (await button.isExisting()) {
+            await button.click();
+          }
+        }
       }
-      await driver.pause(500);
     }
 
+    const transitioned = await this.waitForRegistrationSuccessStep(5000);
+    if (transitioned) {
+      return;
+    }
+
+    await this.captureRegistrationDebugState('preferences-continue-no-transition');
     const errorText = await this.getRegistrationErrorText();
-    throw new Error(errorText || 'element (~registration_create_account_button) not displayed on preferences screen');
+    throw new Error(errorText || 'preferences did not advance to success step');
   }
 
   async createRegistrationAccount() {
@@ -119,8 +146,47 @@ class AuthPage extends BasePage {
   }
 
   async submitVerificationCode() {
-    await this.registrationVerifyEmailButton.waitForDisplayed({ timeout: 15000 });
-    await this.registrationVerifyEmailButton.click();
+    await this.dismissRegistrationKeyboard();
+
+    try {
+      const verifyButton = await this.findVisibleWithSwipe('-ios predicate string:type == "XCUIElementTypeButton" AND label == "Verify Email"', {
+        maxSwipes: 3,
+        pauseMs: 300,
+        direction: 'up'
+      });
+      await verifyButton.click();
+      return;
+    } catch (_error) {
+      // Fall back to a direct lookup when the footer button exists but swipe heuristics miss it.
+    }
+
+    const verifyButton = await this.registrationVerifyEmailButton;
+    if (await verifyButton.isExisting()) {
+      await verifyButton.click();
+      return;
+    }
+
+    await this.captureRegistrationDebugState('verify-email-button-missing');
+    throw new Error('registration verify email button not found in accessibility tree');
+  }
+
+  async waitForRegistrationSuccessStep(timeout = 15000) {
+    try {
+      await this.registrationGoToDashboardButton.waitForDisplayed({ timeout });
+      return true;
+    } catch (_error) {
+      return false;
+    }
+  }
+
+  async goToDashboardAfterRegistration() {
+    const transitioned = await this.waitForRegistrationSuccessStep();
+    if (!transitioned) {
+      await this.captureRegistrationDebugState('success-button-missing');
+      throw new Error('registration success step did not appear');
+    }
+
+    await this.registrationGoToDashboardButton.click();
   }
 
   async goBackFromRegistration() {
@@ -129,13 +195,6 @@ class AuthPage extends BasePage {
   }
 
   async dismissRegistrationKeyboard() {
-    try {
-      await driver.hideKeyboard();
-      return;
-    } catch (_error) {
-      // Fall back to tapping outside the active text field.
-    }
-
     try {
       if (await this.registrationHeaderTitle.isDisplayed()) {
         await this.registrationHeaderTitle.click();
@@ -172,6 +231,14 @@ class AuthPage extends BasePage {
     return matches[0].getText();
   }
 
+  async selectRegistrationQuickPrefecture() {
+    const quickPrefectureButton = await this.registrationTokyoQuickPrefectureButton;
+    if ((await quickPrefectureButton.isExisting()) && (await quickPrefectureButton.isDisplayed())) {
+      await quickPrefectureButton.click();
+      await driver.pause(300);
+    }
+  }
+
   async setInputValue(elementPromise, value) {
     const element = await elementPromise;
     await element.waitForDisplayed({ timeout: 15000 });
@@ -182,6 +249,126 @@ class AuthPage extends BasePage {
       // Some iOS text fields ignore clearValue until focused.
     }
     await element.setValue(value);
+  }
+
+  async setSecureInputValue(elementPromise, value) {
+    const element = await elementPromise;
+    await element.waitForDisplayed({ timeout: 15000 });
+    await element.click();
+    await driver.pause(200);
+
+    try {
+      await element.clearValue();
+      await driver.pause(150);
+    } catch (_error) {
+      // Some iOS SecureField implementations ignore clearValue when empty.
+    }
+
+    await element.setValue(value);
+    await driver.pause(250);
+  }
+
+  async setInputValueVerified(elementPromise, value) {
+    const element = await elementPromise;
+    await element.waitForDisplayed({ timeout: 15000 });
+    await element.click();
+    await driver.pause(200);
+
+    try {
+      await element.clearValue();
+      await driver.pause(150);
+    } catch (_error) {
+      // Some iOS text fields ignore clearValue when empty.
+    }
+
+    await element.setValue(value);
+    await driver.pause(300);
+
+    let actualValue = await this.readElementValue(element);
+    if (actualValue === value) {
+      return;
+    }
+
+    try {
+      await element.clearValue();
+      await driver.pause(150);
+    } catch (_error) {
+      // Best effort before retrying with slower typing.
+    }
+
+    for (const character of String(value)) {
+      await element.addValue(character);
+      await driver.pause(40);
+    }
+    await driver.pause(300);
+
+    actualValue = await this.readElementValue(element);
+    if (actualValue !== value) {
+      const selector = element.selector || 'field';
+      throw new Error(`failed to set input value reliably for ${selector}: expected "${value}" got "${actualValue}"`);
+    }
+  }
+
+  async readElementValue(element) {
+    try {
+      const value = await element.getValue();
+      if (typeof value === 'string' && value.length > 0) {
+        return value;
+      }
+    } catch (_error) {
+      // Fall back to other iOS element properties.
+    }
+
+    try {
+      const value = await element.getAttribute('value');
+      if (typeof value === 'string') {
+        return value;
+      }
+    } catch (_error) {
+      // Fall back to text.
+    }
+
+    try {
+      const text = await element.getText();
+      if (typeof text === 'string') {
+        return text;
+      }
+    } catch (_error) {
+      // Ignore final fallback failure.
+    }
+
+    return '';
+  }
+
+  async captureRegistrationDebugState(label) {
+    const artifactDir = path.resolve(__dirname, '../../artifacts/debug');
+    fs.mkdirSync(artifactDir, { recursive: true });
+    const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+
+    try {
+      const source = await driver.getPageSource();
+      fs.writeFileSync(path.join(artifactDir, `${label}-${stamp}.xml`), source, 'utf8');
+    } catch (_error) {
+      // Ignore debug capture failures.
+    }
+
+    try {
+      await driver.saveScreenshot(path.join(artifactDir, `${label}-${stamp}.png`));
+    } catch (_error) {
+      // Ignore debug capture failures.
+    }
+  }
+
+  async ensureRegistrationPasswordInputsVisible() {
+    if (await this.registrationPasswordVisibilityButton.isDisplayed()) {
+      await this.registrationPasswordVisibilityButton.click();
+      await driver.pause(200);
+    }
+
+    if (await this.registrationConfirmPasswordVisibilityButton.isDisplayed()) {
+      await this.registrationConfirmPasswordVisibilityButton.click();
+      await driver.pause(200);
+    }
   }
 }
 

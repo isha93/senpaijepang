@@ -29,6 +29,7 @@ describe('Regression - Registration', function () {
     await AuthPage.submitVerificationCode();
     await AuthPage.registrationPreferencesView.waitForDisplayed({ timeout: 30000 });
     await AuthPage.continueRegistrationPreferences();
+    await AuthPage.goToDashboardAfterRegistration();
 
     const feedTab = await $('~tab_feed');
     await feedTab.waitForDisplayed({ timeout: 30000 });

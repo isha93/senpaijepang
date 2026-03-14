@@ -86,7 +86,9 @@ struct LoginView: View {
                             }
                             .font(.system(size: 16))
                             .foregroundStyle(AppTheme.textPrimary)
-                            .textContentType(.oneTimeCode)
+                            .textContentType(.password)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
                             .accessibilityIdentifier("auth_password_input")
 
                             Button {
@@ -97,6 +99,7 @@ struct LoginView: View {
                                     .foregroundStyle(AppTheme.textTertiary)
                                     .contentTransition(.symbolEffect(.replace))
                             }
+                            .accessibilityIdentifier("auth_password_visibility_button")
                         }
                         .padding(.horizontal, 16)
                         .frame(height: 56)

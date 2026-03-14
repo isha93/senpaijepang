@@ -55,20 +55,22 @@ extension ApplyJobResponseDTO {
 
 private enum JourneyStepConfig {
     static let orderedStatuses: [ApplicationStatus] = [
-        .applied, .screening, .interview, .visaProcessing, .visaIssued, .startWork
+        .applied, .screening, .interview, .offered, .accepted
     ]
 }
 
 private func applicationStatus(from raw: String) -> ApplicationStatus {
     switch raw.uppercased() {
     case "SUBMITTED":       return .applied
-    case "SCREENING":       return .screening
+    case "IN_REVIEW", "SCREENING":
+                            return .screening
     case "INTERVIEW":       return .interview
     case "VISA_PROCESSING": return .visaProcessing
     case "VISA_ISSUED":     return .visaIssued
     case "START_WORK":      return .startWork
     case "OFFERED":         return .offered
-    case "ACCEPTED":        return .accepted
+    case "HIRED", "ACCEPTED":
+                            return .accepted
     case "REJECTED":        return .rejected
     default:                return .applied
     }
@@ -77,13 +79,13 @@ private func applicationStatus(from raw: String) -> ApplicationStatus {
 private func statusTitle(_ status: ApplicationStatus) -> String {
     switch status {
     case .applied:          return "Application Submitted"
-    case .screening:        return "Screening"
+    case .screening:        return "In Review"
     case .interview:        return "Interview"
     case .visaProcessing:   return "Visa Processing"
     case .visaIssued:       return "Visa Issued"
     case .startWork:        return "Start Work"
     case .offered:          return "Offer Received"
-    case .accepted:         return "Accepted"
+    case .accepted:         return "Hired"
     case .rejected:         return "Rejected"
     }
 }

@@ -150,6 +150,7 @@ struct ProfileView: View {
                         LText(profile.verificationStatus.rawValue.capitalized) // Depends on mock data Enum naming, might need mapping
                             .font(.headline.bold())
                             .foregroundStyle(AppTheme.textPrimary)
+                            .accessibilityIdentifier("profile_status_value")
                         if profile.verificationStatus == .verified {
                             Image(systemName: "checkmark.circle.fill")
                                 .font(.caption)
@@ -238,6 +239,7 @@ struct ProfileView: View {
         }
         .padding(AppTheme.spacingXL)
         .cardStyle()
+        .accessibilityIdentifier("profile_verification_cta")
     }
 }
 

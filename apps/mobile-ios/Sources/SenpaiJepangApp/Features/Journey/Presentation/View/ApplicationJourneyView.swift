@@ -12,15 +12,12 @@ struct ApplicationJourneyView: View {
         ScrollView {
             if let journey = viewModel.journey {
                 VStack(spacing: AppTheme.spacingL) {
-                    // Status hero card
                     statusCard(journey)
                         .staggeredAppear()
 
-                    // Timeline card
                     timelineCard(journey)
                         .staggeredAppear(delay: 0.1)
 
-                    // Recent Updates
                     if !journey.recentUpdates.isEmpty {
                         recentUpdatesSection(journey.recentUpdates)
                             .staggeredAppear(delay: 0.2)
@@ -28,6 +25,17 @@ struct ApplicationJourneyView: View {
                 }
                 .padding(.horizontal, AppTheme.spacingL)
                 .padding(.bottom, AppTheme.spacingXXL)
+                .accessibilityElement(children: .contain)
+                .accessibilityIdentifier("journey_view")
+            } else if !viewModel.isLoading {
+                EmptyStateView(
+                    icon: "map",
+                    title: "No Journey Yet",
+                    message: "Apply to a job first and your latest application timeline will appear here."
+                )
+                .padding(.horizontal, AppTheme.spacingL)
+                .padding(.top, AppTheme.spacingXXL)
+                .accessibilityIdentifier("journey_empty_view")
             }
         }
         .background(AppTheme.backgroundPrimary)
@@ -61,6 +69,7 @@ struct ApplicationJourneyView: View {
                     Text(journey.jobTitle)
                         .font(.title2.bold())
                         .foregroundStyle(AppTheme.textPrimary)
+                        .accessibilityIdentifier("journey_job_title")
 
                     if let location = journey.jobLocation {
                         Text("\(location) • \(journey.companyName)")
@@ -95,6 +104,9 @@ struct ApplicationJourneyView: View {
                     .foregroundStyle(AppTheme.textSecondary)
             }
             .padding(.top, AppTheme.spacingS)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("Step \(viewModel.currentStepIndex + 1) of \(journey.totalSteps)")
+            .accessibilityIdentifier("journey_step_counter")
 
             // Current step info
             if let currentStep = journey.steps.first(where: { $0.completedAt == nil }) {
@@ -116,6 +128,8 @@ struct ApplicationJourneyView: View {
         }
         .padding(AppTheme.spacingXL)
         .cardStyle()
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("journey_status_card")
     }
 
     // MARK: - Timeline Card

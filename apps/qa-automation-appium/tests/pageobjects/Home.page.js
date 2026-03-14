@@ -3,6 +3,7 @@ const BasePage = require('./Base.page');
 class HomePage extends BasePage {
   get tabJobs() { return $('~tab_jobs'); }
   get tabFeed() { return $('~tab_feed'); }
+  get tabJourney() { return $('~tab_journey'); }
   get tabProfile() { return $('~tab_profile'); }
   get searchInput() { return $('~home_search_input'); }
   get notificationButton() { return $('~home_notification_button'); }
@@ -28,6 +29,13 @@ class HomePage extends BasePage {
 
   async goToProfile() {
     const tab = await this.tabProfile;
+    await tab.waitForDisplayed({ timeout: 10000 });
+    await tab.click();
+    await driver.pause(1000);
+  }
+
+  async goToJourney() {
+    const tab = await this.tabJourney;
     await tab.waitForDisplayed({ timeout: 10000 });
     await tab.click();
     await driver.pause(1000);

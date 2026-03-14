@@ -8,6 +8,7 @@ class JobApplicationPage extends BasePage {
   get coverLetterInput() { return $('~job_application_cover_letter_input'); }
   get primaryButton() { return $('~job_application_primary_button'); }
   get successTitle() { return $('~job_application_success_title'); }
+  get successStatusButton() { return $('~job_application_success_status_button'); }
   get errorMessage() { return $('~job_application_error_message'); }
   get successTextFallback() {
     return $('//XCUIElementTypeStaticText[contains(@name, "Lamaran Berhasil") or contains(@label, "Lamaran Berhasil") or contains(@name, "Application Submitted") or contains(@label, "Application Submitted")]');
@@ -116,6 +117,12 @@ class JobApplicationPage extends BasePage {
     const source = await driver.getPageSource();
     await browser.saveScreenshot('/tmp/wdio-job-application-timeout.png');
     throw new Error(`Neither success nor already-applied state appeared. Debug source head: ${source.slice(0, 1200)} | screenshot: /tmp/wdio-job-application-timeout.png`);
+  }
+
+  async openApplicationStatus(timeout = 15000) {
+    const button = await this.successStatusButton;
+    await button.waitForDisplayed({ timeout });
+    await button.click();
   }
 }
 

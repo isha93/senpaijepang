@@ -149,7 +149,9 @@ struct RegistrationView: View {
                         isVisible: viewModel.isPasswordVisible,
                         placeholder: "Min. 8 characters",
                         systemImage: "lock.fill",
+                        textContentType: .newPassword,
                         toggleAction: viewModel.togglePasswordVisibility,
+                        toggleAccessibilityIdentifier: "registration_password_visibility_button",
                         accessibilityIdentifier: "registration_password_input"
                     )
                 }
@@ -161,7 +163,9 @@ struct RegistrationView: View {
                         isVisible: viewModel.isConfirmPasswordVisible,
                         placeholder: "Repeat password",
                         systemImage: "lock.rotation",
+                        textContentType: .newPassword,
                         toggleAction: viewModel.toggleConfirmPasswordVisibility,
+                        toggleAccessibilityIdentifier: "registration_confirm_password_visibility_button",
                         accessibilityIdentifier: "registration_confirm_password_input"
                     )
                 }
@@ -631,7 +635,9 @@ struct RegistrationView: View {
         isVisible: Bool,
         placeholder: String,
         systemImage: String,
+        textContentType: UITextContentType,
         toggleAction: @escaping () -> Void,
+        toggleAccessibilityIdentifier: String,
         accessibilityIdentifier: String
     ) -> some View {
         HStack(spacing: 12) {
@@ -650,7 +656,9 @@ struct RegistrationView: View {
             }
             .font(.system(size: 14))
             .foregroundStyle(AppTheme.textPrimary)
-            .textContentType(.oneTimeCode)
+            .textContentType(textContentType)
+            .textInputAutocapitalization(.never)
+            .autocorrectionDisabled()
 
             Button(action: toggleAction) {
                 Image(systemName: isVisible ? "eye.fill" : "eye.slash.fill")
@@ -658,6 +666,7 @@ struct RegistrationView: View {
                     .foregroundStyle(AppTheme.textTertiary)
                     .contentTransition(.symbolEffect(.replace))
             }
+            .accessibilityIdentifier(toggleAccessibilityIdentifier)
         }
     }
 
@@ -693,6 +702,8 @@ struct RegistrationView: View {
         }
         .buttonStyle(PressableButtonStyle())
         .disabled(isDisabled)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(title)
         .accessibilityIdentifier(accessibilityIdentifier)
     }
 
