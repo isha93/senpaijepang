@@ -41,7 +41,27 @@ private final class AppContainer: ObservableObject {
     let feedService: FeedService
 
     init() {
-        let client = APIClient(tokenProvider: AuthStateManager.shared)
+        let authState = AuthStateManager.shared
+        let authClient = APIClient(tokenProvider: authState)
+        let unauthenticatedClient = APIClient()
+
+        authState.configure(
+            sessionRefreshHandler: { refreshToken in
+                let dto = try await unauthenticatedClient.request(
+                    AuthEndpoint.refresh(refreshToken: refreshToken),
+                    responseType: AuthResponseDTO.self
+                )
+                return dto.toSession()
+            },
+            sessionValidationHandler: {
+                _ = try await authClient.request(
+                    AuthEndpoint.me,
+                    responseType: AuthMeResponseDTO.self
+                )
+            }
+        )
+
+        let client = authClient
         self.apiClient = client
 
         self.authService = AuthService(

@@ -9,6 +9,7 @@ describe('Regression - Jobs', () => {
     before(async () => {
         await OnboardingPage.skipOnboarding();
         await AuthPage.login(users.demo.email, users.demo.password);
+        await HomePage.waitForVisible('~tab_feed', 15000);
         await HomePage.goToJobs();
         await JobsPage.waitForJobsList();
     });

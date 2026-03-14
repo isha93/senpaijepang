@@ -19,6 +19,10 @@ struct AuthResponseDTO: Decodable {
     }
 }
 
+struct AuthMeResponseDTO: Decodable {
+    let user: AuthUserDTO
+}
+
 struct AuthUserDTO: Decodable {
     let id: String
     let fullName: String

@@ -29,9 +29,13 @@ Place app builds under:
 Run iOS:
 ```bash
 PLATFORM=ios IOS_DEVICE_NAME="iPhone 15" IOS_PLATFORM_VERSION=17.5 \
+API_BASE_URL=http://127.0.0.1:4000 \
 IOS_APP_PATH=apps/qa-automation-appium/apps/ios/SenpaiJepang.app \
 npm run test:ios -w @senpaijepang/qa-automation-appium
 ```
+
+Registration E2E is blocked against production by default. To test the OTP flow, point `API_BASE_URL`
+to a non-production backend with short resend cooldown and development OTP exposure enabled.
 
 Run Android:
 ```bash

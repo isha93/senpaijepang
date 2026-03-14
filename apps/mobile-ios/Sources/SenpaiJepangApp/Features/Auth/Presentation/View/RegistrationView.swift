@@ -17,10 +17,10 @@ struct RegistrationView: View {
                 switch viewModel.currentStep {
                 case .accountInfo:
                     accountInfoStep
-                case .preferences:
-                    preferencesStep
                 case .verifyEmail:
                     verifyEmailStep
+                case .preferences:
+                    preferencesStep
                 case .allSet:
                     successStep
                 }
@@ -54,12 +54,14 @@ struct RegistrationView: View {
                                 .foregroundStyle(AppTheme.textSecondary)
                                 .frame(width: 40, height: 40)
                         }
+                        .accessibilityIdentifier("registration_back_button")
                     }
                     Spacer()
                 }
                 Text(viewModel.currentStep.title)
                     .font(.system(size: 16, weight: .bold))
                     .foregroundStyle(AppTheme.textPrimary)
+                    .accessibilityIdentifier("registration_header_title")
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 8)
@@ -170,8 +172,8 @@ struct RegistrationView: View {
                 primaryButton(
                     title: "Continue",
                     systemImage: "arrow.right",
-                    isLoading: false,
-                    isDisabled: false,
+                    isLoading: viewModel.isRegistering,
+                    isDisabled: viewModel.isRegistering,
                     accessibilityIdentifier: "registration_continue_button",
                     action: viewModel.continueToNextStep
                 )
@@ -195,134 +197,148 @@ struct RegistrationView: View {
             .padding(.top, 24)
             .padding(.bottom, 32)
         }
+        #if os(iOS)
+        .scrollDismissesKeyboard(.immediately)
+        #endif
+        .accessibilityIdentifier("registration_account_view")
     }
 
-    // MARK: - Step 2: Preferences
+    // MARK: - Step 3: Preferences
 
     @ViewBuilder
     private var preferencesStep: some View {
-        ScrollView(showsIndicators: false) {
-            VStack(alignment: .leading, spacing: 0) {
-                VStack(alignment: .leading, spacing: 4) {
-                    LText("Tell us about yourself")
-                        .font(.system(size: 22, weight: .bold))
-                        .foregroundStyle(AppTheme.textPrimary)
-                    LText("Personalize your job recommendations before we send your email code.")
-                        .font(.system(size: 14))
-                        .foregroundStyle(AppTheme.textSecondary)
-                }
-                .padding(.bottom, 24)
-
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("CURRENT STATUS")
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(AppTheme.textSecondary)
-                        .tracking(0.8)
-                        .padding(.leading, 4)
-
-                    HStack(spacing: 12) {
-                        ForEach(WorkStatus.allCases, id: \.self) { status in
-                            statusCard(status: status, isSelected: viewModel.workStatus == status)
-                        }
-                    }
-                }
-                .padding(.bottom, 24)
-
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("CURRENT LOCATION")
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(AppTheme.textSecondary)
-                        .tracking(0.8)
-                        .padding(.leading, 4)
-
-                    Menu {
-                        ForEach(viewModel.prefectures, id: \.self) { prefecture in
-                            Button(prefecture) {
-                                viewModel.selectQuickPrefecture(prefecture)
-                            }
-                        }
-                    } label: {
-                        HStack(spacing: 12) {
-                            Image(systemName: "location.fill")
-                                .font(.system(size: 16))
-                                .foregroundStyle(AppTheme.accent)
-                            Text(viewModel.selectedPrefecture.isEmpty ? "Select Prefecture" : viewModel.selectedPrefecture)
-                                .font(.system(size: 14))
-                                .foregroundStyle(viewModel.selectedPrefecture.isEmpty ? AppTheme.textTertiary : AppTheme.textPrimary)
-                            Spacer()
-                            Image(systemName: "chevron.down")
-                                .font(.system(size: 12))
-                                .foregroundStyle(AppTheme.textTertiary)
-                        }
-                        .padding(.horizontal, 16)
-                        .frame(height: 48)
-                        .background(Color(.systemGray6))
-                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                .stroke(Color(.systemGray4), lineWidth: 1)
-                        )
-                    }
-
-                    HStack(spacing: 8) {
-                        ForEach(viewModel.quickPrefectures, id: \.self) { prefecture in
-                            Button {
-                                viewModel.selectQuickPrefecture(prefecture)
-                            } label: {
-                                Text(prefecture)
-                                    .font(.system(size: 11, weight: .medium))
-                                    .foregroundStyle(viewModel.selectedPrefecture == prefecture ? AppTheme.accent : AppTheme.textSecondary)
-                                    .padding(.horizontal, 12)
-                                    .padding(.vertical, 6)
-                                    .background(AppTheme.backgroundCard)
-                                    .clipShape(Capsule())
-                                    .overlay(
-                                        Capsule()
-                                            .stroke(viewModel.selectedPrefecture == prefecture ? AppTheme.accent : Color(.systemGray4), lineWidth: 1)
-                                    )
-                            }
-                        }
-                    }
-                    .padding(.top, 4)
-                }
-
-                statusMessageView
-                    .padding(.top, 16)
-
-                Spacer(minLength: 40)
-
-                HStack(spacing: 12) {
-                    Button { viewModel.goBack() } label: {
-                        LText("Back")
-                            .font(.system(size: 14, weight: .bold))
+        VStack(spacing: 0) {
+            ScrollView(showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 0) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        LText("Tell us about yourself")
+                            .font(.system(size: 22, weight: .bold))
+                            .foregroundStyle(AppTheme.textPrimary)
+                        LText("Set your preferences before you enter the app.")
+                            .font(.system(size: 14))
                             .foregroundStyle(AppTheme.textSecondary)
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 52)
-                            .background(AppTheme.backgroundCard)
-                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    }
+                    .padding(.bottom, 24)
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("CURRENT STATUS")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(AppTheme.textSecondary)
+                            .tracking(0.8)
+                            .padding(.leading, 4)
+
+                        HStack(spacing: 12) {
+                            ForEach(WorkStatus.allCases, id: \.self) { status in
+                                statusCard(status: status, isSelected: viewModel.workStatus == status)
+                            }
+                        }
+                    }
+                    .padding(.bottom, 24)
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("CURRENT LOCATION")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(AppTheme.textSecondary)
+                            .tracking(0.8)
+                            .padding(.leading, 4)
+
+                        Menu {
+                            ForEach(viewModel.prefectures, id: \.self) { prefecture in
+                                Button(prefecture) {
+                                    viewModel.selectQuickPrefecture(prefecture)
+                                }
+                            }
+                        } label: {
+                            HStack(spacing: 12) {
+                                Image(systemName: "location.fill")
+                                    .font(.system(size: 16))
+                                    .foregroundStyle(AppTheme.accent)
+                                Text(viewModel.selectedPrefecture.isEmpty ? "Select Prefecture" : viewModel.selectedPrefecture)
+                                    .font(.system(size: 14))
+                                    .foregroundStyle(viewModel.selectedPrefecture.isEmpty ? AppTheme.textTertiary : AppTheme.textPrimary)
+                                Spacer()
+                                Image(systemName: "chevron.down")
+                                    .font(.system(size: 12))
+                                    .foregroundStyle(AppTheme.textTertiary)
+                            }
+                            .padding(.horizontal, 16)
+                            .frame(height: 48)
+                            .background(Color(.systemGray6))
+                            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                             .overlay(
-                                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                RoundedRectangle(cornerRadius: 10, style: .continuous)
                                     .stroke(Color(.systemGray4), lineWidth: 1)
                             )
-                    }
-                    .buttonStyle(PressableButtonStyle())
-                    .disabled(viewModel.isRegistering)
+                        }
 
-                    primaryButton(
-                        title: "Create Account",
-                        systemImage: "arrow.right",
-                        isLoading: viewModel.isRegistering,
-                        isDisabled: viewModel.isRegistering,
-                        accessibilityIdentifier: "registration_create_account_button",
-                        action: viewModel.continueToNextStep
-                    )
+                        HStack(spacing: 8) {
+                            ForEach(viewModel.quickPrefectures, id: \.self) { prefecture in
+                                Button {
+                                    viewModel.selectQuickPrefecture(prefecture)
+                                } label: {
+                                    Text(prefecture)
+                                        .font(.system(size: 11, weight: .medium))
+                                        .foregroundStyle(viewModel.selectedPrefecture == prefecture ? AppTheme.accent : AppTheme.textSecondary)
+                                        .padding(.horizontal, 12)
+                                        .padding(.vertical, 6)
+                                        .background(AppTheme.backgroundCard)
+                                        .clipShape(Capsule())
+                                        .overlay(
+                                            Capsule()
+                                                .stroke(viewModel.selectedPrefecture == prefecture ? AppTheme.accent : Color(.systemGray4), lineWidth: 1)
+                                        )
+                                }
+                            }
+                        }
+                        .padding(.top, 4)
+                    }
+
+                    statusMessageView
+                        .padding(.top, 16)
+
+                    Spacer(minLength: 40)
                 }
-                .padding(.top, 32)
+                .padding(.horizontal, 24)
+                .padding(.top, 24)
+                .padding(.bottom, 32)
+            }
+            #if os(iOS)
+            .scrollDismissesKeyboard(.immediately)
+            #endif
+
+            Divider()
+
+            HStack(spacing: 12) {
+                Button { viewModel.goBack() } label: {
+                    LText("Back")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(AppTheme.textSecondary)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 52)
+                        .background(AppTheme.backgroundCard)
+                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                .stroke(Color(.systemGray4), lineWidth: 1)
+                        )
+                }
+                .buttonStyle(PressableButtonStyle())
+                .disabled(viewModel.isRegistering)
+
+                primaryButton(
+                    title: "Continue",
+                    systemImage: "arrow.right",
+                    isLoading: false,
+                    isDisabled: false,
+                    accessibilityIdentifier: "registration_create_account_button",
+                    action: viewModel.continueToNextStep
+                )
             }
             .padding(.horizontal, 24)
-            .padding(.top, 24)
-            .padding(.bottom, 32)
+            .padding(.top, 20)
+            .padding(.bottom, 24)
         }
+        .accessibilityIdentifier("registration_preferences_view")
     }
 
     @ViewBuilder
@@ -352,7 +368,7 @@ struct RegistrationView: View {
         .buttonStyle(.plain)
     }
 
-    // MARK: - Step 3: Verify Email
+    // MARK: - Step 2: Verify Email
 
     @ViewBuilder
     private var verifyEmailStep: some View {
@@ -634,6 +650,7 @@ struct RegistrationView: View {
             }
             .font(.system(size: 14))
             .foregroundStyle(AppTheme.textPrimary)
+            .textContentType(.oneTimeCode)
 
             Button(action: toggleAction) {
                 Image(systemName: isVisible ? "eye.fill" : "eye.slash.fill")
@@ -692,6 +709,9 @@ struct RegistrationView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .foregroundStyle(.red)
                 .transition(.opacity.combined(with: .move(edge: .top)))
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(message)
+                .accessibilityIdentifier("registration_error_text")
             }
 
             if let message = viewModel.infoMessage, !message.isEmpty {
@@ -704,6 +724,9 @@ struct RegistrationView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .foregroundStyle(AppTheme.textSecondary)
                 .transition(.opacity.combined(with: .move(edge: .top)))
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(message)
+                .accessibilityIdentifier("registration_info_text")
             }
         }
     }

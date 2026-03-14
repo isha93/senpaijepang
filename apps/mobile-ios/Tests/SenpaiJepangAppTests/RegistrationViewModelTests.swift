@@ -119,9 +119,6 @@ final class RegistrationViewModelTests: XCTestCase {
         viewModel.confirmPassword = "password123"
 
         viewModel.continueToNextStep()
-        XCTAssertEqual(viewModel.currentStep, .preferences)
-
-        viewModel.continueToNextStep()
 
         await waitUntil {
             viewModel.currentStep == .verifyEmail && service.registerCalls.count == 1
@@ -133,7 +130,7 @@ final class RegistrationViewModelTests: XCTestCase {
         XCTAssertFalse(viewModel.canResendCode)
     }
 
-    func testVerifyEmailTransitionsToSuccessStep() async {
+    func testVerifyEmailTransitionsToPreferencesStep() async {
         let service = MockAuthService()
         service.registerResponse = RegistrationResult(
             session: AuthSession(accessToken: "access", refreshToken: "refresh"),
@@ -154,7 +151,6 @@ final class RegistrationViewModelTests: XCTestCase {
         viewModel.confirmPassword = "password123"
 
         viewModel.continueToNextStep()
-        viewModel.continueToNextStep()
         await waitUntil {
             viewModel.currentStep == .verifyEmail
         }
@@ -163,11 +159,22 @@ final class RegistrationViewModelTests: XCTestCase {
         viewModel.continueToNextStep()
 
         await waitUntil {
-            viewModel.currentStep == .allSet && service.verifyCalls.count == 1
+            viewModel.currentStep == .preferences && service.verifyCalls.count == 1
         }
 
         XCTAssertEqual(service.verifyCalls.first, .init(email: "isa@example.com", code: "123456"))
         XCTAssertNil(viewModel.errorMessage)
+    }
+
+    func testPreferencesContinueTransitionsToSuccessStep() async {
+        let service = MockAuthService()
+        let navigation = MockNavigation()
+        let viewModel = RegistrationViewModel(authService: service, navigation: navigation)
+
+        viewModel.currentStep = .preferences
+        viewModel.continueToNextStep()
+
+        XCTAssertEqual(viewModel.currentStep, .allSet)
     }
 
     func testResendCodeUsesDisplayedEmailAndUpdatesCountdown() async {
@@ -198,7 +205,6 @@ final class RegistrationViewModelTests: XCTestCase {
         viewModel.password = "password123"
         viewModel.confirmPassword = "password123"
 
-        viewModel.continueToNextStep()
         viewModel.continueToNextStep()
         await waitUntil {
             viewModel.currentStep == .verifyEmail

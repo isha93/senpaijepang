@@ -2,9 +2,10 @@ const path = require('path');
 const { execSync } = require('child_process');
 
 const PLATFORM = (process.env.PLATFORM || 'ios').toLowerCase();
-const IOS_APP_PATH = process.env.IOS_APP_PATH || path.resolve(__dirname, 'apps/ios/SenpaiJepang.app');
-const ANDROID_APP_PATH = process.env.ANDROID_APP_PATH || path.resolve(__dirname, 'apps/android/SenpaiJepang.apk');
+const IOS_APP_PATH = resolveAppPath(process.env.IOS_APP_PATH, path.resolve(__dirname, 'apps/ios/SenpaiJepang.app'));
+const ANDROID_APP_PATH = resolveAppPath(process.env.ANDROID_APP_PATH, path.resolve(__dirname, 'apps/android/SenpaiJepang.apk'));
 const IOS_PLATFORM_VERSION = process.env.IOS_PLATFORM_VERSION || detectLatestIOSRuntimeVersion() || '18.4';
+const API_BASE_URL = (process.env.API_BASE_URL || '').trim();
 
 const isIOS = PLATFORM === 'ios';
 
@@ -40,6 +41,13 @@ function detectLatestIOSRuntimeVersion() {
   }
 }
 
+function resolveAppPath(inputPath, fallbackPath) {
+  if (!inputPath) {
+    return fallbackPath;
+  }
+  return path.isAbsolute(inputPath) ? inputPath : path.resolve(process.cwd(), inputPath);
+}
+
 exports.config = {
   runner: 'local',
   port: 4723,
@@ -65,6 +73,15 @@ exports.config = {
         'appium:deviceName': process.env.IOS_DEVICE_NAME || 'iPhone 15',
         'appium:platformVersion': IOS_PLATFORM_VERSION,
         'appium:app': IOS_APP_PATH,
+        ...(API_BASE_URL
+          ? {
+            'appium:processArguments': {
+              env: {
+                API_BASE_URL
+              }
+            }
+          }
+          : {}),
         'appium:noReset': false,
         'appium:newCommandTimeout': 120,
         'wdio:maxInstances': 1

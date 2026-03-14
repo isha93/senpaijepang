@@ -6,7 +6,12 @@ public struct APIConfiguration {
     public let baseURL: URL
     
     private init() {
-        guard let url = URL(string: "https://senpai-api-app-production.up.railway.app") else {
+        let baseURLString =
+            ProcessInfo.processInfo.environment["API_BASE_URL"]?.trimmingCharacters(in: .whitespacesAndNewlines)
+            ?? Bundle.main.object(forInfoDictionaryKey: "APIBaseURL") as? String
+            ?? "https://senpai-api-app-production.up.railway.app"
+
+        guard let url = URL(string: baseURLString), let scheme = url.scheme, !scheme.isEmpty else {
             fatalError("Invalid base URL string")
         }
         self.baseURL = url

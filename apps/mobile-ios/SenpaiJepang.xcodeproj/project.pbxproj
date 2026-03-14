@@ -13,6 +13,7 @@
 		0D9F2EB68BD1ABBE9B9E7863 /* SavedJobsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A462532254D46B1889651F02 /* SavedJobsView.swift */; };
 		13D7D66B9EE4A2546450B3DB /* TimelineStepRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A0664A938F23DB900C7284B /* TimelineStepRow.swift */; };
 		16CFA424111C3C85D41DA60F /* ProfileEndpoint.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5DB6A57FCC5C8D09284494CE /* ProfileEndpoint.swift */; };
+		1BE9968D9F0B49D8E306E48C /* AuthLifecycleTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B951301010FEE9CFB7490FE5 /* AuthLifecycleTests.swift */; };
 		1D6FF7CD187F7711BD3C265F /* OnboardingViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64CAB1C95AD8973710B6F907 /* OnboardingViewModel.swift */; };
 		203474E9799A19AD87A8D924 /* APIEndpoint.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4DF64CB9B6FA1F01AB3ABEDA /* APIEndpoint.swift */; };
 		20CEE86FB5E31B288B274CB1 /* RegistrationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 717A4EBDD64DC90BDD482D5D /* RegistrationView.swift */; };
@@ -51,7 +52,9 @@
 		68BB6CDE62FA30C083BC25DA /* APIError.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2A89F34FDDB6131E92E531E /* APIError.swift */; };
 		6E0CEF1BBB90348946198EDB /* NavigationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4333224033A5864F004FD3D /* NavigationManager.swift */; };
 		6E16C664DD477DBAC99B87BD /* APIConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 304F4EC8281CB927C3E6B4C3 /* APIConfiguration.swift */; };
+		6E6E9733EE311CEF07098892 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = C1ED2A44340386FC286E97F1 /* Assets.xcassets */; };
 		71D78BBE9AFB55EB7CCED38D /* FeedEndpoint.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49455F88E41F00DC7CDA9FEB /* FeedEndpoint.swift */; };
+		7399B3DC1140507682C72ECD /* APIClientAuthRetryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 343AE56144B69657B012A9E1 /* APIClientAuthRetryTests.swift */; };
 		77BC0BB2A34BA350AF655EB7 /* NetworkClientKey.swift in Sources */ = {isa = PBXBuildFile; fileRef = F863D37D9DD5A3C2FF1E6239 /* NetworkClientKey.swift */; };
 		7E137564BE75EC6588045676 /* EmptyStateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDA917EF7C240F5B332654E2 /* EmptyStateView.swift */; };
 		82B7E07DEC6FF7194A3C57F1 /* AuthDTO.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4ED39ECFB60FE76BB72FE00 /* AuthDTO.swift */; };
@@ -116,6 +119,7 @@
 		26DBD83BC463F60881E1E2AA /* FeedService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedService.swift; sourceTree = "<group>"; };
 		2B71155FCC3F1134B6A11DFE /* NotificationsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationsViewModel.swift; sourceTree = "<group>"; };
 		304F4EC8281CB927C3E6B4C3 /* APIConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIConfiguration.swift; sourceTree = "<group>"; };
+		343AE56144B69657B012A9E1 /* APIClientAuthRetryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClientAuthRetryTests.swift; sourceTree = "<group>"; };
 		3824163CC6B16D3348B7D346 /* ApplicationDocumentDTO.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApplicationDocumentDTO.swift; sourceTree = "<group>"; };
 		3912D4ABC350F491AA1F5255 /* AuthStateManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthStateManager.swift; sourceTree = "<group>"; };
 		3A956ADAD7E2657081C687A3 /* SenpaiJepangApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SenpaiJepangApp.swift; sourceTree = "<group>"; };
@@ -166,11 +170,13 @@
 		B5CBC2CDEA9992C8E1DF69F7 /* ProfileService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileService.swift; sourceTree = "<group>"; };
 		B734008A981D8F4C900647F8 /* SenpaiJepang.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = SenpaiJepang.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B8002F32ADF944393432D57F /* AppRoute.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppRoute.swift; sourceTree = "<group>"; };
+		B951301010FEE9CFB7490FE5 /* AuthLifecycleTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthLifecycleTests.swift; sourceTree = "<group>"; };
 		B9D62225132F9A6280AEA97F /* FeedPostCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedPostCard.swift; sourceTree = "<group>"; };
 		BA870B3C69AD0EE6212F42BB /* UserAvatarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserAvatarView.swift; sourceTree = "<group>"; };
 		BBD408DBE62077007A6F9A87 /* ProfileViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileViewModel.swift; sourceTree = "<group>"; };
 		BF4162FAFEE63DA1E6D33D31 /* NotificationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationsView.swift; sourceTree = "<group>"; };
 		C16486C3B3FD13900EF470D0 /* RegistrationViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RegistrationViewModel.swift; sourceTree = "<group>"; };
+		C1ED2A44340386FC286E97F1 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		C4333224033A5864F004FD3D /* NavigationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NavigationManager.swift; sourceTree = "<group>"; };
 		C60E8FA7AC694B7626429D3F /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		C8B3D9ABAD1C3C4C8F01BDA7 /* JobDTO.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JobDTO.swift; sourceTree = "<group>"; };
@@ -312,6 +318,8 @@
 		3698EA4DE39DA69C4C803C78 /* SenpaiJepangAppTests */ = {
 			isa = PBXGroup;
 			children = (
+				343AE56144B69657B012A9E1 /* APIClientAuthRetryTests.swift */,
+				B951301010FEE9CFB7490FE5 /* AuthLifecycleTests.swift */,
 				ADC2014FDA5161CA28ACD69F /* RegistrationViewModelTests.swift */,
 			);
 			name = SenpaiJepangAppTests;
@@ -527,6 +535,7 @@
 		801123C769F80C42CF08B29B /* SenpaiJepangApp */ = {
 			isa = PBXGroup;
 			children = (
+				C1ED2A44340386FC286E97F1 /* Assets.xcassets */,
 				3A956ADAD7E2657081C687A3 /* SenpaiJepangApp.swift */,
 				874A73C5ECEEF264C925A6BB /* App */,
 				3EB57FF96E3293D95A8D7BCD /* Components */,
@@ -919,6 +928,7 @@
 			buildConfigurationList = 016112B7D4DDB241F723B740 /* Build configuration list for PBXNativeTarget "SenpaiJepang" */;
 			buildPhases = (
 				550A244E9E43DDD48FFE88CB /* Sources */,
+				31586765716C28F30011BC1D /* Resources */,
 				1ECF753A53494DA2FE1EC708 /* Frameworks */,
 			);
 			buildRules = (
@@ -970,11 +980,24 @@
 		};
 /* End PBXProject section */
 
+/* Begin PBXResourcesBuildPhase section */
+		31586765716C28F30011BC1D /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				6E6E9733EE311CEF07098892 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
 /* Begin PBXSourcesBuildPhase section */
 		46922A71FBE6CD515079788F /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				7399B3DC1140507682C72ECD /* APIClientAuthRetryTests.swift in Sources */,
+				1BE9968D9F0B49D8E306E48C /* AuthLifecycleTests.swift in Sources */,
 				3CF241BB0AE50DC67A905865 /* RegistrationViewModelTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

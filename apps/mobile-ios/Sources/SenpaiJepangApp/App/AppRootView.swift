@@ -35,7 +35,9 @@ struct AppRootView: View {
 
     var body: some View {
         Group {
-            if authState.isLoggedIn {
+            if authState.isBootstrappingSession {
+                bootstrappingView
+            } else if authState.isLoggedIn {
                 MainTabView(
                     navigation: navigation,
                     authService: authService,
@@ -74,11 +76,31 @@ struct AppRootView: View {
         .onChange(of: authState.isLoggedIn) { _, _ in
             navigation.popToRoot()
         }
+        .task {
+            await authState.bootstrapSessionIfNeeded()
+        }
         .onShake {
             NFX.sharedInstance().show()
         }
         .fullScreenCover(isPresented: $showOnboarding) {
             OnboardingContainerView(isPresented: $showOnboarding)
+        }
+    }
+
+    private var bootstrappingView: some View {
+        ZStack {
+            AppTheme.backgroundCard
+                .ignoresSafeArea()
+
+            VStack(spacing: 16) {
+                ProgressView()
+                    .tint(AppTheme.accent)
+                    .scaleEffect(1.15)
+
+                Text("Restoring session...")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(AppTheme.textSecondary)
+            }
         }
     }
 }

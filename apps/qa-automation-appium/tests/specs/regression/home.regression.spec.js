@@ -22,6 +22,7 @@ describe('Regression - Home', () => {
         await searchInput.clearValue();
         if (driver.isIOS) {
             await driver.keys(['\n']);
+            await driver.pause(1000); // Wait for keyboard to dismiss fully
         }
     });
 

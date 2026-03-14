@@ -34,9 +34,21 @@ public final class APIClient: APIClientProtocol {
     
     private func performRequest(_ endpoint: APIEndpoint) async throws -> (Data, URLResponse) {
         let request = try await buildURLRequest(from: endpoint)
-        
         let (data, response) = try await session.data(for: request)
-        
+        return try await validateResponse(
+            data: data,
+            response: response,
+            endpoint: endpoint,
+            allowRefreshRetry: endpoint.requiresAuth
+        )
+    }
+
+    private func validateResponse(
+        data: Data,
+        response: URLResponse,
+        endpoint: APIEndpoint,
+        allowRefreshRetry: Bool
+    ) async throws -> (Data, URLResponse) {
         guard let httpResponse = response as? HTTPURLResponse else {
             throw APIError.invalidResponse
         }
@@ -47,6 +59,19 @@ public final class APIClient: APIClientProtocol {
         case 400, 409, 422, 429:
             throw APIError.custom(parseAPIErrorMessage(from: data) ?? "Request failed.")
         case 401:
+            if allowRefreshRetry, await tokenProvider?.refreshSession() == true {
+                let retryRequest = try await buildURLRequest(from: endpoint)
+                let (retryData, retryResponse) = try await session.data(for: retryRequest)
+                return try await validateResponse(
+                    data: retryData,
+                    response: retryResponse,
+                    endpoint: endpoint,
+                    allowRefreshRetry: false
+                )
+            }
+            if endpoint.requiresAuth {
+                throw APIError.unauthorized
+            }
             throw APIError.custom(parseAPIErrorMessage(from: data) ?? APIError.unauthorized.localizedDescription)
         case 403:
             throw APIError.custom(parseAPIErrorMessage(from: data) ?? APIError.forbidden.localizedDescription)

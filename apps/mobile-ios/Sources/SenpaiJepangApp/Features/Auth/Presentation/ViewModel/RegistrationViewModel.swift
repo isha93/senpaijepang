@@ -3,21 +3,21 @@ import SwiftUI
 
 enum RegistrationStep: Int, CaseIterable {
     case accountInfo = 0
-    case preferences = 1
-    case verifyEmail = 2
+    case verifyEmail = 1
+    case preferences = 2
     case allSet = 3
 
     var title: String {
         switch self {
         case .accountInfo: return "Sign Up"
-        case .preferences: return "Preferences"
         case .verifyEmail: return "Verify Email"
+        case .preferences: return "Preferences"
         case .allSet: return "Success"
         }
     }
 
     var stepLabels: [String] {
-        ["Account Info", "Preferences", "Verify", "All Set"]
+        ["Account Info", "Verify", "Preferences", "All Set"]
     }
 }
 
@@ -45,11 +45,11 @@ final class RegistrationViewModel: ObservableObject {
     @Published var isPasswordVisible: Bool = false
     @Published var isConfirmPasswordVisible: Bool = false
 
-    // Step 2: Preferences
+    // Step 3: Preferences
     @Published var workStatus: WorkStatus = .looking
     @Published var selectedPrefecture: String = ""
 
-    // Step 3: Verify Email
+    // Step 2: Verify Email
     @Published var verificationCode: String = ""
     @Published var resendCountdown: Int = 0
 
@@ -85,11 +85,6 @@ final class RegistrationViewModel: ObservableObject {
         switch currentStep {
         case .accountInfo:
             guard validateAccountInfo() else { return }
-            withAnimation(AppTheme.animationDefault) {
-                currentStep = .preferences
-            }
-
-        case .preferences:
             Task { await registerAndAdvanceToVerification() }
 
         case .verifyEmail:
@@ -98,6 +93,11 @@ final class RegistrationViewModel: ObservableObject {
                 return
             }
             Task { await verifyEmailAndAdvance() }
+
+        case .preferences:
+            withAnimation(AppTheme.animationDefault) {
+                currentStep = .allSet
+            }
 
         case .allSet:
             goToDashboard()
@@ -111,13 +111,13 @@ final class RegistrationViewModel: ObservableObject {
         switch currentStep {
         case .accountInfo:
             navigation.pop()
-        case .preferences:
+        case .verifyEmail:
             withAnimation(AppTheme.animationDefault) {
                 currentStep = .accountInfo
             }
-        case .verifyEmail:
+        case .preferences:
             withAnimation(AppTheme.animationDefault) {
-                currentStep = .preferences
+                currentStep = .verifyEmail
             }
         case .allSet:
             break
@@ -252,7 +252,7 @@ final class RegistrationViewModel: ObservableObject {
             )
             stopResendCountdown()
             withAnimation(AppTheme.animationDefault) {
-                currentStep = .allSet
+                currentStep = .preferences
             }
         } catch {
             errorMessage = error.localizedDescription

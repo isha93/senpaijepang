@@ -18,21 +18,26 @@ class OnboardingPage extends BasePage {
             return;
         }
 
-        // Step 1-3: tap Next button 3 times
-        for (let i = 0; i < 3; i++) {
-            const btn = await this.nextButton;
-            await btn.waitForDisplayed({ timeout: 5000 });
-            await btn.click();
-            await driver.pause(500);
-        }
-        // Step 4: agree to terms, then tap final button
         const checkbox = await this.agreeCheckbox;
+        let attempts = 0;
+
+        while (attempts < 5) {
+            try {
+                if (await checkbox.isDisplayed()) break;
+            } catch (e) { }
+
+            const btn = await this.nextButton;
+            await btn.click();
+            await driver.pause(1200); // Wait for transition
+            attempts++;
+        }
+
         await checkbox.waitForDisplayed({ timeout: 5000 });
         await checkbox.click();
-        await driver.pause(300);
+        await driver.pause(500);
         const finalBtn = await this.nextButton;
         await finalBtn.click();
-        await driver.pause(1000);
+        await driver.pause(1500);
     }
 }
 

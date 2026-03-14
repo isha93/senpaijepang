@@ -25,9 +25,9 @@ class JobsPage extends BasePage {
   }
 
   async waitForJobDetail(timeout = 30000) {
-    const saveBtn = await this.saveButton;
-    await saveBtn.waitForDisplayed({ timeout });
-    return saveBtn;
+    const title = await this.jobDetailTitle;
+    await title.waitForDisplayed({ timeout });
+    return title;
   }
 
   async openApplyFlow() {

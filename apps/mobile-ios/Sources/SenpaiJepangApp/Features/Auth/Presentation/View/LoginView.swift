@@ -86,6 +86,7 @@ struct LoginView: View {
                             }
                             .font(.system(size: 16))
                             .foregroundStyle(AppTheme.textPrimary)
+                            .textContentType(.oneTimeCode)
                             .accessibilityIdentifier("auth_password_input")
 
                             Button {
@@ -190,6 +191,7 @@ struct LoginView: View {
                                 .font(.system(size: 16, weight: .bold))
                                 .foregroundStyle(AppTheme.accent)
                         }
+                        .accessibilityIdentifier("auth_open_registration_button")
                         Spacer()
                     }
                     .padding(.top, 16)
